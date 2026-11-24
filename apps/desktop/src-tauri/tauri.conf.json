@@ -1,0 +1,88 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "HexBox",
+  "version": "1.1.0",
+  "identifier": "com.hexdata.hexbox.replica",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "HexBox · 海克斯大乱斗全能助手 (Max 全解锁版)",
+        "width": 1280,
+        "height": 840,
+        "minWidth": 1024,
+        "minHeight": 680,
+        "resizable": true
+      },
+      {
+        "label": "augment-overlay",
+        "title": "HexBox · 强化悬浮窗",
+        "url": "overlay.html?overlay=augment",
+        "width": 980,
+        "height": 340,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "visible": false
+      },
+      {
+        "label": "formula-item-overlay",
+        "title": "HexBox · 实时流派参考",
+        "url": "overlay.html?overlay=item",
+        "width": 460,
+        "height": 280,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "visible": false
+      },
+      {
+        "label": "champ-select-overlay",
+        "title": "HexBox · 阵容推荐",
+        "url": "overlay.html?overlay=champ-select",
+        "width": 420,
+        "height": 540,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "visible": false
+      },
+      {
+        "label": "player-scores-overlay",
+        "title": "HexBox · 玩家战力条",
+        "url": "overlay.html?overlay=player-scores",
+        "width": 640,
+        "height": 240,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "visible": false
+      },
+      {
+        "label": "death-hint-overlay",
+        "title": "HexBox · 阵亡提示",
+        "url": "overlay.html?overlay=death-hint",
+        "width": 380,
+        "height": 140,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "visible": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  }
+}

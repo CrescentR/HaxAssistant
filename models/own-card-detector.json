@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "architecture": "hexbox-card-centres-v1",
+  "modelVersion": "v6-20261101",
+  "model": "own-card-detector.onnx",
+  "sha256": "8618d830c9cb826ea971401548264aec19754ec10647e9762cd1d8510a4b4732",
+  "bytes": 1742876,
+  "initialization": "random-only",
+  "externalWeights": false,
+  "productionApproved": true,
+  "input": {
+    "name": "image",
+    "shape": [
+      1,
+      3,
+      512,
+      512
+    ],
+    "color": "RGB",
+    "resize": "Pillow bilinear letterbox",
+    "padding": 32,
+    "scale": 0.00392156862745098
+  },
+  "outputs": [
+    "centre_logits",
+    "box_logits"
+  ],
+  "stride": 8,
+  "confidence": 0.35,
+  "nmsIou": 0.5,
+  "scope": "v6: dataset v2 + all test-build offer shots to 2026-11-01 20:00 (15+ accounts); v5 recipe (narrow-window crops + real reroll-animation patches), 3600 steps; see v6/holdout-eval.json",
+  "trainingManifest": "hexbox-own-card-detector-20261031/v6/dataset-v6-all.json"
+}
