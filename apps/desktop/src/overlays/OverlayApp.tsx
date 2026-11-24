@@ -1,0 +1,235 @@
+import React, { useMemo } from "react";
+import { Crown, Crosshair, ShoppingBag, Sparkles, Swords, Users } from "lucide-react";
+import {
+  analyzeEnemyCounter,
+  evaluate5v5Lineup,
+  evaluateAugmentOffer,
+  type LoadedHexBoxDatabase,
+} from "../api/dataService";
+import { getChampionIconUrl, getItemIconUrl, getTierMeta } from "../utils/hexScore";
+
+export type OverlayKind =
+  | "augment"
+  | "item"
+  | "champ-select"
+  | "player-scores"
+  | "death-hint";
+
+interface OverlayAppProps {
+  kind: OverlayKind;
+  db: LoadedHexBoxDatabase;
+  heroName?: string;
+}
+
+export const OverlayApp: React.FC<OverlayAppProps> = ({
+  kind,
+  db,
+  heroName = "寒冰射手",
+}) => {
+  const allyTeam = ["寒冰射手", "光辉女郎", "探险家", "皮城女警", "深海泰坦"];
+  const enemyTeam = ["疾风剑豪", "暗裔剑魔", "祖安狂人", "众星之子", "影流之主"];
+  const benchPool = ["曙光女神", "卡牌大师", "无双剑姬", "虚空女皇"];
+
+  const augmentCards = useMemo(
+    () => evaluateAugmentOffer(db, heroName, ["亮出你的剑", "暴击飞弹", "最终形态"], 2, ["易损"]),
+    [db, heroName]
+  );
+
+  const formula = db.formulaItemsByHero[heroName];
+  const counter = useMemo(
+    () => analyzeEnemyCounter(db, heroName, enemyTeam),
+    [db, heroName]
+  );
+  const lineup = useMemo(
+    () => evaluate5v5Lineup(db, allyTeam, enemyTeam, benchPool, heroName),
+    [db, heroName]
+  );
+
+  if (kind === "augment") {
+    return (
+      <div className="overlay-card overlay-augment">
+        <div className="overlay-header">
+          <span>
+            <Sparkles size={14} className="gold-text" /> 局内海克斯三选一悬浮窗 · {heroName}
+          </span>
+          <span className="overlay-badge">Patch {db.patch}</span>
+        </div>
+        <div className="overlay-3col">
+          {augmentCards.map((c) => (
+            <div
+              key={c.slot}
+              className={`overlay-aug-slot ${c.is_best ? "best" : ""}`}
+            >
+              <div className="overlay-aug-head">
+                <strong>{c.augment_name}</strong>
+                {c.is_best && (
+                  <span className="best-crown-badge">
+                    <Crown size={11} /> 首选
+                  </span>
+                )}
+              </div>
+              <div className="overlay-aug-score" style={{ color: c.hex_tier_color }}>
+                {c.hex_label} · {c.hex_score.toFixed(1)}
+              </div>
+              <div className="overlay-aug-meta">
+                胜率 {(c.win_rate * 100).toFixed(1)}% · 净胜率{" "}
+                {c.delta_win_rate >= 0 ? "+" : ""}
+                {(c.delta_win_rate * 100).toFixed(1)}%
+              </div>
+              {c.synergy_note && <div className="overlay-note ok">{c.synergy_note}</div>}
+              {c.conflict_note && <div className="overlay-note warn">{c.conflict_note}</div>}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (kind === "item") {
+    return (
+      <div className="overlay-card overlay-item">
+        <div className="overlay-header">
+          <span>
+            <Crosshair size={14} className="gold-text" /> 实时流派 & 针对出装 · {heroName}
+          </span>
+          <span className="overlay-badge">
+            {counter.lean === "physical" ? "敌偏物理" : counter.lean === "magic" ? "敌偏魔法" : "均衡"}
+          </span>
+        </div>
+        {formula && (
+          <div className="overlay-row">
+            {formula.coreItems.slice(0, 5).map((it) => (
+              <div key={it.id} className="overlay-item-pill">
+                <img
+                  src={getItemIconUrl(it.id)}
+                  alt={it.name}
+                  onError={(e) => ((e.target as HTMLImageElement).src = "/hexbox-logo.png")}
+                />
+                <span>{it.name}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="overlay-sub-list">
+          {counter.antiHeal && (
+            <div className="overlay-note warn">
+              重伤推荐：{counter.antiHeal.itemName} (+{(counter.antiHeal.lift * 100).toFixed(1)}%)
+            </div>
+          )}
+          {counter.boots && (
+            <div className="overlay-note ok">
+              鞋靴推荐：{counter.boots.itemName} (+{(counter.boots.lift * 100).toFixed(1)}%)
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (kind === "champ-select") {
+    return (
+      <div className="overlay-card overlay-champ-select">
+        <div className="overlay-header">
+          <span>
+            <Users size={14} className="gold-text" /> 选人阵容 & 替补席增益
+          </span>
+          <span className="overlay-badge">
+            胜率 {(lineup.adjustedWin * 100).toFixed(1)}%
+          </span>
+        </div>
+        <div className="overlay-bench-list">
+          {lineup.benchSuggestions.map((b) => (
+            <div key={b.heroName} className="overlay-bench-row">
+              <img
+                src={getChampionIconUrl(b.heroId)}
+                alt={b.heroName}
+                className="hero-avatar-sm"
+                onError={(e) => ((e.target as HTMLImageElement).src = "/hexbox-logo.png")}
+              />
+              <span className="overlay-bench-name">{b.heroName}</span>
+              <span className="tier-pill" style={{ background: b.hexColor, color: "#fff" }}>
+                {b.hexLabel} {b.hexScore.toFixed(0)}
+              </span>
+              <span className={b.gain >= 0 ? "pos-text" : "neg-text"}>
+                {b.gain >= 0 ? "+" : ""}
+                {(b.gain * 100).toFixed(1)}%
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (kind === "player-scores") {
+    return (
+      <div className="overlay-card overlay-scores">
+        <div className="overlay-header">
+          <span>
+            <Swords size={14} className="gold-text" /> 10 人实时战力条 (HexScore)
+          </span>
+          <span className="overlay-badge">蓝队 vs 红队</span>
+        </div>
+        <div className="overlay-2col">
+          <div>
+            {allyTeam.map((h, i) => {
+              const ch = db.champions.find((c) => c.hero === h);
+              const score = [84.2, 76.5, 71.0, 68.4, 73.1][i] || 70;
+              const tier = getTierMeta(score);
+              return (
+                <div key={h} className="overlay-score-row">
+                  <img
+                    src={getChampionIconUrl(ch?.id || "22")}
+                    alt={h}
+                    className="hero-avatar-xs"
+                    onError={(e) => ((e.target as HTMLImageElement).src = "/hexbox-logo.png")}
+                  />
+                  <span>{h}</span>
+                  <span style={{ color: tier.color, marginLeft: "auto", fontWeight: 700 }}>
+                    {tier.label} {score.toFixed(1)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          <div>
+            {enemyTeam.map((h, i) => {
+              const ch = db.champions.find((c) => c.hero === h);
+              const score = [81.0, 69.2, 74.8, 64.5, 66.0][i] || 68;
+              const tier = getTierMeta(score);
+              return (
+                <div key={h} className="overlay-score-row">
+                  <img
+                    src={getChampionIconUrl(ch?.id || "157")}
+                    alt={h}
+                    className="hero-avatar-xs"
+                    onError={(e) => ((e.target as HTMLImageElement).src = "/hexbox-logo.png")}
+                  />
+                  <span>{h}</span>
+                  <span style={{ color: tier.color, marginLeft: "auto", fontWeight: 700 }}>
+                    {tier.label} {score.toFixed(1)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="overlay-card overlay-death-hint">
+      <div className="overlay-header">
+        <span>
+          <ShoppingBag size={14} className="gold-text" /> 阵亡购物提示
+        </span>
+        <span className="overlay-badge">当前金币 2,850g</span>
+      </div>
+      <div className="overlay-note ok">
+        优先合成：{counter.antiHeal?.itemName || formula?.coreItems?.[0]?.name || "核心大件"} ·
+        剩余金币可补真眼/合剂
+      </div>
+    </div>
+  );
+};

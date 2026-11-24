@@ -1,0 +1,10 @@
+[package]
+name = "reco-engine"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+data-runtime = { path = "../data-runtime" }
+serde.workspace = true
+serde_json.workspace = true
+shared-types = { path = "../shared-types" }

@@ -1,0 +1,14 @@
+[package]
+name = "app-core"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+data-runtime = { path = "../data-runtime" }
+data-updater = { path = "../data-updater" }
+lcu-client = { path = "../lcu-client" }
+reco-engine = { path = "../reco-engine" }
+serde.workspace = true
+serde_json.workspace = true
+shared-types = { path = "../shared-types" }

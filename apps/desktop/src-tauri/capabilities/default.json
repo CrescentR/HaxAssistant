@@ -1,0 +1,16 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Default capability for HexBox main window and overlay windows",
+  "windows": [
+    "main",
+    "augment-overlay",
+    "formula-item-overlay",
+    "champ-select-overlay",
+    "player-scores-overlay",
+    "death-hint-overlay"
+  ],
+  "permissions": [
+    "core:default"
+  ]
+}
