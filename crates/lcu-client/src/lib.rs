@@ -1,11 +1,13 @@
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use anyhow::{anyhow, Result};
 use base64::Engine;
 use serde_json::Value;
-use shared_types::{ChampSelectSnapshot, LcuStatus, LiveGameSnapshot, LivePlayerScore};
+use shared_types::{
+    ChampSelectSnapshot, LcuStatus, LiveGameSnapshot, LivePlayerScore, MatchHistoryEntry,
+};
 
 #[derive(Debug, Clone)]
 pub struct LockfileCredentials {
@@ -221,6 +223,18 @@ impl LcuClient {
         let data = self.fetch_live_client_data().await?;
         Ok(parse_live_game_data(&data))
     }
+
+    pub async fn fetch_match_history(
+        &self,
+        creds: &LockfileCredentials,
+        count: usize,
+    ) -> Result<Value> {
+        let end_index = count.clamp(1, 50);
+        let endpoint = format!(
+            "/lol-match-history/v1/products/lol/current-summoner/matches?begIndex=0&endIndex={end_index}"
+        );
+        self.get_json(creds, &endpoint).await
+    }
 }
 
 pub fn parse_champ_select_session(session: &Value) -> ChampSelectSnapshot {
@@ -384,6 +398,136 @@ pub fn parse_live_game_data(data: &Value) -> LiveGameSnapshot {
     }
 }
 
+pub fn format_time_ago(game_creation_ms: u64) -> String {
+    if game_creation_ms == 0 {
+        return "近期".to_string();
+    }
+    let now_ms = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(game_creation_ms);
+    let diff_secs = now_ms.saturating_sub(game_creation_ms) / 1000;
+    if diff_secs < 120 {
+        "刚刚".to_string()
+    } else if diff_secs < 3600 {
+        format!("{} 分钟前", diff_secs / 60)
+    } else if diff_secs < 86_400 {
+        format!("{} 小时前", diff_secs / 3600)
+    } else {
+        format!("{} 天前", diff_secs / 86_400)
+    }
+}
+
+pub fn parse_match_history(
+    raw: &Value,
+    resolve_hero: impl Fn(u32) -> String,
+    resolve_augment: impl Fn(u32) -> Option<String>,
+) -> Vec<MatchHistoryEntry> {
+    let games = raw
+        .get("games")
+        .and_then(|g| g.get("games").or(Some(g)))
+        .and_then(|v| v.as_array());
+
+    let Some(games) = games else {
+        return Vec::new();
+    };
+
+    let mut out = Vec::new();
+    for game in games {
+        let game_id = game
+            .get("gameId")
+            .and_then(|v| v.as_u64())
+            .map(|id| id.to_string())
+            .unwrap_or_else(|| "0".to_string());
+        let queue_id = game.get("queueId").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+        let game_mode = game
+            .get("gameMode")
+            .and_then(|v| v.as_str())
+            .unwrap_or("ARAM")
+            .to_string();
+        let duration_secs = game
+            .get("gameDuration")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        let game_creation = game
+            .get("gameCreation")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+
+        let Some(participant) = game
+            .get("participants")
+            .and_then(|v| v.as_array())
+            .and_then(|arr| arr.first())
+        else {
+            continue;
+        };
+
+        let champion_id = participant
+            .get("championId")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0) as u32;
+        let hero_name = resolve_hero(champion_id);
+
+        let stats = participant.get("stats").unwrap_or(&Value::Null);
+        let win = stats.get("win").and_then(|v| v.as_bool()).unwrap_or(false);
+        let kills = stats.get("kills").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+        let deaths = stats.get("deaths").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+        let assists = stats.get("assists").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+        let damage = stats
+            .get("totalDamageDealtToChampions")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+
+        let mut augments = Vec::new();
+        for key in [
+            "playerAugment1",
+            "playerAugment2",
+            "playerAugment3",
+            "playerAugment4",
+        ] {
+            if let Some(aid) = stats.get(key).and_then(|v| v.as_u64()).map(|n| n as u32) {
+                if aid > 0 {
+                    if let Some(name) = resolve_augment(aid) {
+                        augments.push(name);
+                    } else {
+                        augments.push(format!("强化 #{aid}"));
+                    }
+                }
+            }
+        }
+
+        let kda_ratio = (kills as f64 + assists as f64) / (deaths.max(1) as f64);
+        let dmg_bonus = ((damage as f64) / 5000.0).min(12.0);
+        let win_bonus = if win { 11.0 } else { -7.0 };
+        let hex_score = (56.0 + win_bonus + (kda_ratio * 3.8).min(18.0) + dmg_bonus)
+            .clamp(32.0, 95.0);
+        let hex_score = (hex_score * 10.0).round() / 10.0;
+
+        let duration = format!("{:02}:{:02}", duration_secs / 60, duration_secs % 60);
+        out.push(MatchHistoryEntry {
+            game_id,
+            champion_id,
+            hero_name,
+            result: if win { "WIN" } else { "LOSS" }.to_string(),
+            kills,
+            deaths,
+            assists,
+            kda: format!("{kills} / {deaths} / {assists}"),
+            damage,
+            duration_secs,
+            duration,
+            queue_id,
+            game_mode,
+            augments,
+            hex_score,
+            game_creation,
+            time_ago: format_time_ago(game_creation),
+        });
+    }
+
+    out
+}
+
 pub fn parse_lockfile_at(path: &Path) -> Result<LockfileCredentials> {
     let content = fs::read_to_string(path)?;
     LockfileCredentials::parse(&content, path.to_path_buf())
@@ -462,5 +606,53 @@ mod tests {
         assert_eq!(snap.allies, vec!["寒冰射手"]);
         assert_eq!(snap.enemies, vec!["疾风剑豪"]);
         assert_eq!(snap.players.len(), 2);
+    }
+
+    #[test]
+    fn parses_lcu_match_history() {
+        let raw = json!({
+            "games": {
+                "games": [
+                    {
+                        "gameId": 987654321,
+                        "queueId": 450,
+                        "gameMode": "ARAM",
+                        "gameDuration": 1062,
+                        "gameCreation": 0,
+                        "participants": [
+                            {
+                                "championId": 22,
+                                "stats": {
+                                    "win": true,
+                                    "kills": 12,
+                                    "deaths": 4,
+                                    "assists": 22,
+                                    "totalDamageDealtToChampions": 51200,
+                                    "playerAugment1": 101,
+                                    "playerAugment2": 102
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        });
+
+        let entries = parse_match_history(
+            &raw,
+            |cid| if cid == 22 { "寒冰射手".to_string() } else { cid.to_string() },
+            |aid| match aid {
+                101 => Some("亮出你的剑".to_string()),
+                102 => Some("易损".to_string()),
+                _ => None,
+            },
+        );
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].hero_name, "寒冰射手");
+        assert_eq!(entries[0].result, "WIN");
+        assert_eq!(entries[0].kda, "12 / 4 / 22");
+        assert_eq!(entries[0].duration, "17:42");
+        assert_eq!(entries[0].augments, vec!["亮出你的剑", "易损"]);
+        assert!(entries[0].hex_score >= 70.0);
     }
 }

@@ -211,6 +211,32 @@ export interface OverlayStatePayload {
   ocrMs: number | null;
 }
 
+export interface MatchHistoryEntry {
+  gameId: string;
+  championId: number;
+  heroName: string;
+  result: "WIN" | "LOSS" | string;
+  kills: number;
+  deaths: number;
+  assists: number;
+  kda: string;
+  damage: number;
+  durationSecs: number;
+  duration: string;
+  queueId: number;
+  gameMode: string;
+  augments: string[];
+  hexScore: number;
+  gameCreation: number;
+  timeAgo: string;
+}
+
+export interface MatchHistoryResponse {
+  source: "lcu" | "offline" | string;
+  summonerName: string | null;
+  matches: MatchHistoryEntry[];
+}
+
 export interface RuntimeSummary {
   patch: string;
   report_date: string;

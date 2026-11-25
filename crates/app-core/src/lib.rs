@@ -7,12 +7,12 @@ use std::sync::{Mutex, RwLock};
 use anyhow::{anyhow, Result};
 use data_runtime::Dataset;
 use data_updater::{verify_manifest, ManifestReport};
-use lcu_client::{discover_lockfile, LcuClient};
+use lcu_client::{discover_lockfile, parse_match_history, LcuClient};
 use ocr_worker::PersistentOcrWorker;
 use serde_json::Value;
 use shared_types::{
     AppSettings, AugmentRecommendationCard, EnemyCounterAnalysis, LcuStatus, LineupEvaluation,
-    OverlayStatePayload, RuntimeSummary,
+    MatchHistoryResponse, OverlayStatePayload, RuntimeSummary,
 };
 
 #[derive(Debug, Clone)]
@@ -100,6 +100,48 @@ impl HexBoxCore {
             .iter()
             .find(|c| c.id == id_str)
             .map(|c| c.hero.clone())
+    }
+
+    pub fn augment_name_by_id(&self, id: u32) -> Option<String> {
+        self.dataset
+            .augments_full
+            .iter()
+            .find(|a| a.augment_id == id)
+            .map(|a| a.augment_name.clone())
+    }
+
+    pub async fn fetch_personal_match_history(&self, count: usize) -> MatchHistoryResponse {
+        let Some(creds) = discover_lockfile() else {
+            return MatchHistoryResponse {
+                source: "offline".to_string(),
+                summoner_name: None,
+                matches: Vec::new(),
+            };
+        };
+
+        let status = self.lcu.probe_status().await;
+        match self.lcu.fetch_match_history(&creds, count).await {
+            Ok(raw) => {
+                let matches = parse_match_history(
+                    &raw,
+                    |cid| {
+                        self.champion_name_by_id(cid)
+                            .unwrap_or_else(|| format!("英雄 #{cid}"))
+                    },
+                    |aid| self.augment_name_by_id(aid),
+                );
+                MatchHistoryResponse {
+                    source: "lcu".to_string(),
+                    summoner_name: status.summoner_name,
+                    matches,
+                }
+            }
+            Err(_) => MatchHistoryResponse {
+                source: "offline".to_string(),
+                summoner_name: status.summoner_name,
+                matches: Vec::new(),
+            },
+        }
     }
 
     pub fn verify_data_manifest(&self) -> Result<ManifestReport> {

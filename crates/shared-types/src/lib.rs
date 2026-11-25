@@ -419,6 +419,36 @@ impl Default for OverlayStatePayload {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MatchHistoryEntry {
+    pub game_id: String,
+    pub champion_id: u32,
+    pub hero_name: String,
+    pub result: String,
+    pub kills: u32,
+    pub deaths: u32,
+    pub assists: u32,
+    pub kda: String,
+    pub damage: u64,
+    pub duration_secs: u64,
+    pub duration: String,
+    pub queue_id: u32,
+    pub game_mode: String,
+    pub augments: Vec<String>,
+    pub hex_score: f64,
+    pub game_creation: u64,
+    pub time_ago: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MatchHistoryResponse {
+    pub source: String,
+    pub summoner_name: Option<String>,
+    pub matches: Vec<MatchHistoryEntry>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RuntimeSummary {
     pub patch: String,
     pub report_date: String,

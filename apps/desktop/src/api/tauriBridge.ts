@@ -3,6 +3,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
   AppSettings,
   LcuStatus,
+  MatchHistoryResponse,
   OverlayStatePayload,
   RuntimeSummary,
 } from "../types/hexbox";
@@ -53,6 +54,13 @@ export async function tauriBenchSwap(championId: number): Promise<boolean> {
   if (!isTauriRuntime()) return false;
   await invoke<void>("bench_swap", { championId });
   return true;
+}
+
+export async function tauriGetMatchHistory(
+  count = 20
+): Promise<MatchHistoryResponse | null> {
+  if (!isTauriRuntime()) return null;
+  return invoke<MatchHistoryResponse>("get_match_history", { count });
 }
 
 export async function tauriRunOcrPreset(

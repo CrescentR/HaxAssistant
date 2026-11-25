@@ -12,9 +12,10 @@ use app_core::HexBoxCore;
 use serde_json::Value;
 use shared_types::{
     AppSettings, AugmentRecommendationCard, EnemyCounterAnalysis, LcuStatus, LineupEvaluation,
-    OverlayStatePayload, RuntimeSummary,
+    MatchHistoryResponse, OverlayStatePayload, RuntimeSummary,
 };
 use tauri::{AppHandle, Emitter, Manager, State};
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
 struct AppState {
     core: Arc<HexBoxCore>,
@@ -58,6 +59,7 @@ fn update_settings(
         .core
         .update_settings(settings)
         .map_err(|e| e.to_string())?;
+    register_hotkeys(&app, state.core.clone(), &saved);
     let _ = app.emit("hexbox://settings-updated", &saved);
     Ok(saved)
 }
@@ -136,6 +138,17 @@ async fn bench_swap(state: State<'_, AppState>, champion_id: u32) -> Result<(), 
         .bench_swap(champion_id)
         .await
         .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn get_match_history(
+    state: State<'_, AppState>,
+    count: Option<usize>,
+) -> Result<MatchHistoryResponse, String> {
+    Ok(state
+        .core
+        .fetch_personal_match_history(count.unwrap_or(20))
+        .await)
 }
 
 #[tauri::command]
@@ -277,8 +290,129 @@ fn spawn_background_lcu_poller(app: AppHandle, core: Arc<HexBoxCore>) {
     });
 }
 
+fn register_hotkeys(app: &AppHandle, core: Arc<HexBoxCore>, settings: &AppSettings) {
+    let manager = app.global_shortcut();
+    let _ = manager.unregister_all();
+
+    if let Ok(augment_sc) = settings.augment_hotkey.trim().parse::<Shortcut>() {
+        let core_clone = core.clone();
+        if let Err(err) = manager.on_shortcut(augment_sc, move |app_handle, _shortcut, event| {
+            if event.state() != ShortcutState::Pressed {
+                return;
+            }
+            let visible = toggle_overlay_internal(app_handle, "augment");
+            if visible {
+                let app_bg = app_handle.clone();
+                let core_bg = core_clone.clone();
+                tauri::async_runtime::spawn(async move {
+                    let preset = core_bg.get_settings().selected_preset_key;
+                    let core_ocr = core_bg.clone();
+                    let _ = tokio::task::spawn_blocking(move || {
+                        core_ocr.run_ocr_preset(&preset, None)
+                    })
+                    .await;
+                    let _ = app_bg.emit("hexbox://overlay-state", core_bg.get_overlay_state());
+                });
+            }
+        }) {
+            eprintln!(
+                "Failed to register augment hotkey '{}': {err}",
+                settings.augment_hotkey
+            );
+        }
+    }
+
+    if let Ok(item_sc) = settings.item_overlay_hotkey.trim().parse::<Shortcut>() {
+        if let Err(err) = manager.on_shortcut(item_sc, move |app_handle, _shortcut, event| {
+            if event.state() != ShortcutState::Pressed {
+                return;
+            }
+            let _ = toggle_overlay_internal(app_handle, "item");
+        }) {
+            eprintln!(
+                "Failed to register item overlay hotkey '{}': {err}",
+                settings.item_overlay_hotkey
+            );
+        }
+    }
+}
+
+fn toggle_overlay_internal(app: &AppHandle, kind: &str) -> bool {
+    let label = overlay_label(kind);
+    if let Some(win) = app.get_webview_window(label) {
+        let visible = win.is_visible().unwrap_or(false);
+        if visible {
+            let _ = win.hide();
+            return false;
+        } else {
+            let _ = win.show();
+            return true;
+        }
+    }
+    false
+}
+
+fn spawn_background_auto_ocr_watcher(app: AppHandle, core: Arc<HexBoxCore>) {
+    tauri::async_runtime::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_millis(1200));
+        let mut was_in_progress = false;
+        let mut last_emitted_sig: Vec<String> = Vec::new();
+
+        loop {
+            interval.tick().await;
+            let state = core.get_overlay_state();
+            let settings = core.get_settings();
+            let should_watch = state.lcu.connected
+                && state.lcu.phase == "InProgress"
+                && settings.auto_ocr_enabled;
+
+            if should_watch {
+                was_in_progress = true;
+                let preset = settings.selected_preset_key.clone();
+                let core_bg = core.clone();
+                let tick_res = tokio::task::spawn_blocking(move || {
+                    core_bg.ocr_watch_tick(&preset, None)
+                })
+                .await;
+
+                if let Ok(Ok(resp)) = tick_res {
+                    let watcher = resp.get("watcher");
+                    let is_stable = watcher
+                        .and_then(|w| w.get("stable"))
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false);
+                    let sig: Vec<String> = watcher
+                        .and_then(|w| w.get("signature"))
+                        .and_then(|v| v.as_array())
+                        .map(|arr| {
+                            arr.iter()
+                                .filter_map(|v| v.as_str().map(ToString::to_string))
+                                .filter(|s| !s.is_empty())
+                                .collect()
+                        })
+                        .unwrap_or_default();
+
+                    if is_stable && sig.len() == 3 && sig != last_emitted_sig {
+                        last_emitted_sig = sig;
+                        let _ = app.emit("hexbox://overlay-state", core.get_overlay_state());
+                        if settings.auto_show_overlay {
+                            set_overlay_visible(&app, "augment", true);
+                        }
+                    }
+                }
+            } else if was_in_progress {
+                was_in_progress = false;
+                last_emitted_sig.clear();
+                let core_bg = core.clone();
+                let _ = tokio::task::spawn_blocking(move || core_bg.reset_ocr_watcher()).await;
+            }
+        }
+    });
+}
+
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .setup(|app| {
             let root = resolve_app_root(app.handle());
             let core =
@@ -291,7 +425,9 @@ fn main() {
                 summary.augment_count,
                 summary.mechanic_link_count
             );
+            register_hotkeys(app.handle(), core.clone(), &core.get_settings());
             spawn_background_lcu_poller(app.handle().clone(), core.clone());
+            spawn_background_auto_ocr_watcher(app.handle().clone(), core.clone());
             app.manage(AppState { core });
             Ok(())
         })
@@ -307,6 +443,7 @@ fn main() {
             probe_lcu_status,
             accept_ready_check,
             bench_swap,
+            get_match_history,
             run_ocr_preset,
             ocr_watch_tick,
             reset_ocr_watcher,
