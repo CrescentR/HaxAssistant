@@ -175,3 +175,48 @@ export interface PlayerMarker {
   encounters: number;
   updatedAt: string;
 }
+
+export interface LcuStatus {
+  connected: boolean;
+  phase: string;
+  port: number | null;
+  summoner_name: string | null;
+  lockfile_path: string | null;
+}
+
+export interface LivePlayerScore {
+  summonerName: string;
+  championName: string;
+  team: string;
+  kills: number;
+  deaths: number;
+  assists: number;
+  isDead: boolean;
+}
+
+export interface OverlayStatePayload {
+  heroName: string;
+  phase: string;
+  stage: number;
+  candidateAugments: string[];
+  confirmedAugments: string[];
+  allyTeam: string[];
+  enemyTeam: string[];
+  benchPool: string[];
+  currentGold: number;
+  isDead: boolean;
+  lcu: LcuStatus;
+  livePlayers: LivePlayerScore[];
+  ocrStatus: string | null;
+  ocrMs: number | null;
+}
+
+export interface RuntimeSummary {
+  patch: string;
+  report_date: string;
+  hero_count: number;
+  augment_count: number;
+  mechanic_link_count: number;
+  mechanic_conflict_count: number;
+  data_root: string;
+}

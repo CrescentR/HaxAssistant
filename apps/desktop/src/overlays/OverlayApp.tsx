@@ -7,6 +7,7 @@ import {
   type LoadedHexBoxDatabase,
 } from "../api/dataService";
 import { getChampionIconUrl, getItemIconUrl, getTierMeta } from "../utils/hexScore";
+import type { OverlayStatePayload } from "../types/hexbox";
 
 export type OverlayKind =
   | "augment"
@@ -19,30 +20,59 @@ interface OverlayAppProps {
   kind: OverlayKind;
   db: LoadedHexBoxDatabase;
   heroName?: string;
+  liveState?: OverlayStatePayload;
 }
 
 export const OverlayApp: React.FC<OverlayAppProps> = ({
   kind,
   db,
   heroName = "寒冰射手",
+  liveState,
 }) => {
-  const allyTeam = ["寒冰射手", "光辉女郎", "探险家", "皮城女警", "深海泰坦"];
-  const enemyTeam = ["疾风剑豪", "暗裔剑魔", "祖安狂人", "众星之子", "影流之主"];
-  const benchPool = ["曙光女神", "卡牌大师", "无双剑姬", "虚空女皇"];
+  const effectiveHero = liveState?.heroName || heroName;
+  const effectiveStage = liveState?.stage || 2;
+  const candidateAugments =
+    liveState && liveState.candidateAugments.length > 0
+      ? liveState.candidateAugments
+      : ["亮出你的剑", "暴击飞弹", "最终形态"];
+  const confirmedAugments =
+    liveState && liveState.confirmedAugments.length > 0
+      ? liveState.confirmedAugments
+      : ["易损"];
+  const allyTeam =
+    liveState && liveState.allyTeam.length > 0
+      ? liveState.allyTeam
+      : ["寒冰射手", "光辉女郎", "探险家", "皮城女警", "深海泰坦"];
+  const enemyTeam =
+    liveState && liveState.enemyTeam.length > 0
+      ? liveState.enemyTeam
+      : ["疾风剑豪", "暗裔剑魔", "祖安狂人", "众星之子", "影流之主"];
+  const benchPool =
+    liveState && liveState.benchPool.length > 0
+      ? liveState.benchPool
+      : ["曙光女神", "卡牌大师", "无双剑姬", "虚空女皇"];
+  const currentGold = liveState?.currentGold ?? 2850;
 
   const augmentCards = useMemo(
-    () => evaluateAugmentOffer(db, heroName, ["亮出你的剑", "暴击飞弹", "最终形态"], 2, ["易损"]),
-    [db, heroName]
+    () =>
+      evaluateAugmentOffer(
+        db,
+        effectiveHero,
+        candidateAugments,
+        effectiveStage,
+        confirmedAugments
+      ),
+    [db, effectiveHero, candidateAugments, effectiveStage, confirmedAugments]
   );
 
-  const formula = db.formulaItemsByHero[heroName];
+  const formula = db.formulaItemsByHero[effectiveHero];
   const counter = useMemo(
-    () => analyzeEnemyCounter(db, heroName, enemyTeam),
-    [db, heroName]
+    () => analyzeEnemyCounter(db, effectiveHero, enemyTeam),
+    [db, effectiveHero, enemyTeam]
   );
   const lineup = useMemo(
-    () => evaluate5v5Lineup(db, allyTeam, enemyTeam, benchPool, heroName),
-    [db, heroName]
+    () => evaluate5v5Lineup(db, allyTeam, enemyTeam, benchPool, effectiveHero),
+    [db, allyTeam, enemyTeam, benchPool, effectiveHero]
   );
 
   if (kind === "augment") {
@@ -50,7 +80,7 @@ export const OverlayApp: React.FC<OverlayAppProps> = ({
       <div className="overlay-card overlay-augment">
         <div className="overlay-header">
           <span>
-            <Sparkles size={14} className="gold-text" /> 局内海克斯三选一悬浮窗 · {heroName}
+            <Sparkles size={14} className="gold-text" /> 局内海克斯三选一悬浮窗 · {effectiveHero}
           </span>
           <span className="overlay-badge">Patch {db.patch}</span>
         </div>
@@ -90,7 +120,7 @@ export const OverlayApp: React.FC<OverlayAppProps> = ({
       <div className="overlay-card overlay-item">
         <div className="overlay-header">
           <span>
-            <Crosshair size={14} className="gold-text" /> 实时流派 & 针对出装 · {heroName}
+            <Crosshair size={14} className="gold-text" /> 实时流派 & 针对出装 · {effectiveHero}
           </span>
           <span className="overlay-badge">
             {counter.lean === "physical" ? "敌偏物理" : counter.lean === "magic" ? "敌偏魔法" : "均衡"}
@@ -224,7 +254,7 @@ export const OverlayApp: React.FC<OverlayAppProps> = ({
         <span>
           <ShoppingBag size={14} className="gold-text" /> 阵亡购物提示
         </span>
-        <span className="overlay-badge">当前金币 2,850g</span>
+        <span className="overlay-badge">当前金币 {Math.round(currentGold).toLocaleString()}g</span>
       </div>
       <div className="overlay-note ok">
         优先合成：{counter.antiHeal?.itemName || formula?.coreItems?.[0]?.name || "核心大件"} ·

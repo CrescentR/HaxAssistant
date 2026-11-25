@@ -18,7 +18,18 @@ import {
   saveSettings,
   type LoadedHexBoxDatabase,
 } from "./api/dataService";
-import type { AppSettings } from "./types/hexbox";
+import {
+  isTauriRuntime,
+  subscribeLcuStatus,
+  subscribeOverlayState,
+  subscribeSettingsUpdated,
+  tauriGetOverlayState,
+  tauriGetSettings,
+  tauriProbeLcuStatus,
+  tauriToggleOverlay,
+  tauriUpdateSettings,
+} from "./api/tauriBridge";
+import type { AppSettings, LcuStatus, OverlayStatePayload } from "./types/hexbox";
 import { OngoingWorkspace } from "./views/OngoingWorkspace";
 import { HexdataDataView } from "./views/HexdataDataView";
 import { RecommendView } from "./views/RecommendView";
@@ -37,6 +48,14 @@ const App: React.FC = () => {
   const [selectedHero, setSelectedHero] = useState<string>("寒冰射手");
   const [settings, setSettings] = useState<AppSettings>(() => loadSettings());
   const [overlayPreview, setOverlayPreview] = useState<OverlayKind | null>(null);
+  const [lcuStatus, setLcuStatus] = useState<LcuStatus>({
+    connected: false,
+    phase: "Disconnected",
+    port: null,
+    summoner_name: null,
+    lockfile_path: null,
+  });
+  const [liveOverlayState, setLiveOverlayState] = useState<OverlayStatePayload | null>(null);
 
   useEffect(() => {
     loadDatabase()
@@ -50,12 +69,56 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (!isTauriRuntime()) return;
+    let active = true;
+    tauriGetSettings()
+      .then((remote) => {
+        if (active && remote) {
+          saveSettings(remote);
+          setSettings(remote);
+        }
+      })
+      .catch(() => {});
+    tauriProbeLcuStatus()
+      .then((status) => {
+        if (active && status) setLcuStatus(status);
+      })
+      .catch(() => {});
+    tauriGetOverlayState()
+      .then((state) => {
+        if (active && state) setLiveOverlayState(state);
+      })
+      .catch(() => {});
+
+    const unlisteners: Array<Promise<() => void>> = [
+      subscribeLcuStatus((status) => {
+        if (active) setLcuStatus(status);
+      }),
+      subscribeOverlayState((state) => {
+        if (active) setLiveOverlayState(state);
+      }),
+      subscribeSettingsUpdated((remote) => {
+        if (active) {
+          saveSettings(remote);
+          setSettings(remote);
+        }
+      }),
+    ];
+
+    return () => {
+      active = false;
+      unlisteners.forEach((p) => p.then((fn) => fn()).catch(() => {}));
+    };
+  }, []);
+
+  useEffect(() => {
     document.documentElement.setAttribute("data-theme", settings.appearance_mode);
   }, [settings.appearance_mode]);
 
   const handleUpdateSettings = (patch: Partial<AppSettings>) => {
     const next = saveSettings(patch);
     setSettings(next);
+    tauriUpdateSettings(next).catch(() => {});
   };
 
   const handleOpenHeroRecommend = (heroName: string) => {
@@ -71,7 +134,14 @@ const App: React.FC = () => {
       "player-scores",
       "death-hint",
     ];
-    setOverlayPreview(valid.includes(kind as OverlayKind) ? (kind as OverlayKind) : "augment");
+    const resolved: OverlayKind = valid.includes(kind as OverlayKind)
+      ? (kind as OverlayKind)
+      : "augment";
+    if (isTauriRuntime()) {
+      tauriToggleOverlay(resolved).catch(() => setOverlayPreview(resolved));
+      return;
+    }
+    setOverlayPreview(resolved);
   };
 
   const navItems: Array<{ key: NavKey; label: string; icon: React.ReactNode }> = [
@@ -121,7 +191,14 @@ const App: React.FC = () => {
           </button>
           <div className="sidebar-meta">
             <Sparkles size={12} className="gold-text" />
-            <span>Patch {db?.patch || "16.22"} · v1.1.0</span>
+            <span>
+              Patch {db?.patch || "16.22"} ·{" "}
+              {isTauriRuntime()
+                ? lcuStatus.connected
+                  ? `LCU: ${lcuStatus.phase}`
+                  : "LCU 未连接"
+                : "Web 预览"}
+            </span>
           </div>
         </div>
       </aside>
@@ -140,6 +217,9 @@ const App: React.FC = () => {
         {db && activeTab === "ongoing" && (
           <OngoingWorkspace
             db={db}
+            settings={settings}
+            lcuStatus={lcuStatus}
+            liveOverlayState={liveOverlayState}
             onOpenHeroRecommend={handleOpenHeroRecommend}
             onOpenOverlayPreview={handleOpenOverlayPreview}
           />
@@ -188,7 +268,11 @@ const App: React.FC = () => {
               </div>
             </div>
             <div className="overlay-modal-content">
-              <OverlayApp kind={overlayPreview} db={db} />
+              <OverlayApp
+                kind={overlayPreview}
+                db={db}
+                liveState={liveOverlayState ?? undefined}
+              />
             </div>
           </div>
         </div>

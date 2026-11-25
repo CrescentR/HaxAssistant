@@ -193,4 +193,33 @@ mod tests {
         assert_eq!(cards.len(), 3);
         assert_eq!(cards.iter().filter(|c| c.is_best).count(), 1);
     }
+
+    #[test]
+    fn evaluates_counter_and_5v5_lineup() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .and_then(|p| p.parent())
+            .unwrap()
+            .to_path_buf();
+        let ds = Dataset::load_from_root(&root).expect("load dataset");
+        let enemies: Vec<String> = ["疾风剑豪", "暗裔剑魔", "祖安狂人", "众星之子", "影流之主"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        let counter = analyze_enemy_counter(&ds, "寒冰射手", &enemies);
+        assert_eq!(counter.state, "ready");
+        assert!(counter.anti_heal.is_some());
+
+        let allies: Vec<String> = ["寒冰射手", "光辉女郎", "探险家", "皮城女警", "深海泰坦"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        let bench: Vec<String> = ["曙光女神", "卡牌大师"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        let lineup = evaluate_5v5_lineup(&ds, &allies, &enemies, &bench, "寒冰射手");
+        assert!(lineup.adjusted_win > 0.1 && lineup.adjusted_win < 0.9);
+        assert_eq!(lineup.bench_suggestions.len(), 2);
+    }
 }

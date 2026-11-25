@@ -68,3 +68,22 @@ pub fn verify_manifest(data_dir: &Path) -> Result<ManifestReport> {
         manifest_sha256,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    #[test]
+    fn verifies_workspace_data_manifest() {
+        let data_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .and_then(|p| p.parent())
+            .unwrap()
+            .join("data");
+        let report = verify_manifest(&data_dir).expect("verify manifest");
+        assert!(report.expected_files > 0);
+        assert_eq!(report.present_files, report.expected_files);
+        assert!(report.missing_files.is_empty());
+    }
+}

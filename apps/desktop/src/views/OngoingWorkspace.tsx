@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Activity,
   AlertTriangle,
@@ -21,16 +21,29 @@ import {
   evaluateAugmentOffer,
   type LoadedHexBoxDatabase,
 } from "../api/dataService";
+import {
+  isTauriRuntime,
+  tauriBenchSwap,
+  tauriRunOcrPreset,
+  tauriSetOverlayState,
+} from "../api/tauriBridge";
+import type { AppSettings, LcuStatus, OverlayStatePayload } from "../types/hexbox";
 import { getChampionIconUrl, getItemIconUrl, getTierMeta } from "../utils/hexScore";
 
 interface Props {
   db: LoadedHexBoxDatabase;
+  settings?: AppSettings;
+  lcuStatus?: LcuStatus;
+  liveOverlayState?: OverlayStatePayload | null;
   onOpenHeroRecommend: (heroName: string) => void;
   onOpenOverlayPreview: (overlayKind: string) => void;
 }
 
 export const OngoingWorkspace: React.FC<Props> = ({
   db,
+  settings,
+  lcuStatus,
+  liveOverlayState,
   onOpenHeroRecommend,
   onOpenOverlayPreview,
 }) => {
@@ -97,29 +110,82 @@ export const OngoingWorkspace: React.FC<Props> = ({
     [db, allyTeam, enemyTeam, benchPool, selectedHero]
   );
 
+  useEffect(() => {
+    if (!liveOverlayState) return;
+    if (liveOverlayState.lcu?.connected) {
+      if (liveOverlayState.phase === "ChampSelect") setPhase("ChampSelect");
+      else if (liveOverlayState.phase === "InProgress") setPhase("InProgress");
+      if (liveOverlayState.heroName) setSelectedHero(liveOverlayState.heroName);
+      if (liveOverlayState.allyTeam.length > 0) setAllyTeam(liveOverlayState.allyTeam);
+      if (liveOverlayState.enemyTeam.length > 0) setEnemyTeam(liveOverlayState.enemyTeam);
+      if (liveOverlayState.benchPool.length > 0) setBenchPool(liveOverlayState.benchPool);
+    }
+    if (liveOverlayState.candidateAugments.length === 3) {
+      setCandidateOffer(liveOverlayState.candidateAugments);
+    }
+    if (liveOverlayState.ocrStatus) {
+      setOcrStatus(
+        liveOverlayState.ocrMs
+          ? `${liveOverlayState.ocrStatus} · ${liveOverlayState.ocrMs.toFixed(1)}ms`
+          : liveOverlayState.ocrStatus
+      );
+    }
+  }, [liveOverlayState]);
+
+  useEffect(() => {
+    if (!isTauriRuntime()) return;
+    const payload: OverlayStatePayload = {
+      heroName: selectedHero,
+      phase: lcuStatus?.connected ? lcuStatus.phase : phase,
+      stage,
+      candidateAugments: candidateOffer,
+      confirmedAugments,
+      allyTeam,
+      enemyTeam,
+      benchPool,
+      currentGold: liveOverlayState?.currentGold ?? 2850,
+      isDead: liveOverlayState?.isDead ?? false,
+      lcu: lcuStatus ?? {
+        connected: false,
+        phase: "Disconnected",
+        port: null,
+        summoner_name: null,
+        lockfile_path: null,
+      },
+      livePlayers: liveOverlayState?.livePlayers ?? [],
+      ocrStatus,
+      ocrMs: liveOverlayState?.ocrMs ?? null,
+    };
+    tauriSetOverlayState(payload).catch(() => {});
+  }, [selectedHero, stage, candidateOffer, confirmedAugments, allyTeam, enemyTeam, benchPool]);
+
   const handleTriggerLiveOcr = async () => {
     setOcrRunning(true);
-    setOcrStatus("正在调用 Python ONNX 侧车识别 3 张海克斯卡片...");
+    setOcrStatus("正在调用常驻 Python ONNX 侧车识别 3 张海克斯卡片...");
     try {
-      const res = await fetch(
-        "/api/ocr/run?preset=1920x1080@100&image=/home/crescent/code/Rea/ocr-sidecar/sample_augment_1080p.png"
-      );
-      const data = await res.json();
-      if (data?.status === "ok" && Array.isArray(data.result)) {
-        const names = data.result
-          .map((r: any) => r.match_name)
-          .filter((n: any): n is string => typeof n === "string" && n.length > 0);
+      const presetKey = settings?.selected_preset_key || "1920x1080@100";
+      const data = await tauriRunOcrPreset(presetKey);
+      if (!data) {
+        setOcrStatus("当前为纯浏览器预览模式（在 Tauri 桌面端内可实时调用常驻 ONNX Worker）");
+        return;
+      }
+      const list = (data.ocr_matches ?? data.result) as Array<{ match_name?: string }> | undefined;
+      if (data.status === "ok" && Array.isArray(list)) {
+        const names = list
+          .map((r) => r.match_name)
+          .filter((n): n is string => typeof n === "string" && n.length > 0);
         if (names.length === 3) {
           setCandidateOffer(names);
         }
+        const timings = data.timings as { ocr_ms?: number; total_ms?: number } | undefined;
         setOcrStatus(
-          `ONNX PP-OCRv4 实测识别成功：${names.join(" / ")} · 推理耗时 ${data.timings?.ocr_ms ?? 30.9}ms`
+          `常驻 ONNX 识别成功：${names.join(" / ")} · 推理 ${timings?.ocr_ms ?? 0}ms (总耗时 ${timings?.total_ms ?? 0}ms)`
         );
       } else {
-        setOcrStatus("本地 ONNX 推理完成 (30.9ms)");
+        setOcrStatus(`OCR 返回异常：${String(data.error ?? "unknown")}`);
       }
-    } catch {
-      setOcrStatus("本地 ONNX 推理完成 (30.9ms)");
+    } catch (err) {
+      setOcrStatus(`OCR 调用失败：${String(err)}`);
     } finally {
       setOcrRunning(false);
     }
@@ -129,6 +195,13 @@ export const OngoingWorkspace: React.FC<Props> = ({
     setBenchPool((prev) => prev.map((h) => (h === benchHero ? selectedHero : h)));
     setAllyTeam((prev) => prev.map((h) => (h === selectedHero ? benchHero : h)));
     setSelectedHero(benchHero);
+    if (isTauriRuntime() && lcuStatus?.connected && lcuStatus.phase === "ChampSelect") {
+      const target = db.champions.find((c) => c.hero === benchHero);
+      const champId = Number(target?.id);
+      if (Number.isFinite(champId) && champId > 0) {
+        tauriBenchSwap(champId).catch(() => {});
+      }
+    }
   };
 
   const toggleAutoGrab = (heroName: string) => {

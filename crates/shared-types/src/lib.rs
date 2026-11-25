@@ -307,13 +307,115 @@ pub struct LineupEvaluation {
     pub bench_suggestions: Vec<BenchSuggestion>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct LcuStatus {
     pub connected: bool,
     pub phase: String,
     pub port: Option<u16>,
     pub summoner_name: Option<String>,
     pub lockfile_path: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChampSelectSnapshot {
+    pub my_champion_id: Option<u32>,
+    pub ally_champion_ids: Vec<u32>,
+    pub enemy_champion_ids: Vec<u32>,
+    pub bench_champion_ids: Vec<u32>,
+    pub timer_phase: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LivePlayerScore {
+    pub summoner_name: String,
+    pub champion_name: String,
+    pub team: String,
+    pub kills: u32,
+    pub deaths: u32,
+    pub assists: u32,
+    pub is_dead: bool,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LiveGameSnapshot {
+    pub in_game: bool,
+    pub active_champion: Option<String>,
+    pub current_gold: f64,
+    pub is_dead: bool,
+    pub game_time: f64,
+    pub allies: Vec<String>,
+    pub enemies: Vec<String>,
+    pub players: Vec<LivePlayerScore>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OverlayStatePayload {
+    pub hero_name: String,
+    pub phase: String,
+    pub stage: u8,
+    pub candidate_augments: Vec<String>,
+    pub confirmed_augments: Vec<String>,
+    pub ally_team: Vec<String>,
+    pub enemy_team: Vec<String>,
+    pub bench_pool: Vec<String>,
+    pub current_gold: f64,
+    pub is_dead: bool,
+    pub lcu: LcuStatus,
+    pub live_players: Vec<LivePlayerScore>,
+    pub ocr_status: Option<String>,
+    pub ocr_ms: Option<f64>,
+}
+
+impl Default for OverlayStatePayload {
+    fn default() -> Self {
+        Self {
+            hero_name: "寒冰射手".to_string(),
+            phase: "Disconnected".to_string(),
+            stage: 2,
+            candidate_augments: vec![
+                "亮出你的剑".to_string(),
+                "暴击飞弹".to_string(),
+                "最终形态".to_string(),
+            ],
+            confirmed_augments: vec!["易损".to_string()],
+            ally_team: vec![
+                "寒冰射手".to_string(),
+                "光辉女郎".to_string(),
+                "探险家".to_string(),
+                "皮城女警".to_string(),
+                "深海泰坦".to_string(),
+            ],
+            enemy_team: vec![
+                "疾风剑豪".to_string(),
+                "暗裔剑魔".to_string(),
+                "祖安狂人".to_string(),
+                "众星之子".to_string(),
+                "影流之主".to_string(),
+            ],
+            bench_pool: vec![
+                "曙光女神".to_string(),
+                "卡牌大师".to_string(),
+                "无双剑姬".to_string(),
+                "虚空女皇".to_string(),
+            ],
+            current_gold: 2850.0,
+            is_dead: false,
+            lcu: LcuStatus {
+                connected: false,
+                phase: "Disconnected".to_string(),
+                port: None,
+                summoner_name: None,
+                lockfile_path: None,
+            },
+            live_players: Vec::new(),
+            ocr_status: None,
+            ocr_ms: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
