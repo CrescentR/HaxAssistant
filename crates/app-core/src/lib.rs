@@ -1158,20 +1158,20 @@ impl HexBoxCore {
                 } else if status.phase == "ChampSelect" {
                     // Determine the queue once per champ-select so mode-specific
                     // automation (ARAM spell set) doesn't fire in other queues.
-                    let is_aram_queue = match self.champ_select_is_aram.lock() {
-                        Ok(guard) => {
-                            if let Some(v) = *guard {
-                                v
-                            } else {
-                                drop(guard);
-                                let detected = self.detect_aram_queue(&creds).await;
-                                if let Ok(mut g) = self.champ_select_is_aram.lock() {
-                                    *g = Some(detected);
-                                }
-                                detected
+                    let cached_is_aram = self
+                        .champ_select_is_aram
+                        .lock()
+                        .ok()
+                        .and_then(|guard| *guard);
+                    let is_aram_queue = match cached_is_aram {
+                        Some(v) => v,
+                        None => {
+                            let detected = self.detect_aram_queue(&creds).await;
+                            if let Ok(mut g) = self.champ_select_is_aram.lock() {
+                                *g = Some(detected);
                             }
+                            detected
                         }
-                        Err(_) => false,
                     };
                     if let Ok(cs) = self.lcu.fetch_champ_select(&creds).await {
                         if let Some(my_id) = cs.my_champion_id {
