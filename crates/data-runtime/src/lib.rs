@@ -6,8 +6,8 @@ use anyhow::Result;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 use shared_types::{
-    AugmentCatalogEntry, AugmentMechanicPairs, ChampionSummary, FormulaItemBuild,
-    HeroAugmentStatRow,
+    AugmentCatalogEntry, AugmentMechanicPairs, AugmentTrio, ChampionSummary, FormulaItemBuild,
+    HeroAugmentStatRow, HeroBenchmark, ItemPrice,
 };
 
 #[derive(Debug, Clone)]
@@ -23,6 +23,14 @@ pub struct Dataset {
     pub stage_shifts: HashMap<String, HashMap<u8, f64>>,
     pub postmatch_by_hero_id: HashMap<String, Value>,
     pub hero_synergies_counters: HashMap<String, Value>,
+    /// Item id -> price and recipe (`item_prices_v1.json`).
+    pub item_prices: HashMap<String, ItemPrice>,
+    /// Quantile levels shared by every entry of `hero_benchmarks`.
+    pub benchmark_quantiles: Vec<f64>,
+    /// Hero id -> per-minute benchmark distribution (`hero_postgame_benchmarks_v1.json`).
+    pub hero_benchmarks: HashMap<String, HeroBenchmark>,
+    /// Hero name -> strong three-augment combinations (`hero_augment_trios.json`).
+    pub hero_augment_trios: HashMap<String, Vec<AugmentTrio>>,
     pub item_names: HashMap<String, String>,
 }
 
@@ -98,8 +106,35 @@ impl Dataset {
         let item_names: HashMap<String, String> =
             read_json_or_default(&data_dir.join("item_names.json"));
 
+        let prices_doc = read_value_or_null(&data_dir.join("item_prices_v1.json"));
+        let item_prices: HashMap<String, ItemPrice> = prices_doc
+            .get("items")
+            .cloned()
+            .and_then(|v| serde_json::from_value(v).ok())
+            .unwrap_or_default();
+
+        let bench_doc = read_value_or_null(&data_dir.join("hero_postgame_benchmarks_v1.json"));
+        let benchmark_quantiles: Vec<f64> = bench_doc
+            .get("method")
+            .and_then(|m| m.get("quantiles"))
+            .cloned()
+            .and_then(|v| serde_json::from_value(v).ok())
+            .unwrap_or_default();
+        let hero_benchmarks: HashMap<String, HeroBenchmark> = bench_doc
+            .get("heroes")
+            .cloned()
+            .and_then(|v| serde_json::from_value(v).ok())
+            .unwrap_or_default();
+
+        let hero_augment_trios: HashMap<String, Vec<AugmentTrio>> =
+            read_json_or_default(&data_dir.join("hero_augment_trios.json"));
+
         Ok(Self {
             data_dir,
+            item_prices,
+            benchmark_quantiles,
+            hero_benchmarks,
+            hero_augment_trios,
             runtime_meta,
             manifest,
             champions,

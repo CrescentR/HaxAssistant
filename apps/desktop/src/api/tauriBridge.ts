@@ -2,9 +2,12 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
   AppSettings,
+  ItemPlan,
   LcuStatus,
+  MatchHistoryEntry,
   MatchHistoryResponse,
   OverlayStatePayload,
+  PostgameReview,
   RuntimeSummary,
 } from "../types/hexbox";
 
@@ -63,6 +66,31 @@ export async function tauriGetMatchHistory(
   return invoke<MatchHistoryResponse>("get_match_history", { count });
 }
 
+/** Ordered shopping plan; omitted fields come from the live game state. */
+export async function tauriGetItemPlan(
+  args: {
+    heroName?: string;
+    currentGold?: number;
+    ownedItemIds?: number[];
+    enemyNames?: string[];
+  } = {}
+): Promise<ItemPlan | null> {
+  if (!isTauriRuntime()) return null;
+  return invoke<ItemPlan>("get_item_recommendations", {
+    heroName: args.heroName ?? null,
+    currentGold: args.currentGold ?? null,
+    ownedItemIds: args.ownedItemIds ?? null,
+    enemyNames: args.enemyNames ?? null,
+  });
+}
+
+export async function tauriGetPostgameReview(
+  entry: MatchHistoryEntry
+): Promise<PostgameReview | null> {
+  if (!isTauriRuntime()) return null;
+  return invoke<PostgameReview>("get_postgame_augment_review", { entry });
+}
+
 export async function tauriRunOcrPreset(
   presetKey?: string,
   imagePath?: string
@@ -89,6 +117,29 @@ export async function tauriHideOverlay(kind: string): Promise<boolean> {
 export async function tauriToggleOverlay(kind: string): Promise<boolean | null> {
   if (!isTauriRuntime()) return null;
   return invoke<boolean>("toggle_overlay", { kind });
+}
+
+/** Step overlay zoom in (+1) or out (-1); the host resizes the windows to match. */
+export async function tauriZoomOverlay(direction: 1 | -1): Promise<AppSettings | null> {
+  if (!isTauriRuntime()) return null;
+  return invoke<AppSettings>("zoom_overlay", { direction });
+}
+
+export async function tauriResetOverlayZoom(): Promise<AppSettings | null> {
+  if (!isTauriRuntime()) return null;
+  return invoke<AppSettings>("reset_overlay_zoom");
+}
+
+/** Forget saved overlay positions; without `kind`, all overlays are re-centred. */
+export async function tauriResetOverlayPosition(kind?: string): Promise<boolean> {
+  if (!isTauriRuntime()) return false;
+  await invoke<void>("reset_overlay_position", { kind: kind ?? null });
+  return true;
+}
+
+export async function tauriStartOverlayDrag(): Promise<void> {
+  if (!isTauriRuntime()) return;
+  await invoke<void>("start_overlay_drag");
 }
 
 export async function subscribeLcuStatus(

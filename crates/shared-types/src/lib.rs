@@ -346,6 +346,9 @@ pub struct LiveGameSnapshot {
     pub current_gold: f64,
     pub is_dead: bool,
     pub game_time: f64,
+    /// Item ids in the active player's inventory.
+    #[serde(default)]
+    pub owned_item_ids: Vec<u32>,
     pub allies: Vec<String>,
     pub enemies: Vec<String>,
     pub players: Vec<LivePlayerScore>,
@@ -363,6 +366,8 @@ pub struct OverlayStatePayload {
     pub enemy_team: Vec<String>,
     pub bench_pool: Vec<String>,
     pub current_gold: f64,
+    #[serde(default)]
+    pub owned_item_ids: Vec<u32>,
     pub is_dead: bool,
     pub lcu: LcuStatus,
     pub live_players: Vec<LivePlayerScore>,
@@ -403,6 +408,7 @@ impl Default for OverlayStatePayload {
                 "虚空女皇".to_string(),
             ],
             current_gold: 2850.0,
+            owned_item_ids: Vec::new(),
             is_dead: false,
             lcu: LcuStatus {
                 connected: false,
@@ -430,6 +436,13 @@ pub struct MatchHistoryEntry {
     pub assists: u32,
     pub kda: String,
     pub damage: u64,
+    #[serde(default)]
+    pub damage_taken: u64,
+    #[serde(default)]
+    pub heal: u64,
+    /// Final inventory item ids (empty slots omitted).
+    #[serde(default)]
+    pub items: Vec<u32>,
     pub duration_secs: u64,
     pub duration: String,
     pub queue_id: u32,
@@ -457,4 +470,149 @@ pub struct RuntimeSummary {
     pub mechanic_link_count: usize,
     pub mechanic_conflict_count: usize,
     pub data_root: String,
+}
+
+// ---------------------------------------------------------------------------
+// Item prices and purchase plan
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct ItemPrice {
+    #[serde(default)]
+    pub name: String,
+    /// Full price including every component.
+    #[serde(default)]
+    pub total: u32,
+    /// Recipe (combine) cost on top of the components.
+    #[serde(default)]
+    pub base: u32,
+    /// Direct component item ids.
+    #[serde(default)]
+    pub from: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ItemPlanStep {
+    pub item_id: String,
+    pub item_name: String,
+    /// `starter`, `core` or `counter`.
+    pub kind: String,
+    pub total_cost: u32,
+    /// Gold still needed, after crediting components already owned.
+    pub remaining_cost: u32,
+    pub owned: bool,
+    pub reason: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ItemPurchase {
+    pub item_id: String,
+    pub item_name: String,
+    pub cost: u32,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ItemPlan {
+    pub hero_name: String,
+    pub current_gold: u32,
+    /// Full build order; owned steps stay in the list, flagged `owned`.
+    pub steps: Vec<ItemPlanStep>,
+    /// First step not yet owned.
+    pub next_item: Option<ItemPlanStep>,
+    /// What to buy right now with `current_gold`, in order.
+    pub buy_now: Vec<ItemPurchase>,
+    pub gold_after: u32,
+    /// Gold still missing to finish `next_item` after `buy_now`.
+    pub gold_short: u32,
+    pub note: String,
+}
+
+// ---------------------------------------------------------------------------
+// Post-game review
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct HeroBenchmark {
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub games: u64,
+    /// Per-minute values at each quantile of `HeroBenchmarks::quantiles`.
+    #[serde(default)]
+    pub damage: Vec<f64>,
+    #[serde(default)]
+    pub taken: Vec<f64>,
+    #[serde(default)]
+    pub heal: Vec<f64>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AugmentTrio {
+    #[serde(default)]
+    pub augments: Vec<String>,
+    #[serde(default)]
+    pub family: String,
+    #[serde(default)]
+    pub reason: String,
+    #[serde(default)]
+    pub win_rate: f64,
+    #[serde(default)]
+    pub hex_score: f64,
+    #[serde(default)]
+    pub games: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PostgameMetric {
+    /// `damage`, `taken` or `heal`.
+    pub key: String,
+    pub label: String,
+    pub per_minute: f64,
+    /// 0..1 rank among games on this hero; `None` without benchmark data.
+    pub percentile: Option<f64>,
+    pub median: Option<f64>,
+    pub verdict: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PostgameAugmentVerdict {
+    pub name: String,
+    pub hex_score: f64,
+    pub tier_label: String,
+    pub tier_color: String,
+    pub win_rate: f64,
+    pub games: u64,
+    /// False when the hero has no statistics for this augment.
+    pub hero_specific: bool,
+    pub note: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PostgameReview {
+    pub game_id: String,
+    pub hero_name: String,
+    pub result: String,
+    /// S / A / B / C / D.
+    pub grade: String,
+    pub score: f64,
+    pub metrics: Vec<PostgameMetric>,
+    /// False for games under 10 minutes, where per-minute benchmarks are unreliable.
+    pub benchmark_reliable: bool,
+    pub augments: Vec<PostgameAugmentVerdict>,
+    pub links: Vec<String>,
+    pub conflicts: Vec<String>,
+    pub matched_trio: Option<String>,
+    /// Higher-rated augments for this hero that were not taken.
+    pub better_augments: Vec<String>,
+    pub core_items_built: u32,
+    pub core_items_total: u32,
+    pub missing_core_items: Vec<String>,
+    pub summary: Vec<String>,
 }

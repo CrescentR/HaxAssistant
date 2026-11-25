@@ -4,6 +4,8 @@
 //! Bridges `app-core` (`HexBoxCore`), `reco-engine`, `lcu-client`, and persistent `ocr-sidecar`
 //! to the React frontend and overlay windows.
 
+mod overlay_layout;
+
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
@@ -11,32 +13,49 @@ use std::time::Duration;
 use app_core::HexBoxCore;
 use serde_json::Value;
 use shared_types::{
-    AppSettings, AugmentRecommendationCard, EnemyCounterAnalysis, LcuStatus, LineupEvaluation,
-    MatchHistoryResponse, OverlayStatePayload, RuntimeSummary,
+    AppSettings, AugmentRecommendationCard, EnemyCounterAnalysis, ItemPlan, LcuStatus,
+    LineupEvaluation, MatchHistoryEntry, MatchHistoryResponse, OverlayStatePayload,
+    PostgameReview, RuntimeSummary,
 };
-use tauri::{AppHandle, Emitter, Manager, State};
+use overlay_layout::{OverlayLayoutStore, SavedPosition};
+use tauri::{AppHandle, Emitter, Manager, State, WebviewWindow, WindowEvent};
+use tokio::sync::Notify;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
 struct AppState {
     core: Arc<HexBoxCore>,
+    overlay_layout: Arc<OverlayLayoutStore>,
 }
 
 fn resolve_app_root(app: &AppHandle) -> PathBuf {
-    if let Ok(res_dir) = app.path().resource_dir() {
-        if res_dir.join("data").exists() {
-            return res_dir;
-        }
-    }
+    let has_data = |dir: &PathBuf| {
+        dir.join("data/champions.json").exists() || dir.join("data/runtime_meta.json").exists()
+    };
     let manifest_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .and_then(|p| p.parent())
         .and_then(|p| p.parent())
         .unwrap_or_else(|| std::path::Path::new("."))
         .to_path_buf();
-    if manifest_root.join("data").exists() {
-        return manifest_root;
+    let exe_dir = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|d| d.to_path_buf()));
+
+    // The source checkout wins in debug builds so dev runs use the live data
+    // and the sidecar's virtualenv instead of the copies staged for bundling.
+    let mut candidates: Vec<PathBuf> = Vec::new();
+    if cfg!(debug_assertions) {
+        candidates.push(manifest_root.clone());
     }
-    std::env::current_dir().unwrap_or(manifest_root)
+    candidates.extend(exe_dir);
+    candidates.extend(app.path().resource_dir().ok());
+    candidates.push(manifest_root.clone());
+    candidates.extend(std::env::current_dir().ok());
+
+    candidates
+        .into_iter()
+        .find(has_data)
+        .unwrap_or(manifest_root)
 }
 
 #[tauri::command]
@@ -60,8 +79,56 @@ fn update_settings(
         .update_settings(settings)
         .map_err(|e| e.to_string())?;
     register_hotkeys(&app, state.core.clone(), &saved);
+    overlay_layout::apply_zoom(&app, saved.overlay_zoom);
     let _ = app.emit("hexbox://settings-updated", &saved);
     Ok(saved)
+}
+
+fn save_overlay_zoom(
+    app: &AppHandle,
+    state: &State<'_, AppState>,
+    zoom: u16,
+) -> Result<AppSettings, String> {
+    let mut settings = state.core.get_settings();
+    settings.overlay_zoom = zoom;
+    let saved = state
+        .core
+        .update_settings(settings)
+        .map_err(|e| e.to_string())?;
+    overlay_layout::apply_zoom(app, saved.overlay_zoom);
+    let _ = app.emit("hexbox://settings-updated", &saved);
+    Ok(saved)
+}
+
+/// Step the overlay zoom in or out; `direction` is +1 or -1.
+#[tauri::command]
+fn zoom_overlay(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    direction: i32,
+) -> Result<AppSettings, String> {
+    let current = state.core.get_settings().overlay_zoom as i32;
+    let next = overlay_layout::clamp_zoom(current + direction.signum() * overlay_layout::ZOOM_STEP);
+    save_overlay_zoom(&app, &state, next)
+}
+
+#[tauri::command]
+fn reset_overlay_zoom(app: AppHandle, state: State<'_, AppState>) -> Result<AppSettings, String> {
+    save_overlay_zoom(&app, &state, overlay_layout::ZOOM_DEFAULT)
+}
+
+/// Forget where overlays were dragged to and centre them again. Without
+/// `kind`, every overlay is reset.
+#[tauri::command]
+fn reset_overlay_position(app: AppHandle, state: State<'_, AppState>, kind: Option<String>) {
+    let label = kind.as_deref().map(overlay_label);
+    overlay_layout::reset_positions(&app, &state.overlay_layout, label);
+}
+
+/// Called from an overlay's header on mouse-down so the frameless window can be moved.
+#[tauri::command]
+fn start_overlay_drag(window: WebviewWindow) -> Result<(), String> {
+    window.start_dragging().map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -115,6 +182,32 @@ fn evaluate_5v5_lineup(
     state
         .core
         .evaluate_5v5_lineup(&ally_names, &enemy_names, &bench_names, &local_hero_name)
+}
+
+/// Ordered shopping plan. Every argument is optional; omitted ones come from
+/// the live game state, so overlays can call it with no arguments.
+#[tauri::command]
+fn get_item_recommendations(
+    state: State<'_, AppState>,
+    hero_name: Option<String>,
+    current_gold: Option<f64>,
+    owned_item_ids: Option<Vec<u32>>,
+    enemy_names: Option<Vec<String>>,
+) -> ItemPlan {
+    state.core.item_plan(
+        hero_name.as_deref(),
+        current_gold,
+        owned_item_ids.as_deref(),
+        enemy_names.as_deref(),
+    )
+}
+
+#[tauri::command]
+fn get_postgame_augment_review(
+    state: State<'_, AppState>,
+    entry: MatchHistoryEntry,
+) -> PostgameReview {
+    state.core.postgame_review(&entry)
 }
 
 #[tauri::command]
@@ -254,11 +347,37 @@ fn toggle_overlay(app: AppHandle, kind: String) -> Result<bool, String> {
     Ok(false)
 }
 
-fn spawn_background_lcu_poller(app: AppHandle, core: Arc<HexBoxCore>) {
+/// Keeps a WebSocket open to the League client and wakes the poller whenever
+/// the game flow, champ select or ready check changes, so the app reacts at
+/// once instead of on the next 1.5 s tick. Polling stays as the fallback.
+fn spawn_lcu_event_listener(wake: Arc<Notify>) {
+    tauri::async_runtime::spawn(async move {
+        loop {
+            if let Some(creds) = lcu_client::discover_lockfile() {
+                let wake_on_event = wake.clone();
+                let result = lcu_client::websocket::listen(&creds, move |_event| {
+                    wake_on_event.notify_one();
+                })
+                .await;
+                if let Err(err) = result {
+                    eprintln!("[lcu-ws] {err}");
+                }
+                // Socket closed: the client exited or restarted. Refresh now.
+                wake.notify_one();
+            }
+            tokio::time::sleep(Duration::from_secs(3)).await;
+        }
+    });
+}
+
+fn spawn_background_lcu_poller(app: AppHandle, core: Arc<HexBoxCore>, wake: Arc<Notify>) {
     tauri::async_runtime::spawn(async move {
         let mut interval = tokio::time::interval(Duration::from_millis(1500));
         loop {
-            interval.tick().await;
+            tokio::select! {
+                _ = interval.tick() => {}
+                _ = wake.notified() => {}
+            }
             let outcome = core.poll_lcu_tick().await;
             if outcome.changed {
                 let _ = app.emit("hexbox://lcu-status", &outcome.status);
@@ -426,10 +545,39 @@ fn main() {
                 summary.mechanic_link_count
             );
             register_hotkeys(app.handle(), core.clone(), &core.get_settings());
-            spawn_background_lcu_poller(app.handle().clone(), core.clone());
+            let lcu_wake = Arc::new(Notify::new());
+            spawn_background_lcu_poller(app.handle().clone(), core.clone(), lcu_wake.clone());
+            spawn_lcu_event_listener(lcu_wake);
             spawn_background_auto_ocr_watcher(app.handle().clone(), core.clone());
-            app.manage(AppState { core });
+            let layout = Arc::new(OverlayLayoutStore::load(&core.dataset.data_dir));
+            overlay_layout::apply_zoom(app.handle(), core.get_settings().overlay_zoom);
+            overlay_layout::restore_positions(app.handle(), &layout);
+            let layout_flush = layout.clone();
+            tauri::async_runtime::spawn(async move {
+                let mut interval = tokio::time::interval(Duration::from_secs(1));
+                loop {
+                    interval.tick().await;
+                    layout_flush.flush();
+                }
+            });
+            app.manage(AppState {
+                core,
+                overlay_layout: layout,
+            });
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let WindowEvent::Moved(pos) = event {
+                // Windows reports (-32000, -32000) for minimised windows; never save that.
+                let parked = pos.x <= -30000 || pos.y <= -30000;
+                if !parked && overlay_layout::is_overlay(window.label()) {
+                    if let Some(state) = window.try_state::<AppState>() {
+                        state
+                            .overlay_layout
+                            .remember(window.label(), SavedPosition { x: pos.x, y: pos.y });
+                    }
+                }
+            }
         })
         .invoke_handler(tauri::generate_handler![
             get_runtime_summary,
@@ -444,12 +592,18 @@ fn main() {
             accept_ready_check,
             bench_swap,
             get_match_history,
+            get_item_recommendations,
+            get_postgame_augment_review,
             run_ocr_preset,
             ocr_watch_tick,
             reset_ocr_watcher,
             show_overlay,
             hide_overlay,
             toggle_overlay,
+            zoom_overlay,
+            reset_overlay_zoom,
+            reset_overlay_position,
+            start_overlay_drag,
         ])
         .run(tauri::generate_context!())
         .expect("error while running HexBox Tauri application");

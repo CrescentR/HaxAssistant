@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Crown, Crosshair, ShoppingBag, Sparkles, Swords, Users } from "lucide-react";
 import {
   analyzeEnemyCounter,
@@ -7,7 +7,8 @@ import {
   type LoadedHexBoxDatabase,
 } from "../api/dataService";
 import { getChampionIconUrl, getItemIconUrl, getTierMeta } from "../utils/hexScore";
-import type { OverlayStatePayload } from "../types/hexbox";
+import { tauriGetItemPlan } from "../api/tauriBridge";
+import type { ItemPlan, OverlayStatePayload } from "../types/hexbox";
 
 export type OverlayKind =
   | "augment"
@@ -75,6 +76,26 @@ export const OverlayApp: React.FC<OverlayAppProps> = ({
     [db, allyTeam, enemyTeam, benchPool, effectiveHero]
   );
 
+  // Shopping plan from the host; stays null in a plain browser preview.
+  const [itemPlan, setItemPlan] = useState<ItemPlan | null>(null);
+  const wantsPlan = kind === "item" || kind === "death-hint";
+  const ownedKey = (liveState?.ownedItemIds ?? []).join(",");
+  const enemyKey = enemyTeam.join(",");
+  const goldKey = Math.floor(currentGold / 50);
+  useEffect(() => {
+    if (!wantsPlan) return;
+    let active = true;
+    tauriGetItemPlan(liveState ? {} : { heroName: effectiveHero, currentGold, enemyNames: enemyTeam })
+      .then((plan) => {
+        if (active) setItemPlan(plan);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wantsPlan, effectiveHero, goldKey, ownedKey, enemyKey]);
+
   if (kind === "augment") {
     return (
       <div className="overlay-card overlay-augment">
@@ -140,6 +161,25 @@ export const OverlayApp: React.FC<OverlayAppProps> = ({
             ))}
           </div>
         )}
+        {itemPlan && itemPlan.steps.length > 0 && (
+          <div className="overlay-plan">
+            {itemPlan.steps
+              .filter((st) => st.kind !== "starter" || !st.owned)
+              .map((st, i) => (
+                <span
+                  key={`${st.itemId}-${i}`}
+                  className={`overlay-plan-step ${st.owned ? "done" : ""} ${
+                    itemPlan.nextItem?.itemId === st.itemId && !st.owned ? "next" : ""
+                  } ${st.kind}`}
+                  title={st.reason}
+                >
+                  {st.itemName}
+                  {!st.owned && <em>{st.remainingCost}g</em>}
+                </span>
+              ))}
+          </div>
+        )}
+        {itemPlan && <div className="overlay-note ok">{itemPlan.note}</div>}
         <div className="overlay-sub-list">
           {counter.antiHeal && (
             <div className="overlay-note warn">
@@ -256,10 +296,25 @@ export const OverlayApp: React.FC<OverlayAppProps> = ({
         </span>
         <span className="overlay-badge">当前金币 {Math.round(currentGold).toLocaleString()}g</span>
       </div>
-      <div className="overlay-note ok">
-        优先合成：{counter.antiHeal?.itemName || formula?.coreItems?.[0]?.name || "核心大件"} ·
-        剩余金币可补真眼/合剂
-      </div>
+      {itemPlan && itemPlan.steps.length > 0 ? (
+        <>
+          <div className="overlay-note ok">
+            {itemPlan.buyNow.length > 0
+              ? `现在买：${itemPlan.buyNow.map((b) => `${b.itemName}(${b.cost}g)`).join(" → ")}`
+              : itemPlan.note}
+          </div>
+          {itemPlan.buyNow.length > 0 && (
+            <div className="overlay-note">
+              买完剩 {itemPlan.goldAfter}g · {itemPlan.note}
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="overlay-note ok">
+          优先合成：{counter.antiHeal?.itemName || formula?.coreItems?.[0]?.name || "核心大件"} ·
+          剩余金币可补真眼/合剂
+        </div>
+      )}
     </div>
   );
 };

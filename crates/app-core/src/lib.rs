@@ -8,11 +8,12 @@ use anyhow::{anyhow, Result};
 use data_runtime::Dataset;
 use data_updater::{verify_manifest, ManifestReport};
 use lcu_client::{discover_lockfile, parse_match_history, LcuClient};
-use ocr_worker::PersistentOcrWorker;
+use ocr_worker::{OcrLauncher, PersistentOcrWorker};
 use serde_json::Value;
 use shared_types::{
-    AppSettings, AugmentRecommendationCard, EnemyCounterAnalysis, LcuStatus, LineupEvaluation,
-    MatchHistoryResponse, OverlayStatePayload, RuntimeSummary,
+    AppSettings, AugmentRecommendationCard, EnemyCounterAnalysis, ItemPlan, LcuStatus,
+    LineupEvaluation, MatchHistoryEntry, MatchHistoryResponse, OverlayStatePayload,
+    PostgameReview, RuntimeSummary,
 };
 
 #[derive(Debug, Clone)]
@@ -37,10 +38,9 @@ impl HexBoxCore {
     pub fn initialize(root: &Path) -> Result<Self> {
         let dataset = Dataset::load_from_root(root)?;
         let settings = load_settings_file(&dataset.data_dir);
-        let python = resolve_ocr_python_from_root(root);
-        let script = root.join("ocr-sidecar/worker.py");
-        let model_dir = root.join("models");
-        let ocr_worker = PersistentOcrWorker::new(python, script, dataset.data_dir.clone(), model_dir);
+        let launcher = resolve_ocr_launcher(root);
+        let model_dir = resolve_model_dir(root);
+        let ocr_worker = PersistentOcrWorker::new(launcher, dataset.data_dir.clone(), model_dir);
 
         Ok(Self {
             root: root.to_path_buf(),
@@ -275,6 +275,7 @@ impl HexBoxCore {
                                 }
                             }
                             next_state.current_gold = live.current_gold;
+                            next_state.owned_item_ids = live.owned_item_ids;
                             next_state.is_dead = live.is_dead;
                             if !live.allies.is_empty() {
                                 next_state.ally_team = live.allies;
@@ -306,6 +307,29 @@ impl HexBoxCore {
         }
     }
 
+    /// Purchase order for the hero currently in the overlay state (live game),
+    /// or for the explicitly given hero / gold / inventory.
+    pub fn item_plan(
+        &self,
+        hero_name: Option<&str>,
+        current_gold: Option<f64>,
+        owned_item_ids: Option<&[u32]>,
+        enemy_names: Option<&[String]>,
+    ) -> ItemPlan {
+        let state = self.get_overlay_state();
+        reco_engine::plan_item_order(
+            &self.dataset,
+            hero_name.unwrap_or(&state.hero_name),
+            current_gold.unwrap_or(state.current_gold),
+            owned_item_ids.unwrap_or(&state.owned_item_ids),
+            enemy_names.unwrap_or(&state.enemy_team),
+        )
+    }
+
+    pub fn postgame_review(&self, entry: &MatchHistoryEntry) -> PostgameReview {
+        reco_engine::review_match(&self.dataset, entry)
+    }
+
     pub fn resolve_ocr_python(&self) -> PathBuf {
         resolve_ocr_python_from_root(&self.root)
     }
@@ -322,7 +346,7 @@ impl HexBoxCore {
                 }
             }
             _ => {
-                let sample = self.root.join("ocr-sidecar/sample_augment_1080p.png");
+                let sample = resolve_ocr_sidecar_dir(&self.root).join("sample_augment_1080p.png");
                 if sample.exists() {
                     Some(sample.display().to_string())
                 } else {
@@ -413,18 +437,125 @@ impl HexBoxCore {
     }
 }
 
-fn resolve_ocr_python_from_root(root: &Path) -> PathBuf {
-    let candidates = [
-        root.join("ocr-sidecar/.venv/bin/python"),
-        root.join(".venv/bin/python"),
-        root.join("ocr-sidecar/.venv/Scripts/python.exe"),
-    ];
-    for cand in candidates {
-        if cand.exists() {
-            return cand;
+/// Roots that may hold `ocr-sidecar/` and `models/`: the app root, the folder
+/// next to the executable (portable / installed layouts), and the source
+/// checkout this binary was built from (dev runs).
+fn search_roots(root: &Path) -> Vec<PathBuf> {
+    let mut roots = vec![root.to_path_buf(), root.join("resources")];
+    if let Some(exe_dir) = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(Path::to_path_buf))
+    {
+        roots.push(exe_dir.clone());
+        roots.push(exe_dir.join("resources"));
+    }
+    if let Some(workspace) = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(|p| p.parent())
+    {
+        roots.push(workspace.to_path_buf());
+    }
+    roots
+}
+
+fn env_path(name: &str) -> Option<PathBuf> {
+    std::env::var_os(name)
+        .filter(|v| !v.is_empty())
+        .map(PathBuf::from)
+}
+
+/// Directory containing `worker.py`. Falls back to `<root>/ocr-sidecar` so the
+/// "not found" error names the place the user is expected to put it.
+pub fn resolve_ocr_sidecar_dir(root: &Path) -> PathBuf {
+    if let Some(dir) = env_path("HEXBOX_OCR_SIDECAR_DIR") {
+        if dir.join("worker.py").exists() {
+            return dir;
         }
     }
-    PathBuf::from("python3")
+    search_roots(root)
+        .into_iter()
+        .map(|r| r.join("ocr-sidecar"))
+        .find(|dir| dir.join("worker.py").exists())
+        .unwrap_or_else(|| root.join("ocr-sidecar"))
+}
+
+pub fn resolve_model_dir(root: &Path) -> PathBuf {
+    if let Some(dir) = env_path("ARAM_ASSISTANT_OCR_MODEL_DIR") {
+        if dir.is_dir() {
+            return dir;
+        }
+    }
+    let dirs: Vec<PathBuf> = search_roots(root)
+        .into_iter()
+        .map(|r| r.join("models"))
+        .collect();
+    // Prefer a folder that really has model weights over one with only dictionaries.
+    dirs.iter()
+        .find(|dir| has_onnx_model(dir))
+        .or_else(|| dirs.iter().find(|dir| dir.is_dir()))
+        .cloned()
+        .unwrap_or_else(|| root.join("models"))
+}
+
+/// Compiled runner shipped with the installer, if present.
+pub fn resolve_compiled_ocr_runner(root: &Path) -> Option<PathBuf> {
+    let exe_name = if cfg!(windows) { "hexbox-ocr.exe" } else { "hexbox-ocr" };
+    if let Some(exe) = env_path("HEXBOX_OCR_RUNNER") {
+        if exe.is_file() {
+            return Some(exe);
+        }
+    }
+    search_roots(root)
+        .into_iter()
+        .map(|r| r.join("ocr").join(exe_name))
+        .find(|exe| exe.is_file())
+}
+
+/// The compiled runner wins when it exists; otherwise fall back to the Python
+/// sources. `HEXBOX_OCR_USE_PYTHON=1` forces the Python path (handy in dev).
+pub fn resolve_ocr_launcher(root: &Path) -> OcrLauncher {
+    let force_python = env_path("HEXBOX_OCR_USE_PYTHON").is_some();
+    if !force_python {
+        if let Some(exe) = resolve_compiled_ocr_runner(root) {
+            return OcrLauncher::Compiled(exe);
+        }
+    }
+    OcrLauncher::Python {
+        python: resolve_ocr_python_from_root(root),
+        script: resolve_ocr_sidecar_dir(root).join("worker.py"),
+    }
+}
+
+fn has_onnx_model(dir: &Path) -> bool {
+    fs::read_dir(dir)
+        .map(|entries| {
+            entries
+                .flatten()
+                .any(|e| e.path().extension().is_some_and(|ext| ext == "onnx"))
+        })
+        .unwrap_or(false)
+}
+
+fn resolve_ocr_python_from_root(root: &Path) -> PathBuf {
+    if let Some(python) = env_path("ARAM_ASSISTANT_OCR_PYTHON") {
+        return python;
+    }
+    for base in search_roots(root) {
+        let candidates = [
+            base.join("ocr-sidecar/.venv/Scripts/python.exe"),
+            base.join("ocr-sidecar/.venv/bin/python"),
+            base.join(".venv/Scripts/python.exe"),
+            base.join(".venv/bin/python"),
+            base.join("runtime/python.exe"),
+        ];
+        for cand in candidates {
+            if cand.exists() {
+                return cand;
+            }
+        }
+    }
+    // `python3` on Windows is usually the Microsoft Store stub, not a real interpreter.
+    PathBuf::from(if cfg!(windows) { "python" } else { "python3" })
 }
 
 fn load_settings_file(data_dir: &Path) -> AppSettings {
@@ -474,7 +605,8 @@ mod tests {
         let root = workspace_root();
         let sample = root.join("ocr-sidecar/sample_augment_1080p.png");
         let venv_py = root.join("ocr-sidecar/.venv/bin/python");
-        if !sample.exists() || !venv_py.exists() {
+        let can_run = venv_py.exists() || resolve_compiled_ocr_runner(&root).is_some();
+        if !sample.exists() || !can_run {
             return;
         }
         let core = HexBoxCore::initialize(&root).expect("initialize HexBoxCore");
@@ -485,5 +617,14 @@ mod tests {
         let state = core.get_overlay_state();
         assert_eq!(state.candidate_augments.len(), 3);
         assert_eq!(state.candidate_augments[0], "亮出你的剑");
+    }
+
+    #[test]
+    fn sidecar_is_found_when_app_root_has_no_ocr_sidecar_folder() {
+        // An installed app whose root holds only data/ must still find worker.py.
+        let empty_root = std::env::temp_dir().join("hexbox-root-without-sidecar");
+        let _ = fs::create_dir_all(&empty_root);
+        let dir = resolve_ocr_sidecar_dir(&empty_root);
+        assert!(dir.join("worker.py").exists(), "resolved {}", dir.display());
     }
 }

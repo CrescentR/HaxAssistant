@@ -96,6 +96,12 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "resources": {
+      "resources/data": "data",
+      "resources/models": "models",
+      "resources/ocr-sidecar": "ocr-sidecar",
+      "resources/ocr": "ocr"
+    },
     "windows": {
       "nsis": {
         "installMode": "currentUser",

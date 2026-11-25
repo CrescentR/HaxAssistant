@@ -204,6 +204,7 @@ export interface OverlayStatePayload {
   enemyTeam: string[];
   benchPool: string[];
   currentGold: number;
+  ownedItemIds?: number[];
   isDead: boolean;
   lcu: LcuStatus;
   livePlayers: LivePlayerScore[];
@@ -221,6 +222,10 @@ export interface MatchHistoryEntry {
   assists: number;
   kda: string;
   damage: number;
+  damageTaken?: number;
+  heal?: number;
+  /** Final inventory item ids. */
+  items?: number[];
   durationSecs: number;
   duration: string;
   queueId: number;
@@ -245,4 +250,72 @@ export interface RuntimeSummary {
   mechanic_link_count: number;
   mechanic_conflict_count: number;
   data_root: string;
+}
+
+export interface ItemPlanStep {
+  itemId: string;
+  itemName: string;
+  kind: "starter" | "core" | "counter" | string;
+  totalCost: number;
+  /** Gold still needed after crediting owned components. */
+  remainingCost: number;
+  owned: boolean;
+  reason: string;
+}
+
+export interface ItemPurchase {
+  itemId: string;
+  itemName: string;
+  cost: number;
+}
+
+export interface ItemPlan {
+  heroName: string;
+  currentGold: number;
+  steps: ItemPlanStep[];
+  nextItem: ItemPlanStep | null;
+  buyNow: ItemPurchase[];
+  goldAfter: number;
+  goldShort: number;
+  note: string;
+}
+
+export interface PostgameMetric {
+  key: "damage" | "taken" | "heal" | string;
+  label: string;
+  perMinute: number;
+  /** 0..1 rank among games on this hero. */
+  percentile: number | null;
+  median: number | null;
+  verdict: string;
+}
+
+export interface PostgameAugmentVerdict {
+  name: string;
+  hexScore: number;
+  tierLabel: string;
+  tierColor: string;
+  winRate: number;
+  games: number;
+  heroSpecific: boolean;
+  note: string;
+}
+
+export interface PostgameReview {
+  gameId: string;
+  heroName: string;
+  result: string;
+  grade: "S" | "A" | "B" | "C" | "D" | string;
+  score: number;
+  metrics: PostgameMetric[];
+  benchmarkReliable: boolean;
+  augments: PostgameAugmentVerdict[];
+  links: string[];
+  conflicts: string[];
+  matchedTrio: string | null;
+  betterAugments: string[];
+  coreItemsBuilt: number;
+  coreItemsTotal: number;
+  missingCoreItems: string[];
+  summary: string[];
 }

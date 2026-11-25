@@ -6,6 +6,51 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use anyhow::{anyhow, Result};
 use serde_json::{json, Value};
 
+/// How the OCR worker process is started.
+#[derive(Debug, Clone, PartialEq)]
+pub enum OcrLauncher {
+    /// Standalone compiled runner (`ocr/hexbox-ocr[.exe]`); needs no Python.
+    Compiled(PathBuf),
+    /// `python -u worker.py` from the `ocr-sidecar` sources.
+    Python { python: PathBuf, script: PathBuf },
+}
+
+impl OcrLauncher {
+    fn check(&self) -> Result<()> {
+        match self {
+            OcrLauncher::Compiled(exe) if !exe.exists() => {
+                Err(anyhow!("ocr runner not found: {}", exe.display()))
+            }
+            OcrLauncher::Python { script, .. } if !script.exists() => Err(anyhow!(
+                "ocr worker script not found: {} (把仓库的 ocr-sidecar 文件夹放到程序目录，或设置 HEXBOX_OCR_SIDECAR_DIR)",
+                script.display()
+            )),
+            _ => Ok(()),
+        }
+    }
+
+    fn command(&self) -> Command {
+        match self {
+            OcrLauncher::Compiled(exe) => Command::new(exe),
+            OcrLauncher::Python { python, script } => {
+                let mut cmd = Command::new(python);
+                cmd.arg("-u").arg(script);
+                cmd
+            }
+        }
+    }
+
+    fn describe(&self) -> String {
+        match self {
+            OcrLauncher::Compiled(exe) => exe.display().to_string(),
+            OcrLauncher::Python { python, .. } => format!(
+                "{} (请安装 Python 3.10+ 并 pip install -r ocr-sidecar/requirements.txt，或设置 ARAM_ASSISTANT_OCR_PYTHON)",
+                python.display()
+            ),
+        }
+    }
+}
+
 struct RunningWorker {
     child: Child,
     stdin: ChildStdin,
@@ -13,16 +58,23 @@ struct RunningWorker {
 }
 
 impl RunningWorker {
-    fn spawn(python: &Path, script: &Path, data_dir: &Path, model_dir: &Path) -> Result<Self> {
-        let mut child = Command::new(python)
-            .arg("-u")
-            .arg(script)
-            .env("ARAM_ASSISTANT_DATA_DIR", data_dir)
+    fn spawn(launcher: &OcrLauncher, data_dir: &Path, model_dir: &Path) -> Result<Self> {
+        let mut cmd = launcher.command();
+        cmd.env("ARAM_ASSISTANT_DATA_DIR", data_dir)
             .env("ARAM_ASSISTANT_OCR_MODEL_DIR", model_dir)
+            .env("PYTHONIOENCODING", "utf-8")
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::null())
-            .spawn()?;
+            .stderr(Stdio::null());
+        #[cfg(windows)]
+        {
+            // CREATE_NO_WINDOW: keep a console window from flashing over the game.
+            use std::os::windows::process::CommandExt;
+            cmd.creation_flags(0x0800_0000);
+        }
+        let mut child = cmd
+            .spawn()
+            .map_err(|err| anyhow!("无法启动 OCR 进程 {}: {err}", launcher.describe()))?;
 
         let stdin = child
             .stdin
@@ -72,8 +124,7 @@ impl RunningWorker {
 }
 
 pub struct PersistentOcrWorker {
-    python: PathBuf,
-    script: PathBuf,
+    launcher: OcrLauncher,
     data_dir: PathBuf,
     model_dir: PathBuf,
     next_id: AtomicU64,
@@ -81,10 +132,9 @@ pub struct PersistentOcrWorker {
 }
 
 impl PersistentOcrWorker {
-    pub fn new(python: PathBuf, script: PathBuf, data_dir: PathBuf, model_dir: PathBuf) -> Self {
+    pub fn new(launcher: OcrLauncher, data_dir: PathBuf, model_dir: PathBuf) -> Self {
         Self {
-            python,
-            script,
+            launcher,
             data_dir,
             model_dir,
             next_id: AtomicU64::new(1),
@@ -98,23 +148,17 @@ impl PersistentOcrWorker {
             None => true,
         };
         if needs_spawn {
-            if !self.script.exists() {
-                return Err(anyhow!(
-                    "ocr worker script not found: {}",
-                    self.script.display()
-                ));
-            }
-            let worker = RunningWorker::spawn(
-                &self.python,
-                &self.script,
-                &self.data_dir,
-                &self.model_dir,
-            )?;
+            self.launcher.check()?;
+            let worker = RunningWorker::spawn(&self.launcher, &self.data_dir, &self.model_dir)?;
             self.process = Some(worker);
         }
         self.process
             .as_mut()
             .ok_or_else(|| anyhow!("ocr worker failed to start"))
+    }
+
+    pub fn launcher(&self) -> &OcrLauncher {
+        &self.launcher
     }
 
     pub fn call(&mut self, method: &str, params: Value) -> Result<Value> {

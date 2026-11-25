@@ -10,6 +10,7 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 anyhow.workspace = true
 app-core = { path = "../../../crates/app-core" }
+lcu-client = { path = "../../../crates/lcu-client" }
 serde.workspace = true
 serde_json.workspace = true
 shared-types = { path = "../../../crates/shared-types" }

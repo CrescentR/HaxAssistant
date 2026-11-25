@@ -1,11 +1,15 @@
 pub mod conditional_items;
+pub mod item_order;
 pub mod lineup;
+pub mod postgame;
 
 use data_runtime::Dataset;
 use shared_types::{get_tier_meta, AugmentRecommendationCard};
 
 pub use conditional_items::analyze_enemy_counter;
+pub use item_order::plan_item_order;
 pub use lineup::evaluate_5v5_lineup;
+pub use postgame::review_match;
 
 /// Evaluates 3 candidate Hextech Augment cards for a given hero, stage (1..4),
 /// and already confirmed augments. Algorithm matches `dataService.ts:evaluateAugmentOffer`.

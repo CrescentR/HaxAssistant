@@ -1,6 +1,7 @@
 import React from "react";
 import { Eye, RotateCcw, Settings } from "lucide-react";
 import { DEFAULT_SETTINGS, type LoadedHexBoxDatabase } from "../api/dataService";
+import { tauriResetOverlayPosition } from "../api/tauriBridge";
 import type { AppSettings } from "../types/hexbox";
 
 interface SettingsHubViewProps {
@@ -179,6 +180,12 @@ export const SettingsHubView: React.FC<SettingsHubViewProps> = ({
                 onChange={(e) => onUpdateSettings({ overlay_zoom: Number(e.target.value) })}
               />
             </label>
+            <div className="setting-row">
+              <span>悬浮窗位置（拖动标题栏可移动，位置会被记住）</span>
+              <button className="hex-btn ghost sm" onClick={() => tauriResetOverlayPosition().catch(() => {})}>
+                全部重置
+              </button>
+            </div>
           </div>
         </div>
 

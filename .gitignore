@@ -24,3 +24,9 @@ models/*.onnx
 Thumbs.db
 .vscode/
 .idea/
+
+# Runtime files staged for bundling by build.rs
+apps/desktop/src-tauri/resources/
+
+# Compiled OCR runner (scripts/build_ocr_runner.py)
+/ocr/

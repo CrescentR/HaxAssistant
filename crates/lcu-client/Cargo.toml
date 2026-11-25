@@ -10,3 +10,7 @@ reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 shared-types = { path = "../shared-types" }
+futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
+native-tls = "0.2"
+tokio = { workspace = true, features = ["net"] }
+tokio-tungstenite = { version = "0.24", features = ["native-tls"] }

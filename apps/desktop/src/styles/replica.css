@@ -1423,7 +1423,52 @@ body.overlay-body {
   color: #e6edf7;
 }
 
+.overlay-shell {
+  position: relative;
+}
+
+/* Zoom / reset controls: hidden until the pointer is over the overlay. */
+.overlay-tools {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 999px;
+  background: rgba(8, 13, 24, 0.92);
+  border: 1px solid var(--border-gold);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.overlay-shell:hover .overlay-tools {
+  opacity: 1;
+}
+
+.overlay-tools button {
+  min-width: 22px;
+  height: 20px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #e6edf7;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.overlay-tools button:hover {
+  background: var(--gold-dim);
+  color: var(--gold);
+}
+
 .overlay-header {
+  cursor: move;
+  user-select: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1549,4 +1594,113 @@ body.overlay-body {
 .overlay-bench-name {
   flex: 1;
   font-weight: 600;
+}
+
+/* Item purchase plan (item overlay) */
+.overlay-plan {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 8px 0 6px;
+}
+
+.overlay-plan-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  font-size: 11px;
+  color: #c9d4e6;
+}
+
+.overlay-plan-step em {
+  font-style: normal;
+  color: var(--gold);
+}
+
+.overlay-plan-step.counter {
+  border-style: dashed;
+}
+
+.overlay-plan-step.done {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+
+.overlay-plan-step.next {
+  border-color: var(--gold);
+  background: var(--gold-dim);
+  color: #fff;
+}
+
+/* Post-game review (history view) */
+.postgame-review {
+  flex-basis: 100%;
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border-gold);
+  background: rgba(12, 19, 34, 0.5);
+  display: grid;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.postgame-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.postgame-grade {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--gold);
+  min-width: 28px;
+  text-align: center;
+}
+
+.postgame-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.postgame-metric {
+  display: grid;
+  gap: 4px;
+}
+
+.postgame-bar {
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.postgame-bar > i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--gold);
+}
+
+.postgame-list {
+  margin: 0;
+  padding-left: 16px;
+  display: grid;
+  gap: 2px;
+}
+
+.postgame-augs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.history-row {
+  flex-wrap: wrap;
 }

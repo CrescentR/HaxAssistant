@@ -1,9 +1,69 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Award, History, RefreshCw, Trophy, Wifi, WifiOff } from "lucide-react";
 import type { LoadedHexBoxDatabase } from "../api/dataService";
-import { isTauriRuntime, tauriGetMatchHistory } from "../api/tauriBridge";
-import type { MatchHistoryEntry } from "../types/hexbox";
+import { isTauriRuntime, tauriGetMatchHistory, tauriGetPostgameReview } from "../api/tauriBridge";
+import type { MatchHistoryEntry, PostgameReview } from "../types/hexbox";
 import { getChampionIconUrl, getTierMeta } from "../utils/hexScore";
+
+const PostgameReviewPanel: React.FC<{ review: PostgameReview }> = ({ review }) => (
+  <div className="postgame-review">
+    <div className="postgame-head">
+      <span className="postgame-grade">{review.grade}</span>
+      <div>
+        <strong>赛后复盘 · 综合 {review.score.toFixed(1)} 分</strong>
+        <div className="card-sub">
+          公式核心装 {review.coreItemsBuilt}/{review.coreItemsTotal}
+          {review.missingCoreItems.length > 0 && ` · 未出：${review.missingCoreItems.join("、")}`}
+        </div>
+      </div>
+    </div>
+
+    <div className="postgame-metrics">
+      {review.metrics.map((m) => (
+        <div key={m.key} className="postgame-metric">
+          <span>
+            {m.label} <strong>{Math.round(m.perMinute).toLocaleString()}</strong>
+            {m.median != null && <span className="card-sub"> / 中位 {Math.round(m.median)}</span>}
+          </span>
+          <div className="postgame-bar">
+            <i style={{ width: `${Math.round((m.percentile ?? 0) * 100)}%` }} />
+          </div>
+          <span className="card-sub">{m.verdict}</span>
+        </div>
+      ))}
+    </div>
+
+    {review.augments.length > 0 && (
+      <div className="postgame-augs">
+        {review.augments.map((a) => (
+          <span
+            key={a.name}
+            className="tier-pill"
+            style={{ color: a.tierColor, border: `1px solid ${a.tierColor}` }}
+            title={a.note}
+          >
+            {a.name} · {a.tierLabel} {a.hexScore.toFixed(1)}
+          </span>
+        ))}
+      </div>
+    )}
+
+    <ul className="postgame-list">
+      {review.summary.map((line) => (
+        <li key={line}>{line}</li>
+      ))}
+      {review.links.map((line) => (
+        <li key={line}>联动：{line}</li>
+      ))}
+      {review.conflicts.map((line) => (
+        <li key={line}>冲突：{line}</li>
+      ))}
+      {review.betterAugments.length > 0 && (
+        <li>这个英雄评分更高、本局没拿的强化：{review.betterAugments.join("、")}</li>
+      )}
+    </ul>
+  </div>
+);
 
 interface PersonalHistoryViewProps {
   db: LoadedHexBoxDatabase;
@@ -128,6 +188,33 @@ export const PersonalHistoryView: React.FC<PersonalHistoryViewProps> = ({
     void loadMatches();
   }, [loadMatches]);
 
+  // Post-game reviews are computed by the desktop host, one match at a time.
+  const [openReviewId, setOpenReviewId] = useState<string | null>(null);
+  const [reviews, setReviews] = useState<Record<string, PostgameReview>>({});
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const toggleReview = useCallback(
+    async (m: MatchHistoryEntry) => {
+      setReviewError(null);
+      if (openReviewId === m.gameId) {
+        setOpenReviewId(null);
+        return;
+      }
+      setOpenReviewId(m.gameId);
+      if (reviews[m.gameId]) return;
+      try {
+        const review = await tauriGetPostgameReview(m);
+        if (review) {
+          setReviews((prev) => ({ ...prev, [m.gameId]: review }));
+        } else {
+          setReviewError("复盘需要在桌面端运行");
+        }
+      } catch (err) {
+        setReviewError(`复盘失败：${String(err)}`);
+      }
+    },
+    [openReviewId, reviews]
+  );
+
   const wins = matches.filter((m) => m.result === "WIN").length;
   const avgHex =
     matches.reduce((sum, m) => sum + m.hexScore, 0) / Math.max(1, matches.length);
@@ -215,6 +302,9 @@ export const PersonalHistoryView: React.FC<PersonalHistoryViewProps> = ({
                   <span className="tier-pill" style={{ background: tier.bg, color: tier.color }}>
                     {tier.label} {m.hexScore.toFixed(1)}
                   </span>
+                  <button className="hex-btn ghost sm" onClick={() => void toggleReview(m)}>
+                    {openReviewId === m.gameId ? "收起复盘" : "复盘"}
+                  </button>
                   <button
                     className="hex-btn ghost sm"
                     onClick={() => onSelectHero(ch?.hero || m.heroName)}
@@ -222,6 +312,12 @@ export const PersonalHistoryView: React.FC<PersonalHistoryViewProps> = ({
                     查看英雄库 →
                   </button>
                 </div>
+                {openReviewId === m.gameId &&
+                  (reviews[m.gameId] ? (
+                    <PostgameReviewPanel review={reviews[m.gameId]} />
+                  ) : (
+                    <div className="postgame-review">{reviewError || "正在生成复盘..."}</div>
+                  ))}
               </div>
             );
           })}

@@ -1,3 +1,5 @@
+pub mod websocket;
+
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -323,6 +325,7 @@ pub fn parse_live_game_data(data: &Value) -> LiveGameSnapshot {
     let mut active_champion = None;
     let mut active_team = "ORDER".to_string();
     let mut is_dead = false;
+    let mut owned_item_ids: Vec<u32> = Vec::new();
     let mut players = Vec::new();
 
     if let Some(all_players) = data.get("allPlayers").and_then(|v| v.as_array()) {
@@ -362,6 +365,17 @@ pub fn parse_live_game_data(data: &Value) -> LiveGameSnapshot {
                 active_champion = Some(champion.clone());
                 active_team = team.clone();
                 is_dead = dead;
+                owned_item_ids = p
+                    .get("items")
+                    .and_then(|v| v.as_array())
+                    .map(|items| {
+                        items
+                            .iter()
+                            .filter_map(|it| it.get("itemID").and_then(|v| v.as_u64()))
+                            .map(|id| id as u32)
+                            .collect()
+                    })
+                    .unwrap_or_default();
             }
 
             players.push(LivePlayerScore {
@@ -392,6 +406,7 @@ pub fn parse_live_game_data(data: &Value) -> LiveGameSnapshot {
         current_gold,
         is_dead,
         game_time,
+        owned_item_ids,
         allies,
         enemies,
         players,
@@ -478,6 +493,18 @@ pub fn parse_match_history(
             .and_then(|v| v.as_u64())
             .unwrap_or(0);
 
+        let damage_taken = stats
+            .get("totalDamageTaken")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        let heal = stats.get("totalHeal").and_then(|v| v.as_u64()).unwrap_or(0);
+        let items: Vec<u32> = ["item0", "item1", "item2", "item3", "item4", "item5"]
+            .iter()
+            .filter_map(|key| stats.get(*key).and_then(|v| v.as_u64()))
+            .filter(|id| *id > 0)
+            .map(|id| id as u32)
+            .collect();
+
         let mut augments = Vec::new();
         for key in [
             "playerAugment1",
@@ -514,6 +541,9 @@ pub fn parse_match_history(
             assists,
             kda: format!("{kills} / {deaths} / {assists}"),
             damage,
+            damage_taken,
+            heal,
+            items,
             duration_secs,
             duration,
             queue_id,
