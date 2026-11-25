@@ -32,7 +32,10 @@ struct AppState {
 
 fn resolve_app_root(app: &AppHandle) -> PathBuf {
     let has_data = |dir: &PathBuf| {
-        dir.join("data/champions.json").exists() || dir.join("data/runtime_meta.json").exists()
+        dir.join("data/champions.json").exists()
+            || dir.join("data/runtime_meta.json").exists()
+            || dir.join("resources/data/champions.json").exists()
+            || dir.join("resources/data/runtime_meta.json").exists()
     };
     let manifest_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .parent()
@@ -43,6 +46,8 @@ fn resolve_app_root(app: &AppHandle) -> PathBuf {
     let exe_dir = std::env::current_exe()
         .ok()
         .and_then(|p| p.parent().map(|d| d.to_path_buf()));
+    let resource_dir = app.path().resource_dir().ok();
+    let local_data_dir = app.path().app_local_data_dir().ok();
 
     // The source checkout wins in debug builds so dev runs use the live data
     // and the sidecar's virtualenv instead of the copies staged for bundling.
@@ -50,15 +55,47 @@ fn resolve_app_root(app: &AppHandle) -> PathBuf {
     if cfg!(debug_assertions) {
         candidates.push(manifest_root.clone());
     }
-    candidates.extend(exe_dir);
-    candidates.extend(app.path().resource_dir().ok());
-    candidates.push(manifest_root.clone());
+    if let Some(dir) = &exe_dir {
+        candidates.push(dir.clone());
+    }
+    if let Some(dir) = &resource_dir {
+        candidates.push(dir.clone());
+    }
+    if let Some(dir) = &local_data_dir {
+        candidates.push(dir.clone());
+    }
+    if cfg!(debug_assertions) {
+        candidates.push(manifest_root.clone());
+    }
     candidates.extend(std::env::current_dir().ok());
 
-    candidates
-        .into_iter()
-        .find(has_data)
-        .unwrap_or(manifest_root)
+    let fallback = if cfg!(debug_assertions) {
+        manifest_root
+    } else {
+        resource_dir
+            .or(exe_dir)
+            .or(local_data_dir)
+            .unwrap_or(manifest_root)
+    };
+
+    candidates.into_iter().find(has_data).unwrap_or(fallback)
+}
+
+#[tauri::command]
+async fn read_data_file(state: State<'_, AppState>, file_name: String) -> Result<String, String> {
+    let trimmed = file_name.trim();
+    let valid_name = !trimmed.is_empty()
+        && trimmed.ends_with(".json")
+        && !trimmed.contains('/')
+        && !trimmed.contains('\\')
+        && !trimmed.contains("..");
+    if !valid_name {
+        return Err(format!("Invalid data file name: {file_name}"));
+    }
+    let path = state.core.data_dir().join(trimmed);
+    tokio::fs::read_to_string(&path)
+        .await
+        .map_err(|e| format!("Failed to read {}: {e}", path.display()))
 }
 
 #[tauri::command]
@@ -145,8 +182,10 @@ fn set_overlay_state(
     state: State<'_, AppState>,
     payload: OverlayStatePayload,
 ) -> OverlayStatePayload {
-    let saved = state.core.set_overlay_state(payload);
-    let _ = app.emit("hexbox://overlay-state", &saved);
+    let (saved, changed) = state.core.set_overlay_state_if_changed(payload);
+    if changed {
+        let _ = app.emit("hexbox://overlay-state", &saved);
+    }
     saved
 }
 
@@ -822,8 +861,8 @@ fn main() {
             });
             Ok(())
         })
-        .on_window_event(|window, event| {
-            if let WindowEvent::Moved(pos) = event {
+        .on_window_event(|window, event| match event {
+            WindowEvent::Moved(pos) => {
                 // Windows reports (-32000, -32000) for minimised windows; never save that.
                 let parked = pos.x <= -30000 || pos.y <= -30000;
                 if !parked && overlay_layout::is_overlay(window.label()) {
@@ -834,9 +873,17 @@ fn main() {
                     }
                 }
             }
+            WindowEvent::CloseRequested { .. } if window.label() == "main" => {
+                if let Some(state) = window.try_state::<AppState>() {
+                    state.overlay_layout.flush();
+                }
+                window.app_handle().exit(0);
+            }
+            _ => {}
         })
         .invoke_handler(tauri::generate_handler![
             get_runtime_summary,
+            read_data_file,
             get_settings,
             update_settings,
             get_overlay_state,

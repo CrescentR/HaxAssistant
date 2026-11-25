@@ -1,0 +1,100 @@
+{
+  "stages": [
+    {
+      "stage": 1,
+      "totalGames": 28500000,
+      "rarities": [
+        {
+          "rarity": "白银",
+          "probability": 0.44,
+          "availableAugmentCount": 67,
+          "singleCardReachProbability": 0.038
+        },
+        {
+          "rarity": "黄金",
+          "probability": 0.4,
+          "availableAugmentCount": 87,
+          "singleCardReachProbability": 0.0268
+        },
+        {
+          "rarity": "棱彩",
+          "probability": 0.16,
+          "availableAugmentCount": 68,
+          "singleCardReachProbability": 0.0136
+        }
+      ]
+    },
+    {
+      "stage": 2,
+      "totalGames": 27800000,
+      "rarities": [
+        {
+          "rarity": "白银",
+          "probability": 0.34,
+          "availableAugmentCount": 67,
+          "singleCardReachProbability": 0.0293
+        },
+        {
+          "rarity": "黄金",
+          "probability": 0.44,
+          "availableAugmentCount": 87,
+          "singleCardReachProbability": 0.0295
+        },
+        {
+          "rarity": "棱彩",
+          "probability": 0.22,
+          "availableAugmentCount": 68,
+          "singleCardReachProbability": 0.0187
+        }
+      ]
+    },
+    {
+      "stage": 3,
+      "totalGames": 25400000,
+      "rarities": [
+        {
+          "rarity": "白银",
+          "probability": 0.26,
+          "availableAugmentCount": 67,
+          "singleCardReachProbability": 0.0224
+        },
+        {
+          "rarity": "黄金",
+          "probability": 0.46,
+          "availableAugmentCount": 87,
+          "singleCardReachProbability": 0.0308
+        },
+        {
+          "rarity": "棱彩",
+          "probability": 0.28,
+          "availableAugmentCount": 68,
+          "singleCardReachProbability": 0.0238
+        }
+      ]
+    },
+    {
+      "stage": 4,
+      "totalGames": 22600000,
+      "rarities": [
+        {
+          "rarity": "白银",
+          "probability": 0.2,
+          "availableAugmentCount": 67,
+          "singleCardReachProbability": 0.0173
+        },
+        {
+          "rarity": "黄金",
+          "probability": 0.44,
+          "availableAugmentCount": 87,
+          "singleCardReachProbability": 0.0295
+        },
+        {
+          "rarity": "棱彩",
+          "probability": 0.36,
+          "availableAugmentCount": 68,
+          "singleCardReachProbability": 0.0306
+        }
+      ]
+    }
+  ]
+}

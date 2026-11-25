@@ -128,6 +128,19 @@ jobs:
           $stage = "target/portable-win64"
           New-Item -ItemType Directory -Force -Path $stage | Out-Null
           Copy-Item $exePath "$stage/HexBox.exe"
+          if (Test-Path "data") {
+            New-Item -ItemType Directory -Force -Path "$stage/data" | Out-Null
+            $skipData = @(
+              "user_settings.json",
+              "overlay_layout.json",
+              "player_markers.json",
+              "player_encounters.json",
+              "augment_offer_stats.json"
+            )
+            Get-ChildItem "data" -File -Filter "*.json" |
+              Where-Object { $skipData -notcontains $_.Name } |
+              Copy-Item -Destination "$stage/data"
+          }
           if (Test-Path "ocr-sidecar") {
             New-Item -ItemType Directory -Force -Path "$stage/ocr-sidecar" | Out-Null
             Get-ChildItem "ocr-sidecar" -File | Copy-Item -Destination "$stage/ocr-sidecar"

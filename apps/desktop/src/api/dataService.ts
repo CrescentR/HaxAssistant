@@ -11,6 +11,7 @@ import type {
   PlayerMarker,
 } from "../types/hexbox";
 import { getTierMeta } from "../utils/hexScore";
+import { isTauriRuntime, tauriReadDataFile } from "./tauriBridge";
 
 export interface LoadedHexBoxDatabase {
   patch: string;
@@ -35,6 +36,15 @@ export interface LoadedHexBoxDatabase {
 let cachedDbPromise: Promise<LoadedHexBoxDatabase> | null = null;
 
 async function fetchJsonSafe<T>(url: string, fallback: T): Promise<T> {
+  if (isTauriRuntime() && url.startsWith("/data/")) {
+    const fileName = url.slice("/data/".length).split("?")[0];
+    try {
+      const text = await tauriReadDataFile(fileName);
+      if (text) return JSON.parse(text) as T;
+    } catch {
+      // Fall back to static bundled /data/* asset
+    }
+  }
   try {
     const res = await fetch(url);
     if (!res.ok) return fallback;

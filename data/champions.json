@@ -1,0 +1,4408 @@
+[
+  {
+    "id": "22",
+    "hero": "寒冰射手",
+    "full_name": "寒冰射手",
+    "roles": [
+      "射手"
+    ],
+    "search_terms": [
+      "寒冰射手",
+      "22"
+    ],
+    "win_rate": 0.43125,
+    "pick_rate": 0.143854,
+    "games": 1621779,
+    "wins": 699393,
+    "hex_score": 29.7,
+    "hex_tier": "trap",
+    "hex_label": "拉完了",
+    "hex_tier_color": "#7a3aa8",
+    "kda": 2.41,
+    "avg_damage": 26046,
+    "avg_damage_taken": 22698,
+    "avg_heal_shield": 1998,
+    "avg_cc_time": 18
+  },
+  {
+    "id": "21",
+    "hero": "赏金猎人",
+    "full_name": "赏金猎人",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "赏金猎人",
+      "21"
+    ],
+    "win_rate": 0.50475,
+    "pick_rate": 0.140615,
+    "games": 1585255,
+    "wins": 800157,
+    "hex_score": 60.5,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 2.8,
+    "avg_damage": 38376,
+    "avg_damage_taken": 25902,
+    "avg_heal_shield": 2340,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "17",
+    "hero": "迅捷斥候",
+    "full_name": "迅捷斥候",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "迅捷斥候",
+      "17"
+    ],
+    "win_rate": 0.535946,
+    "pick_rate": 0.137376,
+    "games": 1548747,
+    "wins": 830045,
+    "hex_score": 73.5,
+    "hex_tier": "top",
+    "hex_label": "顶级",
+    "hex_tier_color": "#e8751a",
+    "kda": 3.11,
+    "avg_damage": 34956,
+    "avg_damage_taken": 26316,
+    "avg_heal_shield": 2034,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "145",
+    "hero": "虚空之女",
+    "full_name": "虚空之女",
+    "roles": [
+      "射手"
+    ],
+    "search_terms": [
+      "虚空之女",
+      "145"
+    ],
+    "win_rate": 0.484083,
+    "pick_rate": 0.135758,
+    "games": 1530499,
+    "wins": 740889,
+    "hex_score": 51.7,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.94,
+    "avg_damage": 39978,
+    "avg_damage_taken": 25884,
+    "avg_heal_shield": 2754,
+    "avg_cc_time": 18
+  },
+  {
+    "id": "223",
+    "hero": "河流之王",
+    "full_name": "河流之王",
+    "roles": [
+      "法师",
+      "坦克"
+    ],
+    "search_terms": [
+      "河流之王",
+      "223"
+    ],
+    "win_rate": 0.540224,
+    "pick_rate": 0.135504,
+    "games": 1527634,
+    "wins": 825265,
+    "hex_score": 75.3,
+    "hex_tier": "top",
+    "hex_label": "顶级",
+    "hex_tier_color": "#e8751a",
+    "kda": 3.15,
+    "avg_damage": 38412,
+    "avg_damage_taken": 83538,
+    "avg_heal_shield": 28044,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "236",
+    "hero": "圣枪游侠",
+    "full_name": "圣枪游侠",
+    "roles": [
+      "射手"
+    ],
+    "search_terms": [
+      "圣枪游侠",
+      "236"
+    ],
+    "win_rate": 0.518917,
+    "pick_rate": 0.134563,
+    "games": 1517028,
+    "wins": 787211,
+    "hex_score": 66.3,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 3.29,
+    "avg_damage": 44046,
+    "avg_damage_taken": 30978,
+    "avg_heal_shield": 3888,
+    "avg_cc_time": 18
+  },
+  {
+    "id": "51",
+    "hero": "皮城女警",
+    "full_name": "皮城女警",
+    "roles": [
+      "射手"
+    ],
+    "search_terms": [
+      "皮城女警",
+      "51"
+    ],
+    "win_rate": 0.497063,
+    "pick_rate": 0.133075,
+    "games": 1500260,
+    "wins": 745724,
+    "hex_score": 57.1,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 3.07,
+    "avg_damage": 41976,
+    "avg_damage_taken": 28746,
+    "avg_heal_shield": 3924,
+    "avg_cc_time": 18
+  },
+  {
+    "id": "30",
+    "hero": "死亡颂唱者",
+    "full_name": "死亡颂唱者",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "死亡颂唱者",
+      "30"
+    ],
+    "win_rate": 0.466341,
+    "pick_rate": 0.127096,
+    "games": 1432854,
+    "wins": 668199,
+    "hex_score": 44.0,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.41,
+    "avg_damage": 56232,
+    "avg_damage_taken": 37566,
+    "avg_heal_shield": 774,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "202",
+    "hero": "戏命师",
+    "full_name": "戏命师",
+    "roles": [
+      "射手"
+    ],
+    "search_terms": [
+      "戏命师",
+      "202"
+    ],
+    "win_rate": 0.486086,
+    "pick_rate": 0.126407,
+    "games": 1425082,
+    "wins": 692712,
+    "hex_score": 52.3,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.96,
+    "avg_damage": 39366,
+    "avg_damage_taken": 26892,
+    "avg_heal_shield": 2862,
+    "avg_cc_time": 18
+  },
+  {
+    "id": "81",
+    "hero": "探险家",
+    "full_name": "探险家",
+    "roles": [
+      "战士"
+    ],
+    "search_terms": [
+      "探险家",
+      "81"
+    ],
+    "win_rate": 0.462546,
+    "pick_rate": 0.121038,
+    "games": 1364556,
+    "wins": 631170,
+    "hex_score": 42.3,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.38,
+    "avg_damage": 42426,
+    "avg_damage_taken": 28350,
+    "avg_heal_shield": 4068,
+    "avg_cc_time": 18
+  },
+  {
+    "id": "63",
+    "hero": "复仇焰魂",
+    "full_name": "复仇焰魂",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "复仇焰魂",
+      "63"
+    ],
+    "win_rate": 0.487106,
+    "pick_rate": 0.12095,
+    "games": 1363559,
+    "wins": 664198,
+    "hex_score": 52.6,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.62,
+    "avg_damage": 41364,
+    "avg_damage_taken": 32508,
+    "avg_heal_shield": 2520,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "4",
+    "hero": "卡牌大师",
+    "full_name": "卡牌大师",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "卡牌大师",
+      "4"
+    ],
+    "win_rate": 0.568137,
+    "pick_rate": 0.115794,
+    "games": 1305438,
+    "wins": 741667,
+    "hex_score": 86.5,
+    "hex_tier": "hang",
+    "hex_label": "夯",
+    "hex_tier_color": "#c41e3a",
+    "kda": 3.43,
+    "avg_damage": 38520,
+    "avg_damage_taken": 27126,
+    "avg_heal_shield": 2160,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "136",
+    "hero": "铸星龙王",
+    "full_name": "铸星龙王",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "铸星龙王",
+      "136"
+    ],
+    "win_rate": 0.507096,
+    "pick_rate": 0.115055,
+    "games": 1297099,
+    "wins": 657754,
+    "hex_score": 60.9,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 2.82,
+    "avg_damage": 39654,
+    "avg_damage_taken": 35496,
+    "avg_heal_shield": 4410,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "157",
+    "hero": "疾风剑豪",
+    "full_name": "疾风剑豪",
+    "roles": [
+      "战士"
+    ],
+    "search_terms": [
+      "疾风剑豪",
+      "157"
+    ],
+    "win_rate": 0.589421,
+    "pick_rate": 0.113842,
+    "games": 1283431,
+    "wins": 756481,
+    "hex_score": 95.4,
+    "hex_tier": "hang",
+    "hex_label": "夯",
+    "hex_tier_color": "#c41e3a",
+    "kda": 3.64,
+    "avg_damage": 39492,
+    "avg_damage_taken": 36630,
+    "avg_heal_shield": 5652,
+    "avg_cc_time": 18
+  },
+  {
+    "id": "104",
+    "hero": "法外狂徒",
+    "full_name": "法外狂徒",
+    "roles": [
+      "射手",
+      "战士"
+    ],
+    "search_terms": [
+      "法外狂徒",
+      "104"
+    ],
+    "win_rate": 0.510489,
+    "pick_rate": 0.113631,
+    "games": 1281046,
+    "wins": 653960,
+    "hex_score": 62.2,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 3.2,
+    "avg_damage": 44766,
+    "avg_damage_taken": 35532,
+    "avg_heal_shield": 6246,
+    "avg_cc_time": 18
+  },
+  {
+    "id": "11",
+    "hero": "无极剑圣",
+    "full_name": "无极剑圣",
+    "roles": [
+      "射手",
+      "坦克"
+    ],
+    "search_terms": [
+      "无极剑圣",
+      "11"
+    ],
+    "win_rate": 0.550724,
+    "pick_rate": 0.108927,
+    "games": 1228021,
+    "wins": 676301,
+    "hex_score": 79.0,
+    "hex_tier": "top",
+    "hex_label": "顶级",
+    "hex_tier_color": "#e8751a",
+    "kda": 3.61,
+    "avg_damage": 43416,
+    "avg_damage_taken": 39240,
+    "avg_heal_shield": 6282,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "901",
+    "hero": "炽炎雏龙",
+    "full_name": "炽炎雏龙",
+    "roles": [
+      "射手"
+    ],
+    "search_terms": [
+      "炽炎雏龙",
+      "901"
+    ],
+    "win_rate": 0.493542,
+    "pick_rate": 0.108738,
+    "games": 1225889,
+    "wins": 605028,
+    "hex_score": 55.0,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 3.04,
+    "avg_damage": 41580,
+    "avg_damage_taken": 29682,
+    "avg_heal_shield": 4248,
+    "avg_cc_time": 18
+  },
+  {
+    "id": "13",
+    "hero": "符文法师",
+    "full_name": "符文法师",
+    "roles": [
+      "法师",
+      "坦克"
+    ],
+    "search_terms": [
+      "符文法师",
+      "13"
+    ],
+    "win_rate": 0.518364,
+    "pick_rate": 0.108672,
+    "games": 1225142,
+    "wins": 635069,
+    "hex_score": 65.4,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 2.93,
+    "avg_damage": 43956,
+    "avg_damage_taken": 46620,
+    "avg_heal_shield": 8694,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "54",
+    "hero": "熔岩巨兽",
+    "full_name": "熔岩巨兽",
+    "roles": [
+      "法师",
+      "坦克"
+    ],
+    "search_terms": [
+      "熔岩巨兽",
+      "54"
+    ],
+    "win_rate": 0.488615,
+    "pick_rate": 0.107799,
+    "games": 1215297,
+    "wins": 593812,
+    "hex_score": 52.9,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.64,
+    "avg_damage": 33858,
+    "avg_damage_taken": 38880,
+    "avg_heal_shield": 2880,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "875",
+    "hero": "腕豪",
+    "full_name": "腕豪",
+    "roles": [
+      "坦克"
+    ],
+    "search_terms": [
+      "腕豪",
+      "875"
+    ],
+    "win_rate": 0.512335,
+    "pick_rate": 0.103109,
+    "games": 1162429,
+    "wins": 595553,
+    "hex_score": 62.8,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 2.87,
+    "avg_damage": 44748,
+    "avg_damage_taken": 74034,
+    "avg_heal_shield": 6210,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "25",
+    "hero": "堕落天使",
+    "full_name": "堕落天使",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "堕落天使",
+      "25"
+    ],
+    "win_rate": 0.536057,
+    "pick_rate": 0.102539,
+    "games": 1156000,
+    "wins": 619682,
+    "hex_score": 72.7,
+    "hex_tier": "top",
+    "hex_label": "顶级",
+    "hex_tier_color": "#e8751a",
+    "kda": 3.11,
+    "avg_damage": 33876,
+    "avg_damage_taken": 29466,
+    "avg_heal_shield": 6534,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "110",
+    "hero": "惩戒之箭",
+    "full_name": "惩戒之箭",
+    "roles": [
+      "战士"
+    ],
+    "search_terms": [
+      "惩戒之箭",
+      "110"
+    ],
+    "win_rate": 0.476439,
+    "pick_rate": 0.100919,
+    "games": 1137732,
+    "wins": 542060,
+    "hex_score": 47.6,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.51,
+    "avg_damage": 39996,
+    "avg_damage_taken": 27738,
+    "avg_heal_shield": 2754,
+    "avg_cc_time": 18
+  },
+  {
+    "id": "120",
+    "hero": "战争之影",
+    "full_name": "战争之影",
+    "roles": [
+      "坦克",
+      "辅助"
+    ],
+    "search_terms": [
+      "战争之影",
+      "120"
+    ],
+    "win_rate": 0.493976,
+    "pick_rate": 0.099643,
+    "games": 1123356,
+    "wins": 554911,
+    "hex_score": 55.0,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 3.04,
+    "avg_damage": 44424,
+    "avg_damage_taken": 59328,
+    "avg_heal_shield": 20610,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "35",
+    "hero": "恶魔小丑",
+    "full_name": "恶魔小丑",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "恶魔小丑",
+      "35"
+    ],
+    "win_rate": 0.48096,
+    "pick_rate": 0.097849,
+    "games": 1103130,
+    "wins": 530561,
+    "hex_score": 49.4,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.56,
+    "avg_damage": 34560,
+    "avg_damage_taken": 29178,
+    "avg_heal_shield": 2502,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "126",
+    "hero": "未来守护者",
+    "full_name": "未来守护者",
+    "roles": [
+      "射手"
+    ],
+    "search_terms": [
+      "未来守护者",
+      "126"
+    ],
+    "win_rate": 0.47098,
+    "pick_rate": 0.096383,
+    "games": 1086599,
+    "wins": 511766,
+    "hex_score": 45.2,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.81,
+    "avg_damage": 43326,
+    "avg_damage_taken": 29106,
+    "avg_heal_shield": 2430,
+    "avg_cc_time": 18
+  },
+  {
+    "id": "5",
+    "hero": "德邦总管",
+    "full_name": "德邦总管",
+    "roles": [
+      "坦克",
+      "辅助"
+    ],
+    "search_terms": [
+      "德邦总管",
+      "5"
+    ],
+    "win_rate": 0.558387,
+    "pick_rate": 0.096066,
+    "games": 1083021,
+    "wins": 604745,
+    "hex_score": 81.9,
+    "hex_tier": "hang",
+    "hex_label": "夯",
+    "hex_tier_color": "#c41e3a",
+    "kda": 3.68,
+    "avg_damage": 40932,
+    "avg_damage_taken": 68652,
+    "avg_heal_shield": 26388,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "222",
+    "hero": "暴走萝莉",
+    "full_name": "暴走萝莉",
+    "roles": [
+      "射手"
+    ],
+    "search_terms": [
+      "暴走萝莉",
+      "222"
+    ],
+    "win_rate": 0.481108,
+    "pick_rate": 0.094829,
+    "games": 1069078,
+    "wins": 514342,
+    "hex_score": 49.4,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.91,
+    "avg_damage": 37764,
+    "avg_damage_taken": 29214,
+    "avg_heal_shield": 3276,
+    "avg_cc_time": 18
+  },
+  {
+    "id": "48",
+    "hero": "巨魔之王",
+    "full_name": "巨魔之王",
+    "roles": [
+      "坦克",
+      "辅助"
+    ],
+    "search_terms": [
+      "巨魔之王",
+      "48"
+    ],
+    "win_rate": 0.511949,
+    "pick_rate": 0.09461,
+    "games": 1066607,
+    "wins": 546048,
+    "hex_score": 62.4,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 3.22,
+    "avg_damage": 31104,
+    "avg_damage_taken": 56358,
+    "avg_heal_shield": 20988,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "235",
+    "hero": "涤魂圣枪",
+    "full_name": "涤魂圣枪",
+    "roles": [
+      "射手",
+      "辅助"
+    ],
+    "search_terms": [
+      "涤魂圣枪",
+      "235"
+    ],
+    "win_rate": 0.459018,
+    "pick_rate": 0.093429,
+    "games": 1053292,
+    "wins": 483480,
+    "hex_score": 40.1,
+    "hex_tier": "trap",
+    "hex_label": "拉完了",
+    "hex_tier_color": "#7a3aa8",
+    "kda": 2.69,
+    "avg_damage": 32238,
+    "avg_damage_taken": 28908,
+    "avg_heal_shield": 12654,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "777",
+    "hero": "封魔剑魂",
+    "full_name": "封魔剑魂",
+    "roles": [
+      "战士"
+    ],
+    "search_terms": [
+      "封魔剑魂",
+      "777"
+    ],
+    "win_rate": 0.564644,
+    "pick_rate": 0.093335,
+    "games": 1052235,
+    "wins": 594138,
+    "hex_score": 84.5,
+    "hex_tier": "hang",
+    "hex_label": "夯",
+    "hex_tier_color": "#c41e3a",
+    "kda": 3.4,
+    "avg_damage": 47304,
+    "avg_damage_taken": 36630,
+    "avg_heal_shield": 6498,
+    "avg_cc_time": 18
+  },
+  {
+    "id": "67",
+    "hero": "暗夜猎手",
+    "full_name": "暗夜猎手",
+    "roles": [
+      "射手"
+    ],
+    "search_terms": [
+      "暗夜猎手",
+      "67"
+    ],
+    "win_rate": 0.506198,
+    "pick_rate": 0.093166,
+    "games": 1050333,
+    "wins": 531676,
+    "hex_score": 59.9,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 3.16,
+    "avg_damage": 39600,
+    "avg_damage_taken": 30708,
+    "avg_heal_shield": 4122,
+    "avg_cc_time": 18
+  },
+  {
+    "id": "59",
+    "hero": "德玛西亚皇子",
+    "full_name": "德玛西亚皇子",
+    "roles": [
+      "坦克"
+    ],
+    "search_terms": [
+      "德玛西亚皇子",
+      "59"
+    ],
+    "win_rate": 0.465562,
+    "pick_rate": 0.092583,
+    "games": 1043761,
+    "wins": 485935,
+    "hex_score": 42.9,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.41,
+    "avg_damage": 36486,
+    "avg_damage_taken": 46404,
+    "avg_heal_shield": 5112,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "238",
+    "hero": "影流之主",
+    "full_name": "影流之主",
+    "roles": [
+      "战士"
+    ],
+    "search_terms": [
+      "影流之主",
+      "238"
+    ],
+    "win_rate": 0.489171,
+    "pick_rate": 0.090344,
+    "games": 1018520,
+    "wins": 498230,
+    "hex_score": 52.7,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.64,
+    "avg_damage": 44622,
+    "avg_damage_taken": 33498,
+    "avg_heal_shield": 3258,
+    "avg_cc_time": 18
+  },
+  {
+    "id": "41",
+    "hero": "海洋之灾",
+    "full_name": "海洋之灾",
+    "roles": [
+      "射手",
+      "战士"
+    ],
+    "search_terms": [
+      "海洋之灾",
+      "41"
+    ],
+    "win_rate": 0.49099,
+    "pick_rate": 0.088309,
+    "games": 995575,
+    "wins": 488817,
+    "hex_score": 53.4,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 3.01,
+    "avg_damage": 44208,
+    "avg_damage_taken": 37350,
+    "avg_heal_shield": 9234,
+    "avg_cc_time": 18
+  },
+  {
+    "id": "50",
+    "hero": "诺克萨斯统领",
+    "full_name": "诺克萨斯统领",
+    "roles": [
+      "法师",
+      "坦克"
+    ],
+    "search_terms": [
+      "诺克萨斯统领",
+      "50"
+    ],
+    "win_rate": 0.500242,
+    "pick_rate": 0.085781,
+    "games": 967073,
+    "wins": 483771,
+    "hex_score": 57.2,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 2.75,
+    "avg_damage": 40086,
+    "avg_damage_taken": 90954,
+    "avg_heal_shield": 37818,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "105",
+    "hero": "潮汐海灵",
+    "full_name": "潮汐海灵",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "潮汐海灵",
+      "105"
+    ],
+    "win_rate": 0.501575,
+    "pick_rate": 0.085562,
+    "games": 964600,
+    "wins": 483819,
+    "hex_score": 57.8,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 2.77,
+    "avg_damage": 39186,
+    "avg_damage_taken": 37332,
+    "avg_heal_shield": 2736,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "36",
+    "hero": "祖安狂人",
+    "full_name": "祖安狂人",
+    "roles": [
+      "坦克",
+      "辅助"
+    ],
+    "search_terms": [
+      "祖安狂人",
+      "36"
+    ],
+    "win_rate": 0.515402,
+    "pick_rate": 0.085484,
+    "games": 963727,
+    "wins": 496707,
+    "hex_score": 63.6,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 3.25,
+    "avg_damage": 41418,
+    "avg_damage_taken": 95256,
+    "avg_heal_shield": 19476,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "29",
+    "hero": "瘟疫之源",
+    "full_name": "瘟疫之源",
+    "roles": [
+      "射手"
+    ],
+    "search_terms": [
+      "瘟疫之源",
+      "29"
+    ],
+    "win_rate": 0.470666,
+    "pick_rate": 0.082422,
+    "games": 929202,
+    "wins": 437344,
+    "hex_score": 44.7,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.81,
+    "avg_damage": 41616,
+    "avg_damage_taken": 30006,
+    "avg_heal_shield": 3204,
+    "avg_cc_time": 18
+  },
+  {
+    "id": "876",
+    "hero": "含羞蓓蕾",
+    "full_name": "含羞蓓蕾",
+    "roles": [
+      "法师",
+      "坦克"
+    ],
+    "search_terms": [
+      "含羞蓓蕾",
+      "876"
+    ],
+    "win_rate": 0.541257,
+    "pick_rate": 0.081369,
+    "games": 917335,
+    "wins": 496514,
+    "hex_score": 74.4,
+    "hex_tier": "top",
+    "hex_label": "顶级",
+    "hex_tier_color": "#e8751a",
+    "kda": 3.16,
+    "avg_damage": 45162,
+    "avg_damage_taken": 41382,
+    "avg_heal_shield": 12438,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "245",
+    "hero": "时间刺客",
+    "full_name": "时间刺客",
+    "roles": [
+      "法师",
+      "坦克"
+    ],
+    "search_terms": [
+      "时间刺客",
+      "245"
+    ],
+    "win_rate": 0.553163,
+    "pick_rate": 0.080499,
+    "games": 907525,
+    "wins": 502009,
+    "hex_score": 79.3,
+    "hex_tier": "top",
+    "hex_label": "顶级",
+    "hex_tier_color": "#e8751a",
+    "kda": 3.28,
+    "avg_damage": 43128,
+    "avg_damage_taken": 42606,
+    "avg_heal_shield": 10998,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "517",
+    "hero": "解脱者",
+    "full_name": "解脱者",
+    "roles": [
+      "法师",
+      "坦克"
+    ],
+    "search_terms": [
+      "解脱者",
+      "517"
+    ],
+    "win_rate": 0.498234,
+    "pick_rate": 0.078396,
+    "games": 883818,
+    "wins": 440348,
+    "hex_score": 56.2,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 2.73,
+    "avg_damage": 40158,
+    "avg_damage_taken": 57546,
+    "avg_heal_shield": 15894,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "31",
+    "hero": "虚空恐惧",
+    "full_name": "虚空恐惧",
+    "roles": [
+      "坦克"
+    ],
+    "search_terms": [
+      "虚空恐惧",
+      "31"
+    ],
+    "win_rate": 0.47325,
+    "pick_rate": 0.077573,
+    "games": 874536,
+    "wins": 413874,
+    "hex_score": 45.7,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.48,
+    "avg_damage": 35334,
+    "avg_damage_taken": 78570,
+    "avg_heal_shield": 10908,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "122",
+    "hero": "诺克萨斯之手",
+    "full_name": "诺克萨斯之手",
+    "roles": [
+      "坦克",
+      "辅助"
+    ],
+    "search_terms": [
+      "诺克萨斯之手",
+      "122"
+    ],
+    "win_rate": 0.504448,
+    "pick_rate": 0.074687,
+    "games": 842003,
+    "wins": 424747,
+    "hex_score": 58.7,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 3.14,
+    "avg_damage": 36882,
+    "avg_damage_taken": 65268,
+    "avg_heal_shield": 15876,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "57",
+    "hero": "扭曲树精",
+    "full_name": "扭曲树精",
+    "roles": [
+      "法师",
+      "坦克"
+    ],
+    "search_terms": [
+      "扭曲树精",
+      "57"
+    ],
+    "win_rate": 0.500824,
+    "pick_rate": 0.073891,
+    "games": 833024,
+    "wins": 417198,
+    "hex_score": 57.2,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 2.76,
+    "avg_damage": 34542,
+    "avg_damage_taken": 66690,
+    "avg_heal_shield": 16722,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "18",
+    "hero": "麦林炮手",
+    "full_name": "麦林炮手",
+    "roles": [
+      "射手"
+    ],
+    "search_terms": [
+      "麦林炮手",
+      "18"
+    ],
+    "win_rate": 0.469102,
+    "pick_rate": 0.073879,
+    "games": 832890,
+    "wins": 390710,
+    "hex_score": 43.9,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.79,
+    "avg_damage": 38520,
+    "avg_damage_taken": 31284,
+    "avg_heal_shield": 3942,
+    "avg_cc_time": 18
+  },
+  {
+    "id": "55",
+    "hero": "不祥之刃",
+    "full_name": "不祥之刃",
+    "roles": [
+      "射手",
+      "坦克"
+    ],
+    "search_terms": [
+      "不祥之刃",
+      "55"
+    ],
+    "win_rate": 0.491726,
+    "pick_rate": 0.073688,
+    "games": 830743,
+    "wins": 408498,
+    "hex_score": 53.4,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 3.02,
+    "avg_damage": 45846,
+    "avg_damage_taken": 42696,
+    "avg_heal_shield": 5112,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "76",
+    "hero": "狂野女猎手",
+    "full_name": "狂野女猎手",
+    "roles": [
+      "法师",
+      "辅助"
+    ],
+    "search_terms": [
+      "狂野女猎手",
+      "76"
+    ],
+    "win_rate": 0.469867,
+    "pick_rate": 0.072928,
+    "games": 822175,
+    "wins": 386313,
+    "hex_score": 44.2,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.8,
+    "avg_damage": 38934,
+    "avg_damage_taken": 29268,
+    "avg_heal_shield": 12384,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "101",
+    "hero": "远古巫灵",
+    "full_name": "远古巫灵",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "远古巫灵",
+      "101"
+    ],
+    "win_rate": 0.490323,
+    "pick_rate": 0.072303,
+    "games": 815124,
+    "wins": 399674,
+    "hex_score": 52.7,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.65,
+    "avg_damage": 36720,
+    "avg_damage_taken": 21672,
+    "avg_heal_shield": 1818,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "68",
+    "hero": "机械公敌",
+    "full_name": "机械公敌",
+    "roles": [
+      "法师",
+      "坦克"
+    ],
+    "search_terms": [
+      "机械公敌",
+      "68"
+    ],
+    "win_rate": 0.498511,
+    "pick_rate": 0.072074,
+    "games": 812539,
+    "wins": 405060,
+    "hex_score": 56.2,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 2.74,
+    "avg_damage": 48132,
+    "avg_damage_taken": 40572,
+    "avg_heal_shield": 4266,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "804",
+    "hero": "不破之誓",
+    "full_name": "不破之誓",
+    "roles": [
+      "射手",
+      "战士"
+    ],
+    "search_terms": [
+      "不破之誓",
+      "804"
+    ],
+    "win_rate": 0.495802,
+    "pick_rate": 0.071703,
+    "games": 808357,
+    "wins": 400785,
+    "hex_score": 55.0,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 3.06,
+    "avg_damage": 44028,
+    "avg_damage_taken": 32148,
+    "avg_heal_shield": 4356,
+    "avg_cc_time": 18
+  },
+  {
+    "id": "53",
+    "hero": "蒸汽机器人",
+    "full_name": "蒸汽机器人",
+    "roles": [
+      "法师",
+      "坦克"
+    ],
+    "search_terms": [
+      "蒸汽机器人",
+      "53"
+    ],
+    "win_rate": 0.468587,
+    "pick_rate": 0.071109,
+    "games": 801661,
+    "wins": 375648,
+    "hex_score": 43.6,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.44,
+    "avg_damage": 24696,
+    "avg_damage_taken": 48888,
+    "avg_heal_shield": 4122,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "64",
+    "hero": "盲僧",
+    "full_name": "盲僧",
+    "roles": [
+      "坦克"
+    ],
+    "search_terms": [
+      "盲僧",
+      "64"
+    ],
+    "win_rate": 0.455801,
+    "pick_rate": 0.070994,
+    "games": 800371,
+    "wins": 364810,
+    "hex_score": 38.2,
+    "hex_tier": "trap",
+    "hex_label": "拉完了",
+    "hex_tier_color": "#7a3aa8",
+    "kda": 2.31,
+    "avg_damage": 36000,
+    "avg_damage_taken": 41544,
+    "avg_heal_shield": 8046,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "119",
+    "hero": "荣耀行刑官",
+    "full_name": "荣耀行刑官",
+    "roles": [
+      "射手",
+      "战士"
+    ],
+    "search_terms": [
+      "荣耀行刑官",
+      "119"
+    ],
+    "win_rate": 0.506929,
+    "pick_rate": 0.070716,
+    "games": 797234,
+    "wins": 404141,
+    "hex_score": 59.7,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 3.17,
+    "avg_damage": 44766,
+    "avg_damage_taken": 33588,
+    "avg_heal_shield": 5220,
+    "avg_cc_time": 18
+  },
+  {
+    "id": "106",
+    "hero": "不灭狂雷",
+    "full_name": "不灭狂雷",
+    "roles": [
+      "坦克",
+      "辅助"
+    ],
+    "search_terms": [
+      "不灭狂雷",
+      "106"
+    ],
+    "win_rate": 0.521574,
+    "pick_rate": 0.070701,
+    "games": 797066,
+    "wins": 415729,
+    "hex_score": 65.8,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 3.32,
+    "avg_damage": 37260,
+    "avg_damage_taken": 70380,
+    "avg_heal_shield": 12150,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "141",
+    "hero": "影流之镰",
+    "full_name": "影流之镰",
+    "roles": [
+      "坦克",
+      "辅助"
+    ],
+    "search_terms": [
+      "影流之镰",
+      "141"
+    ],
+    "win_rate": 0.52555,
+    "pick_rate": 0.070443,
+    "games": 794162,
+    "wins": 417372,
+    "hex_score": 67.5,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 3.36,
+    "avg_damage": 45792,
+    "avg_damage_taken": 46314,
+    "avg_heal_shield": 13950,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "86",
+    "hero": "德玛西亚之力",
+    "full_name": "德玛西亚之力",
+    "roles": [
+      "坦克"
+    ],
+    "search_terms": [
+      "德玛西亚之力",
+      "86"
+    ],
+    "win_rate": 0.457227,
+    "pick_rate": 0.069889,
+    "games": 787906,
+    "wins": 360252,
+    "hex_score": 38.8,
+    "hex_tier": "trap",
+    "hex_label": "拉完了",
+    "hex_tier_color": "#7a3aa8",
+    "kda": 2.32,
+    "avg_damage": 35694,
+    "avg_damage_taken": 49410,
+    "avg_heal_shield": 4554,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "45",
+    "hero": "邪恶小法师",
+    "full_name": "邪恶小法师",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "邪恶小法师",
+      "45"
+    ],
+    "win_rate": 0.494967,
+    "pick_rate": 0.069041,
+    "games": 778353,
+    "wins": 385259,
+    "hex_score": 54.6,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.7,
+    "avg_damage": 31986,
+    "avg_damage_taken": 29466,
+    "avg_heal_shield": 3888,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "412",
+    "hero": "魂锁典狱长",
+    "full_name": "魂锁典狱长",
+    "roles": [
+      "法师",
+      "坦克"
+    ],
+    "search_terms": [
+      "魂锁典狱长",
+      "412"
+    ],
+    "win_rate": 0.512429,
+    "pick_rate": 0.068705,
+    "games": 774564,
+    "wins": 396909,
+    "hex_score": 61.9,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 2.87,
+    "avg_damage": 25506,
+    "avg_damage_taken": 66204,
+    "avg_heal_shield": 6714,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "99",
+    "hero": "光辉女郎",
+    "full_name": "光辉女郎",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "光辉女郎",
+      "99"
+    ],
+    "win_rate": 0.474955,
+    "pick_rate": 0.067984,
+    "games": 766437,
+    "wins": 364023,
+    "hex_score": 46.2,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.5,
+    "avg_damage": 29862,
+    "avg_damage_taken": 20790,
+    "avg_heal_shield": 1944,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "8",
+    "hero": "猩红收割者",
+    "full_name": "猩红收割者",
+    "roles": [
+      "法师",
+      "坦克"
+    ],
+    "search_terms": [
+      "猩红收割者",
+      "8"
+    ],
+    "win_rate": 0.480262,
+    "pick_rate": 0.067347,
+    "games": 759257,
+    "wins": 364642,
+    "hex_score": 48.4,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.55,
+    "avg_damage": 40464,
+    "avg_damage_taken": 56664,
+    "avg_heal_shield": 32400,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "111",
+    "hero": "深海泰坦",
+    "full_name": "深海泰坦",
+    "roles": [
+      "坦克"
+    ],
+    "search_terms": [
+      "深海泰坦",
+      "111"
+    ],
+    "win_rate": 0.50046,
+    "pick_rate": 0.067084,
+    "games": 756292,
+    "wins": 378494,
+    "hex_score": 56.9,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 2.75,
+    "avg_damage": 27756,
+    "avg_damage_taken": 69372,
+    "avg_heal_shield": 8190,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "115",
+    "hero": "爆破鬼才",
+    "full_name": "爆破鬼才",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "爆破鬼才",
+      "115"
+    ],
+    "win_rate": 0.480074,
+    "pick_rate": 0.06663,
+    "games": 751169,
+    "wins": 360617,
+    "hex_score": 48.3,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.55,
+    "avg_damage": 37098,
+    "avg_damage_taken": 23958,
+    "avg_heal_shield": 1998,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "42",
+    "hero": "英勇投弹手",
+    "full_name": "英勇投弹手",
+    "roles": [
+      "射手",
+      "战士"
+    ],
+    "search_terms": [
+      "英勇投弹手",
+      "42"
+    ],
+    "win_rate": 0.518371,
+    "pick_rate": 0.066278,
+    "games": 747200,
+    "wins": 387327,
+    "hex_score": 64.4,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 3.28,
+    "avg_damage": 46962,
+    "avg_damage_taken": 32886,
+    "avg_heal_shield": 4932,
+    "avg_cc_time": 18
+  },
+  {
+    "id": "23",
+    "hero": "蛮族之王",
+    "full_name": "蛮族之王",
+    "roles": [
+      "射手",
+      "坦克"
+    ],
+    "search_terms": [
+      "蛮族之王",
+      "23"
+    ],
+    "win_rate": 0.519016,
+    "pick_rate": 0.066018,
+    "games": 744274,
+    "wins": 386290,
+    "hex_score": 64.6,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 3.29,
+    "avg_damage": 40986,
+    "avg_damage_taken": 52974,
+    "avg_heal_shield": 12942,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "62",
+    "hero": "齐天大圣",
+    "full_name": "齐天大圣",
+    "roles": [
+      "射手",
+      "坦克"
+    ],
+    "search_terms": [
+      "齐天大圣",
+      "62"
+    ],
+    "win_rate": 0.505082,
+    "pick_rate": 0.065989,
+    "games": 743939,
+    "wins": 375750,
+    "hex_score": 58.8,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 3.15,
+    "avg_damage": 35154,
+    "avg_damage_taken": 49698,
+    "avg_heal_shield": 7182,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "147",
+    "hero": "星籁歌姬",
+    "full_name": "星籁歌姬",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "星籁歌姬",
+      "147"
+    ],
+    "win_rate": 0.521142,
+    "pick_rate": 0.065432,
+    "games": 737661,
+    "wins": 384426,
+    "hex_score": 65.5,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 2.96,
+    "avg_damage": 33282,
+    "avg_damage_taken": 25506,
+    "avg_heal_shield": 4338,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "800",
+    "hero": "流光镜影",
+    "full_name": "流光镜影",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "流光镜影",
+      "800"
+    ],
+    "win_rate": 0.486589,
+    "pick_rate": 0.065341,
+    "games": 736642,
+    "wins": 358442,
+    "hex_score": 51.0,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.62,
+    "avg_damage": 38916,
+    "avg_damage_taken": 26478,
+    "avg_heal_shield": 2628,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "80",
+    "hero": "不屈之枪",
+    "full_name": "不屈之枪",
+    "roles": [
+      "坦克"
+    ],
+    "search_terms": [
+      "不屈之枪",
+      "80"
+    ],
+    "win_rate": 0.503142,
+    "pick_rate": 0.064614,
+    "games": 728447,
+    "wins": 366512,
+    "hex_score": 57.9,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 2.78,
+    "avg_damage": 41472,
+    "avg_damage_taken": 42570,
+    "avg_heal_shield": 6012,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "10",
+    "hero": "正义天使",
+    "full_name": "正义天使",
+    "roles": [
+      "射手"
+    ],
+    "search_terms": [
+      "正义天使",
+      "10"
+    ],
+    "win_rate": 0.555046,
+    "pick_rate": 0.06386,
+    "games": 719946,
+    "wins": 399603,
+    "hex_score": 79.7,
+    "hex_tier": "top",
+    "hex_label": "顶级",
+    "hex_tier_color": "#e8751a",
+    "kda": 3.65,
+    "avg_damage": 35568,
+    "avg_damage_taken": 33930,
+    "avg_heal_shield": 9594,
+    "avg_cc_time": 18
+  },
+  {
+    "id": "82",
+    "hero": "铁铠冥魂",
+    "full_name": "铁铠冥魂",
+    "roles": [
+      "法师",
+      "坦克"
+    ],
+    "search_terms": [
+      "铁铠冥魂",
+      "82"
+    ],
+    "win_rate": 0.470158,
+    "pick_rate": 0.063247,
+    "games": 713033,
+    "wins": 335238,
+    "hex_score": 44.0,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.45,
+    "avg_damage": 40878,
+    "avg_damage_taken": 63630,
+    "avg_heal_shield": 13680,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "90",
+    "hero": "虚空先知",
+    "full_name": "虚空先知",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "虚空先知",
+      "90"
+    ],
+    "win_rate": 0.512604,
+    "pick_rate": 0.062988,
+    "games": 710115,
+    "wins": 364008,
+    "hex_score": 61.9,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 2.88,
+    "avg_damage": 32580,
+    "avg_damage_taken": 28566,
+    "avg_heal_shield": 2178,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "114",
+    "hero": "无双剑姬",
+    "full_name": "无双剑姬",
+    "roles": [
+      "坦克",
+      "辅助"
+    ],
+    "search_terms": [
+      "无双剑姬",
+      "114"
+    ],
+    "win_rate": 0.564393,
+    "pick_rate": 0.062858,
+    "games": 708643,
+    "wins": 399953,
+    "hex_score": 83.6,
+    "hex_tier": "hang",
+    "hex_label": "夯",
+    "hex_tier_color": "#c41e3a",
+    "kda": 3.74,
+    "avg_damage": 40860,
+    "avg_damage_taken": 51534,
+    "avg_heal_shield": 18648,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "103",
+    "hero": "九尾妖狐",
+    "full_name": "九尾妖狐",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "九尾妖狐",
+      "103"
+    ],
+    "win_rate": 0.52178,
+    "pick_rate": 0.062401,
+    "games": 703488,
+    "wins": 367066,
+    "hex_score": 65.7,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 2.97,
+    "avg_damage": 38700,
+    "avg_damage_taken": 31212,
+    "avg_heal_shield": 7614,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "24",
+    "hero": "武器大师",
+    "full_name": "武器大师",
+    "roles": [
+      "坦克"
+    ],
+    "search_terms": [
+      "武器大师",
+      "24"
+    ],
+    "win_rate": 0.536619,
+    "pick_rate": 0.060934,
+    "games": 686958,
+    "wins": 368635,
+    "hex_score": 71.9,
+    "hex_tier": "top",
+    "hex_label": "顶级",
+    "hex_tier_color": "#e8751a",
+    "kda": 3.12,
+    "avg_damage": 38934,
+    "avg_damage_taken": 49986,
+    "avg_heal_shield": 7362,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "27",
+    "hero": "炼金术士",
+    "full_name": "炼金术士",
+    "roles": [
+      "法师",
+      "坦克"
+    ],
+    "search_terms": [
+      "炼金术士",
+      "27"
+    ],
+    "win_rate": 0.512367,
+    "pick_rate": 0.060905,
+    "games": 686627,
+    "wins": 351805,
+    "hex_score": 61.7,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 2.87,
+    "avg_damage": 35856,
+    "avg_damage_taken": 59166,
+    "avg_heal_shield": 8460,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "112",
+    "hero": "奥术先驱",
+    "full_name": "奥术先驱",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "奥术先驱",
+      "112"
+    ],
+    "win_rate": 0.524268,
+    "pick_rate": 0.060142,
+    "games": 678025,
+    "wins": 355467,
+    "hex_score": 66.7,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 2.99,
+    "avg_damage": 42408,
+    "avg_damage_taken": 27504,
+    "avg_heal_shield": 3024,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "75",
+    "hero": "沙漠死神",
+    "full_name": "沙漠死神",
+    "roles": [
+      "法师",
+      "坦克"
+    ],
+    "search_terms": [
+      "沙漠死神",
+      "75"
+    ],
+    "win_rate": 0.506145,
+    "pick_rate": 0.060002,
+    "games": 676450,
+    "wins": 342382,
+    "hex_score": 59.1,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 2.81,
+    "avg_damage": 34740,
+    "avg_damage_taken": 54396,
+    "avg_heal_shield": 10566,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "121",
+    "hero": "虚空掠夺者",
+    "full_name": "虚空掠夺者",
+    "roles": [
+      "战士"
+    ],
+    "search_terms": [
+      "虚空掠夺者",
+      "121"
+    ],
+    "win_rate": 0.485632,
+    "pick_rate": 0.05947,
+    "games": 670448,
+    "wins": 325591,
+    "hex_score": 50.5,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.61,
+    "avg_damage": 41022,
+    "avg_damage_taken": 35136,
+    "avg_heal_shield": 6246,
+    "avg_cc_time": 18
+  },
+  {
+    "id": "134",
+    "hero": "暗黑元首",
+    "full_name": "暗黑元首",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "暗黑元首",
+      "134"
+    ],
+    "win_rate": 0.506701,
+    "pick_rate": 0.059339,
+    "games": 668977,
+    "wins": 338971,
+    "hex_score": 59.3,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 2.82,
+    "avg_damage": 37656,
+    "avg_damage_taken": 25866,
+    "avg_heal_shield": 2412,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "266",
+    "hero": "暗裔剑魔",
+    "full_name": "暗裔剑魔",
+    "roles": [
+      "坦克",
+      "辅助"
+    ],
+    "search_terms": [
+      "暗裔剑魔",
+      "266"
+    ],
+    "win_rate": 0.477485,
+    "pick_rate": 0.059301,
+    "games": 668545,
+    "wins": 319220,
+    "hex_score": 47.0,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.87,
+    "avg_damage": 39852,
+    "avg_damage_taken": 59994,
+    "avg_heal_shield": 24282,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "107",
+    "hero": "傲之追猎者",
+    "full_name": "傲之追猎者",
+    "roles": [
+      "射手",
+      "坦克"
+    ],
+    "search_terms": [
+      "傲之追猎者",
+      "107"
+    ],
+    "win_rate": 0.497824,
+    "pick_rate": 0.057376,
+    "games": 646845,
+    "wins": 322015,
+    "hex_score": 55.5,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 3.08,
+    "avg_damage": 42624,
+    "avg_damage_taken": 40860,
+    "avg_heal_shield": 7272,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "91",
+    "hero": "刀锋之影",
+    "full_name": "刀锋之影",
+    "roles": [
+      "坦克"
+    ],
+    "search_terms": [
+      "刀锋之影",
+      "91"
+    ],
+    "win_rate": 0.493381,
+    "pick_rate": 0.054968,
+    "games": 619693,
+    "wins": 305745,
+    "hex_score": 53.6,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.68,
+    "avg_damage": 48042,
+    "avg_damage_taken": 38034,
+    "avg_heal_shield": 3474,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "3",
+    "hero": "正义巨像",
+    "full_name": "正义巨像",
+    "roles": [
+      "法师",
+      "坦克"
+    ],
+    "search_terms": [
+      "正义巨像",
+      "3"
+    ],
+    "win_rate": 0.516596,
+    "pick_rate": 0.054264,
+    "games": 611756,
+    "wins": 316031,
+    "hex_score": 63.3,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 2.92,
+    "avg_damage": 31914,
+    "avg_damage_taken": 68202,
+    "avg_heal_shield": 7686,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "161",
+    "hero": "虚空之眼",
+    "full_name": "虚空之眼",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "虚空之眼",
+      "161"
+    ],
+    "win_rate": 0.508386,
+    "pick_rate": 0.05418,
+    "games": 610814,
+    "wins": 310529,
+    "hex_score": 59.9,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 2.83,
+    "avg_damage": 40302,
+    "avg_damage_taken": 24984,
+    "avg_heal_shield": 2214,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "893",
+    "hero": "双界灵兔",
+    "full_name": "双界灵兔",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "双界灵兔",
+      "893"
+    ],
+    "win_rate": 0.506664,
+    "pick_rate": 0.052342,
+    "games": 590091,
+    "wins": 298978,
+    "hex_score": 59.1,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 2.82,
+    "avg_damage": 45684,
+    "avg_damage_taken": 31968,
+    "avg_heal_shield": 6894,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "12",
+    "hero": "牛头酋长",
+    "full_name": "牛头酋长",
+    "roles": [
+      "法师",
+      "坦克"
+    ],
+    "search_terms": [
+      "牛头酋长",
+      "12"
+    ],
+    "win_rate": 0.525949,
+    "pick_rate": 0.052281,
+    "games": 589405,
+    "wins": 309997,
+    "hex_score": 67.2,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 3.01,
+    "avg_damage": 26730,
+    "avg_damage_taken": 78336,
+    "avg_heal_shield": 28386,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "89",
+    "hero": "曙光女神",
+    "full_name": "曙光女神",
+    "roles": [
+      "坦克"
+    ],
+    "search_terms": [
+      "曙光女神",
+      "89"
+    ],
+    "win_rate": 0.517906,
+    "pick_rate": 0.052209,
+    "games": 588595,
+    "wins": 304837,
+    "hex_score": 63.8,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 2.93,
+    "avg_damage": 29250,
+    "avg_damage_taken": 77292,
+    "avg_heal_shield": 9468,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "77",
+    "hero": "兽灵行者",
+    "full_name": "兽灵行者",
+    "roles": [
+      "法师",
+      "坦克"
+    ],
+    "search_terms": [
+      "兽灵行者",
+      "77"
+    ],
+    "win_rate": 0.488794,
+    "pick_rate": 0.051671,
+    "games": 582521,
+    "wins": 284733,
+    "hex_score": 51.6,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.64,
+    "avg_damage": 47952,
+    "avg_damage_taken": 39546,
+    "avg_heal_shield": 3222,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "14",
+    "hero": "亡灵战神",
+    "full_name": "亡灵战神",
+    "roles": [
+      "坦克",
+      "辅助"
+    ],
+    "search_terms": [
+      "亡灵战神",
+      "14"
+    ],
+    "win_rate": 0.516451,
+    "pick_rate": 0.051503,
+    "games": 580634,
+    "wins": 299869,
+    "hex_score": 63.2,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 3.26,
+    "avg_damage": 41472,
+    "avg_damage_taken": 116892,
+    "avg_heal_shield": 13410,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "555",
+    "hero": "血港鬼影",
+    "full_name": "血港鬼影",
+    "roles": [
+      "战士"
+    ],
+    "search_terms": [
+      "血港鬼影",
+      "555"
+    ],
+    "win_rate": 0.477544,
+    "pick_rate": 0.050972,
+    "games": 574644,
+    "wins": 274418,
+    "hex_score": 46.8,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.53,
+    "avg_damage": 26370,
+    "avg_damage_taken": 35226,
+    "avg_heal_shield": 10260,
+    "avg_cc_time": 18
+  },
+  {
+    "id": "498",
+    "hero": "逆羽",
+    "full_name": "逆羽",
+    "roles": [
+      "射手"
+    ],
+    "search_terms": [
+      "逆羽",
+      "498"
+    ],
+    "win_rate": 0.4818,
+    "pick_rate": 0.050428,
+    "games": 568508,
+    "wins": 273907,
+    "hex_score": 48.6,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.92,
+    "avg_damage": 41184,
+    "avg_damage_taken": 30726,
+    "avg_heal_shield": 3924,
+    "avg_cc_time": 18
+  },
+  {
+    "id": "96",
+    "hero": "深渊巨口",
+    "full_name": "深渊巨口",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "深渊巨口",
+      "96"
+    ],
+    "win_rate": 0.485334,
+    "pick_rate": 0.050303,
+    "games": 567109,
+    "wins": 275237,
+    "hex_score": 50.1,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.6,
+    "avg_damage": 44046,
+    "avg_damage_taken": 30078,
+    "avg_heal_shield": 3042,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "39",
+    "hero": "刀锋舞者",
+    "full_name": "刀锋舞者",
+    "roles": [
+      "坦克",
+      "辅助"
+    ],
+    "search_terms": [
+      "刀锋舞者",
+      "39"
+    ],
+    "win_rate": 0.504522,
+    "pick_rate": 0.049486,
+    "games": 557894,
+    "wins": 281470,
+    "hex_score": 58.1,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 3.15,
+    "avg_damage": 39996,
+    "avg_damage_taken": 54108,
+    "avg_heal_shield": 11682,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "15",
+    "hero": "战争女神",
+    "full_name": "战争女神",
+    "roles": [
+      "射手"
+    ],
+    "search_terms": [
+      "战争女神",
+      "15"
+    ],
+    "win_rate": 0.466937,
+    "pick_rate": 0.047462,
+    "games": 535074,
+    "wins": 249846,
+    "hex_score": 42.3,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.77,
+    "avg_damage": 37224,
+    "avg_damage_taken": 30096,
+    "avg_heal_shield": 4518,
+    "avg_cc_time": 18
+  },
+  {
+    "id": "234",
+    "hero": "破败之王",
+    "full_name": "破败之王",
+    "roles": [
+      "射手",
+      "坦克"
+    ],
+    "search_terms": [
+      "破败之王",
+      "234"
+    ],
+    "win_rate": 0.527001,
+    "pick_rate": 0.046776,
+    "games": 527342,
+    "wins": 277910,
+    "hex_score": 67.5,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 3.37,
+    "avg_damage": 44280,
+    "avg_damage_taken": 43074,
+    "avg_heal_shield": 11574,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "98",
+    "hero": "暮光之眼",
+    "full_name": "暮光之眼",
+    "roles": [
+      "坦克"
+    ],
+    "search_terms": [
+      "暮光之眼",
+      "98"
+    ],
+    "win_rate": 0.514952,
+    "pick_rate": 0.046518,
+    "games": 524431,
+    "wins": 270057,
+    "hex_score": 62.4,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 2.9,
+    "avg_damage": 34668,
+    "avg_damage_taken": 73404,
+    "avg_heal_shield": 10386,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "910",
+    "hero": "异画师",
+    "full_name": "异画师",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "异画师",
+      "910"
+    ],
+    "win_rate": 0.52316,
+    "pick_rate": 0.046236,
+    "games": 521250,
+    "wins": 272697,
+    "hex_score": 65.9,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 2.98,
+    "avg_damage": 40230,
+    "avg_damage_taken": 26118,
+    "avg_heal_shield": 2700,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "360",
+    "hero": "沙漠玫瑰",
+    "full_name": "沙漠玫瑰",
+    "roles": [
+      "射手",
+      "坦克"
+    ],
+    "search_terms": [
+      "沙漠玫瑰",
+      "360"
+    ],
+    "win_rate": 0.479857,
+    "pick_rate": 0.045667,
+    "games": 514833,
+    "wins": 247046,
+    "hex_score": 47.7,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.9,
+    "avg_damage": 43848,
+    "avg_damage_taken": 38088,
+    "avg_heal_shield": 6030,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "56",
+    "hero": "永恒梦魇",
+    "full_name": "永恒梦魇",
+    "roles": [
+      "坦克"
+    ],
+    "search_terms": [
+      "永恒梦魇",
+      "56"
+    ],
+    "win_rate": 0.487984,
+    "pick_rate": 0.044742,
+    "games": 504410,
+    "wins": 246144,
+    "hex_score": 51.1,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.63,
+    "avg_damage": 39942,
+    "avg_damage_taken": 39672,
+    "avg_heal_shield": 5130,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "26",
+    "hero": "时光守护者",
+    "full_name": "时光守护者",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "时光守护者",
+      "26"
+    ],
+    "win_rate": 0.52403,
+    "pick_rate": 0.044395,
+    "games": 500498,
+    "wins": 262276,
+    "hex_score": 66.2,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 2.99,
+    "avg_damage": 25560,
+    "avg_damage_taken": 27846,
+    "avg_heal_shield": 10476,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "143",
+    "hero": "荆棘之兴",
+    "full_name": "荆棘之兴",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "荆棘之兴",
+      "143"
+    ],
+    "win_rate": 0.503958,
+    "pick_rate": 0.043812,
+    "games": 493922,
+    "wins": 248916,
+    "hex_score": 57.8,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 2.79,
+    "avg_damage": 34524,
+    "avg_damage_taken": 26334,
+    "avg_heal_shield": 2394,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "516",
+    "hero": "山隐之焰",
+    "full_name": "山隐之焰",
+    "roles": [
+      "坦克"
+    ],
+    "search_terms": [
+      "山隐之焰",
+      "516"
+    ],
+    "win_rate": 0.478626,
+    "pick_rate": 0.043644,
+    "games": 492033,
+    "wins": 235500,
+    "hex_score": 47.1,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.54,
+    "avg_damage": 32328,
+    "avg_damage_taken": 85518,
+    "avg_heal_shield": 9738,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "79",
+    "hero": "酒桶",
+    "full_name": "酒桶",
+    "roles": [
+      "法师",
+      "坦克"
+    ],
+    "search_terms": [
+      "酒桶",
+      "79"
+    ],
+    "win_rate": 0.493362,
+    "pick_rate": 0.043565,
+    "games": 491136,
+    "wins": 242308,
+    "hex_score": 53.3,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.68,
+    "avg_damage": 36720,
+    "avg_damage_taken": 43056,
+    "avg_heal_shield": 11952,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "200",
+    "hero": "虚空女皇",
+    "full_name": "虚空女皇",
+    "roles": [
+      "坦克",
+      "辅助"
+    ],
+    "search_terms": [
+      "虚空女皇",
+      "200"
+    ],
+    "win_rate": 0.553724,
+    "pick_rate": 0.042308,
+    "games": 476965,
+    "wins": 264107,
+    "hex_score": 78.6,
+    "hex_tier": "top",
+    "hex_label": "顶级",
+    "hex_tier_color": "#e8751a",
+    "kda": 3.64,
+    "avg_damage": 40536,
+    "avg_damage_taken": 50148,
+    "avg_heal_shield": 14220,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "32",
+    "hero": "殇之木乃伊",
+    "full_name": "殇之木乃伊",
+    "roles": [
+      "法师",
+      "坦克"
+    ],
+    "search_terms": [
+      "殇之木乃伊",
+      "32"
+    ],
+    "win_rate": 0.490601,
+    "pick_rate": 0.041937,
+    "games": 472787,
+    "wins": 231950,
+    "hex_score": 52.1,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.66,
+    "avg_damage": 33498,
+    "avg_damage_taken": 69066,
+    "avg_heal_shield": 5850,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "799",
+    "hero": "铁血狼母",
+    "full_name": "铁血狼母",
+    "roles": [
+      "坦克",
+      "辅助"
+    ],
+    "search_terms": [
+      "铁血狼母",
+      "799"
+    ],
+    "win_rate": 0.529291,
+    "pick_rate": 0.041839,
+    "games": 471684,
+    "wins": 249658,
+    "hex_score": 68.3,
+    "hex_tier": "top",
+    "hex_label": "顶级",
+    "hex_tier_color": "#e8751a",
+    "kda": 3.39,
+    "avg_damage": 45792,
+    "avg_damage_taken": 44766,
+    "avg_heal_shield": 11322,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "61",
+    "hero": "发条魔灵",
+    "full_name": "发条魔灵",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "发条魔灵",
+      "61"
+    ],
+    "win_rate": 0.484281,
+    "pick_rate": 0.039934,
+    "games": 450201,
+    "wins": 218024,
+    "hex_score": 49.4,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.59,
+    "avg_damage": 33480,
+    "avg_damage_taken": 25686,
+    "avg_heal_shield": 2268,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "420",
+    "hero": "海兽祭司",
+    "full_name": "海兽祭司",
+    "roles": [
+      "坦克",
+      "辅助"
+    ],
+    "search_terms": [
+      "海兽祭司",
+      "420"
+    ],
+    "win_rate": 0.474591,
+    "pick_rate": 0.039769,
+    "games": 448344,
+    "wins": 212780,
+    "hex_score": 45.3,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.85,
+    "avg_damage": 39186,
+    "avg_damage_taken": 80946,
+    "avg_heal_shield": 20412,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "9",
+    "hero": "远古恐惧",
+    "full_name": "远古恐惧",
+    "roles": [
+      "法师",
+      "坦克"
+    ],
+    "search_terms": [
+      "远古恐惧",
+      "9"
+    ],
+    "win_rate": 0.482008,
+    "pick_rate": 0.03971,
+    "games": 447683,
+    "wins": 215787,
+    "hex_score": 48.4,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.57,
+    "avg_damage": 37206,
+    "avg_damage_taken": 39978,
+    "avg_heal_shield": 10008,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "523",
+    "hero": "残月之肃",
+    "full_name": "残月之肃",
+    "roles": [
+      "射手",
+      "战士"
+    ],
+    "search_terms": [
+      "残月之肃",
+      "523"
+    ],
+    "win_rate": 0.490971,
+    "pick_rate": 0.039283,
+    "games": 442863,
+    "wins": 217433,
+    "hex_score": 52.2,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 3.01,
+    "avg_damage": 42408,
+    "avg_damage_taken": 31500,
+    "avg_heal_shield": 5706,
+    "avg_cc_time": 18
+  },
+  {
+    "id": "37",
+    "hero": "琴瑟仙女",
+    "full_name": "琴瑟仙女",
+    "roles": [
+      "法师",
+      "辅助"
+    ],
+    "search_terms": [
+      "琴瑟仙女",
+      "37"
+    ],
+    "win_rate": 0.527778,
+    "pick_rate": 0.038918,
+    "games": 438751,
+    "wins": 231563,
+    "hex_score": 67.6,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 3.38,
+    "avg_damage": 18666,
+    "avg_damage_taken": 31590,
+    "avg_heal_shield": 21510,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "887",
+    "hero": "灵罗娃娃",
+    "full_name": "灵罗娃娃",
+    "roles": [
+      "法师",
+      "坦克"
+    ],
+    "search_terms": [
+      "灵罗娃娃",
+      "887"
+    ],
+    "win_rate": 0.569757,
+    "pick_rate": 0.038824,
+    "games": 437692,
+    "wins": 249378,
+    "hex_score": 85.3,
+    "hex_tier": "hang",
+    "hex_label": "夯",
+    "hex_tier_color": "#c41e3a",
+    "kda": 3.45,
+    "avg_damage": 45972,
+    "avg_damage_taken": 54072,
+    "avg_heal_shield": 17118,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "113",
+    "hero": "Locke",
+    "full_name": "灰烬驱魔人",
+    "roles": [
+      "坦克"
+    ],
+    "search_terms": [
+      "Locke",
+      "灰烬驱魔人",
+      "113"
+    ],
+    "win_rate": 0.463205,
+    "pick_rate": 0.038812,
+    "games": 437556,
+    "wins": 202678,
+    "hex_score": 40.5,
+    "hex_tier": "trap",
+    "hex_label": "拉完了",
+    "hex_tier_color": "#7a3aa8",
+    "kda": 2.38,
+    "avg_damage": 37224,
+    "avg_damage_taken": 81522,
+    "avg_heal_shield": 9882,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "6",
+    "hero": "无畏战车",
+    "full_name": "无畏战车",
+    "roles": [
+      "坦克"
+    ],
+    "search_terms": [
+      "无畏战车",
+      "6"
+    ],
+    "win_rate": 0.461029,
+    "pick_rate": 0.038378,
+    "games": 432663,
+    "wins": 199470,
+    "hex_score": 39.6,
+    "hex_tier": "trap",
+    "hex_label": "拉完了",
+    "hex_tier_color": "#7a3aa8",
+    "kda": 2.36,
+    "avg_damage": 37746,
+    "avg_damage_taken": 66006,
+    "avg_heal_shield": 6408,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "150",
+    "hero": "迷失之牙",
+    "full_name": "迷失之牙",
+    "roles": [
+      "坦克"
+    ],
+    "search_terms": [
+      "迷失之牙",
+      "150"
+    ],
+    "win_rate": 0.464449,
+    "pick_rate": 0.038056,
+    "games": 429037,
+    "wins": 199266,
+    "hex_score": 41.0,
+    "hex_tier": "trap",
+    "hex_label": "拉完了",
+    "hex_tier_color": "#7a3aa8",
+    "kda": 2.39,
+    "avg_damage": 39402,
+    "avg_damage_taken": 57798,
+    "avg_heal_shield": 6174,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "43",
+    "hero": "天启者",
+    "full_name": "天启者",
+    "roles": [
+      "法师",
+      "辅助"
+    ],
+    "search_terms": [
+      "天启者",
+      "43"
+    ],
+    "win_rate": 0.485368,
+    "pick_rate": 0.037385,
+    "games": 421466,
+    "wins": 204566,
+    "hex_score": 49.8,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.95,
+    "avg_damage": 23454,
+    "avg_damage_taken": 25596,
+    "avg_heal_shield": 4338,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "7",
+    "hero": "诡术妖姬",
+    "full_name": "诡术妖姬",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "诡术妖姬",
+      "7"
+    ],
+    "win_rate": 0.44407,
+    "pick_rate": 0.037089,
+    "games": 418128,
+    "wins": 185678,
+    "hex_score": 32.4,
+    "hex_tier": "trap",
+    "hex_label": "拉完了",
+    "hex_tier_color": "#7a3aa8",
+    "kda": 2.19,
+    "avg_damage": 38934,
+    "avg_damage_taken": 30006,
+    "avg_heal_shield": 2628,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "526",
+    "hero": "镕铁少女",
+    "full_name": "镕铁少女",
+    "roles": [
+      "坦克"
+    ],
+    "search_terms": [
+      "镕铁少女",
+      "526"
+    ],
+    "win_rate": 0.547639,
+    "pick_rate": 0.035728,
+    "games": 402789,
+    "wins": 220583,
+    "hex_score": 75.9,
+    "hex_tier": "top",
+    "hex_label": "顶级",
+    "hex_tier_color": "#e8751a",
+    "kda": 3.23,
+    "avg_damage": 29754,
+    "avg_damage_taken": 77112,
+    "avg_heal_shield": 10134,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "102",
+    "hero": "龙血武姬",
+    "full_name": "龙血武姬",
+    "roles": [
+      "法师",
+      "坦克"
+    ],
+    "search_terms": [
+      "龙血武姬",
+      "102"
+    ],
+    "win_rate": 0.536987,
+    "pick_rate": 0.035522,
+    "games": 400470,
+    "wins": 215047,
+    "hex_score": 71.4,
+    "hex_tier": "top",
+    "hex_label": "顶级",
+    "hex_tier_color": "#e8751a",
+    "kda": 3.12,
+    "avg_damage": 42066,
+    "avg_damage_taken": 52182,
+    "avg_heal_shield": 9414,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "74",
+    "hero": "大发明家",
+    "full_name": "大发明家",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "大发明家",
+      "74"
+    ],
+    "win_rate": 0.508874,
+    "pick_rate": 0.035369,
+    "games": 398745,
+    "wins": 202911,
+    "hex_score": 59.6,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 2.84,
+    "avg_damage": 39132,
+    "avg_damage_taken": 27702,
+    "avg_heal_shield": 2340,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "16",
+    "hero": "众星之子",
+    "full_name": "众星之子",
+    "roles": [
+      "法师",
+      "辅助"
+    ],
+    "search_terms": [
+      "众星之子",
+      "16"
+    ],
+    "win_rate": 0.494397,
+    "pick_rate": 0.034823,
+    "games": 392589,
+    "wins": 194095,
+    "hex_score": 53.5,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 3.04,
+    "avg_damage": 10152,
+    "avg_damage_taken": 31284,
+    "avg_heal_shield": 41598,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "38",
+    "hero": "虚空行者",
+    "full_name": "虚空行者",
+    "roles": [
+      "法师",
+      "坦克"
+    ],
+    "search_terms": [
+      "虚空行者",
+      "38"
+    ],
+    "win_rate": 0.508948,
+    "pick_rate": 0.034452,
+    "games": 388407,
+    "wins": 197679,
+    "hex_score": 59.6,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 2.84,
+    "avg_damage": 41364,
+    "avg_damage_taken": 45144,
+    "avg_heal_shield": 6336,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "78",
+    "hero": "圣锤之毅",
+    "full_name": "圣锤之毅",
+    "roles": [
+      "坦克"
+    ],
+    "search_terms": [
+      "圣锤之毅",
+      "78"
+    ],
+    "win_rate": 0.532045,
+    "pick_rate": 0.034174,
+    "games": 385274,
+    "wins": 204983,
+    "hex_score": 69.3,
+    "hex_tier": "top",
+    "hex_label": "顶级",
+    "hex_tier_color": "#e8751a",
+    "kda": 3.07,
+    "avg_damage": 35748,
+    "avg_damage_taken": 72774,
+    "avg_heal_shield": 10116,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "246",
+    "hero": "元素女皇",
+    "full_name": "元素女皇",
+    "roles": [
+      "战士"
+    ],
+    "search_terms": [
+      "元素女皇",
+      "246"
+    ],
+    "win_rate": 0.465676,
+    "pick_rate": 0.033575,
+    "games": 378512,
+    "wins": 176264,
+    "hex_score": 41.4,
+    "hex_tier": "trap",
+    "hex_label": "拉完了",
+    "hex_tier_color": "#7a3aa8",
+    "kda": 2.41,
+    "avg_damage": 41508,
+    "avg_damage_taken": 34794,
+    "avg_heal_shield": 2574,
+    "avg_cc_time": 18
+  },
+  {
+    "id": "904",
+    "hero": "不落魔锋",
+    "full_name": "不落魔锋",
+    "roles": [
+      "坦克",
+      "辅助"
+    ],
+    "search_terms": [
+      "不落魔锋",
+      "904"
+    ],
+    "win_rate": 0.551949,
+    "pick_rate": 0.033233,
+    "games": 374665,
+    "wins": 206796,
+    "hex_score": 77.6,
+    "hex_tier": "top",
+    "hex_label": "顶级",
+    "hex_tier_color": "#e8751a",
+    "kda": 3.62,
+    "avg_damage": 40086,
+    "avg_damage_taken": 63432,
+    "avg_heal_shield": 19170,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "113",
+    "hero": "北地之怒",
+    "full_name": "北地之怒",
+    "roles": [
+      "坦克"
+    ],
+    "search_terms": [
+      "北地之怒",
+      "113"
+    ],
+    "win_rate": 0.49136,
+    "pick_rate": 0.033214,
+    "games": 374442,
+    "wins": 183986,
+    "hex_score": 52.2,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.66,
+    "avg_damage": 37224,
+    "avg_damage_taken": 81522,
+    "avg_heal_shield": 9882,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "254",
+    "hero": "皮城执法官",
+    "full_name": "皮城执法官",
+    "roles": [
+      "坦克"
+    ],
+    "search_terms": [
+      "皮城执法官",
+      "254"
+    ],
+    "win_rate": 0.474724,
+    "pick_rate": 0.032344,
+    "games": 364639,
+    "wins": 173103,
+    "hex_score": 45.2,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.5,
+    "avg_damage": 36000,
+    "avg_damage_taken": 42588,
+    "avg_heal_shield": 4734,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "131",
+    "hero": "皎月女神",
+    "full_name": "皎月女神",
+    "roles": [
+      "法师",
+      "坦克"
+    ],
+    "search_terms": [
+      "皎月女神",
+      "131"
+    ],
+    "win_rate": 0.478331,
+    "pick_rate": 0.031877,
+    "games": 359379,
+    "wins": 171902,
+    "hex_score": 46.7,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.53,
+    "avg_damage": 39114,
+    "avg_damage_taken": 48708,
+    "avg_heal_shield": 5472,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "84",
+    "hero": "离群之刺",
+    "full_name": "离群之刺",
+    "roles": [
+      "法师",
+      "坦克"
+    ],
+    "search_terms": [
+      "离群之刺",
+      "84"
+    ],
+    "win_rate": 0.445027,
+    "pick_rate": 0.031078,
+    "games": 350363,
+    "wins": 155921,
+    "hex_score": 32.7,
+    "hex_tier": "trap",
+    "hex_label": "拉完了",
+    "hex_tier_color": "#7a3aa8",
+    "kda": 2.2,
+    "avg_damage": 38772,
+    "avg_damage_taken": 39474,
+    "avg_heal_shield": 5742,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "203",
+    "hero": "永猎双子",
+    "full_name": "永猎双子",
+    "roles": [
+      "射手",
+      "战士"
+    ],
+    "search_terms": [
+      "永猎双子",
+      "203"
+    ],
+    "win_rate": 0.466475,
+    "pick_rate": 0.030443,
+    "games": 343202,
+    "wins": 160095,
+    "hex_score": 41.7,
+    "hex_tier": "trap",
+    "hex_label": "拉完了",
+    "hex_tier_color": "#7a3aa8",
+    "kda": 2.76,
+    "avg_damage": 39114,
+    "avg_damage_taken": 33102,
+    "avg_heal_shield": 10926,
+    "avg_cc_time": 18
+  },
+  {
+    "id": "58",
+    "hero": "荒漠屠夫",
+    "full_name": "荒漠屠夫",
+    "roles": [
+      "坦克",
+      "辅助"
+    ],
+    "search_terms": [
+      "荒漠屠夫",
+      "58"
+    ],
+    "win_rate": 0.46608,
+    "pick_rate": 0.030395,
+    "games": 342662,
+    "wins": 159708,
+    "hex_score": 41.5,
+    "hex_tier": "trap",
+    "hex_label": "拉完了",
+    "hex_tier_color": "#7a3aa8",
+    "kda": 2.76,
+    "avg_damage": 34002,
+    "avg_damage_taken": 62406,
+    "avg_heal_shield": 14166,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "92",
+    "hero": "放逐之刃",
+    "full_name": "放逐之刃",
+    "roles": [
+      "坦克"
+    ],
+    "search_terms": [
+      "放逐之刃",
+      "92"
+    ],
+    "win_rate": 0.490295,
+    "pick_rate": 0.030139,
+    "games": 339781,
+    "wins": 166593,
+    "hex_score": 51.7,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.65,
+    "avg_damage": 32418,
+    "avg_damage_taken": 39798,
+    "avg_heal_shield": 6210,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "166",
+    "hero": "影哨",
+    "full_name": "影哨",
+    "roles": [
+      "射手"
+    ],
+    "search_terms": [
+      "影哨",
+      "166"
+    ],
+    "win_rate": 0.447806,
+    "pick_rate": 0.029707,
+    "games": 334915,
+    "wins": 149977,
+    "hex_score": 33.8,
+    "hex_tier": "trap",
+    "hex_label": "拉完了",
+    "hex_tier_color": "#7a3aa8",
+    "kda": 2.58,
+    "avg_damage": 36000,
+    "avg_damage_taken": 29574,
+    "avg_heal_shield": 3456,
+    "avg_cc_time": 18
+  },
+  {
+    "id": "950",
+    "hero": "百裂冥犬",
+    "full_name": "百裂冥犬",
+    "roles": [
+      "战士"
+    ],
+    "search_terms": [
+      "百裂冥犬",
+      "950"
+    ],
+    "win_rate": 0.456177,
+    "pick_rate": 0.029445,
+    "games": 331959,
+    "wins": 151432,
+    "hex_score": 37.3,
+    "hex_tier": "trap",
+    "hex_label": "拉完了",
+    "hex_tier_color": "#7a3aa8",
+    "kda": 2.31,
+    "avg_damage": 39114,
+    "avg_damage_taken": 36036,
+    "avg_heal_shield": 6768,
+    "avg_cc_time": 18
+  },
+  {
+    "id": "127",
+    "hero": "冰霜女巫",
+    "full_name": "冰霜女巫",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "冰霜女巫",
+      "127"
+    ],
+    "win_rate": 0.487345,
+    "pick_rate": 0.029226,
+    "games": 329485,
+    "wins": 160573,
+    "hex_score": 50.4,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.62,
+    "avg_damage": 34884,
+    "avg_damage_taken": 36018,
+    "avg_heal_shield": 4464,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "85",
+    "hero": "狂暴之心",
+    "full_name": "狂暴之心",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "狂暴之心",
+      "85"
+    ],
+    "win_rate": 0.447545,
+    "pick_rate": 0.029017,
+    "games": 327125,
+    "wins": 146403,
+    "hex_score": 33.7,
+    "hex_tier": "trap",
+    "hex_label": "拉完了",
+    "hex_tier_color": "#7a3aa8",
+    "kda": 2.23,
+    "avg_damage": 35352,
+    "avg_damage_taken": 29592,
+    "avg_heal_shield": 1800,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "897",
+    "hero": "纳祖芒荣耀",
+    "full_name": "纳祖芒荣耀",
+    "roles": [
+      "坦克"
+    ],
+    "search_terms": [
+      "纳祖芒荣耀",
+      "897"
+    ],
+    "win_rate": 0.442563,
+    "pick_rate": 0.028889,
+    "games": 325687,
+    "wins": 144137,
+    "hex_score": 31.6,
+    "hex_tier": "trap",
+    "hex_label": "拉完了",
+    "hex_tier_color": "#7a3aa8",
+    "kda": 2.18,
+    "avg_damage": 31230,
+    "avg_damage_taken": 67410,
+    "avg_heal_shield": 8964,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "350",
+    "hero": "魔法猫咪",
+    "full_name": "魔法猫咪",
+    "roles": [
+      "法师",
+      "辅助"
+    ],
+    "search_terms": [
+      "魔法猫咪",
+      "350"
+    ],
+    "win_rate": 0.50613,
+    "pick_rate": 0.028772,
+    "games": 324371,
+    "wins": 164174,
+    "hex_score": 58.3,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 3.16,
+    "avg_damage": 11322,
+    "avg_damage_taken": 14616,
+    "avg_heal_shield": 13014,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "164",
+    "hero": "青钢影",
+    "full_name": "青钢影",
+    "roles": [
+      "坦克"
+    ],
+    "search_terms": [
+      "青钢影",
+      "164"
+    ],
+    "win_rate": 0.486665,
+    "pick_rate": 0.028703,
+    "games": 323588,
+    "wins": 157479,
+    "hex_score": 50.1,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.62,
+    "avg_damage": 37098,
+    "avg_damage_taken": 49554,
+    "avg_heal_shield": 10206,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "233",
+    "hero": "狂厄蔷薇",
+    "full_name": "狂厄蔷薇",
+    "roles": [
+      "射手",
+      "坦克"
+    ],
+    "search_terms": [
+      "狂厄蔷薇",
+      "233"
+    ],
+    "win_rate": 0.499796,
+    "pick_rate": 0.026906,
+    "games": 303326,
+    "wins": 151601,
+    "hex_score": 55.6,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 3.1,
+    "avg_damage": 45234,
+    "avg_damage_taken": 50940,
+    "avg_heal_shield": 24426,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "711",
+    "hero": "愁云使者",
+    "full_name": "愁云使者",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "愁云使者",
+      "711"
+    ],
+    "win_rate": 0.498417,
+    "pick_rate": 0.025605,
+    "games": 288668,
+    "wins": 143877,
+    "hex_score": 55.0,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 2.73,
+    "avg_damage": 39744,
+    "avg_damage_taken": 26802,
+    "avg_heal_shield": 2160,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "429",
+    "hero": "复仇之矛",
+    "full_name": "复仇之矛",
+    "roles": [
+      "射手",
+      "战士"
+    ],
+    "search_terms": [
+      "复仇之矛",
+      "429"
+    ],
+    "win_rate": 0.493297,
+    "pick_rate": 0.025394,
+    "games": 286284,
+    "wins": 141223,
+    "hex_score": 52.8,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 3.03,
+    "avg_damage": 40374,
+    "avg_damage_taken": 32526,
+    "avg_heal_shield": 5184,
+    "avg_cc_time": 18
+  },
+  {
+    "id": "163",
+    "hero": "岩雀",
+    "full_name": "岩雀",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "岩雀",
+      "163"
+    ],
+    "win_rate": 0.496073,
+    "pick_rate": 0.025275,
+    "games": 284942,
+    "wins": 141352,
+    "hex_score": 54.0,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.71,
+    "avg_damage": 38448,
+    "avg_damage_taken": 28944,
+    "avg_heal_shield": 2484,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "34",
+    "hero": "冰晶凤凰",
+    "full_name": "冰晶凤凰",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "冰晶凤凰",
+      "34"
+    ],
+    "win_rate": 0.453399,
+    "pick_rate": 0.023953,
+    "games": 270040,
+    "wins": 122436,
+    "hex_score": 36.0,
+    "hex_tier": "trap",
+    "hex_label": "拉完了",
+    "hex_tier_color": "#7a3aa8",
+    "kda": 2.28,
+    "avg_damage": 29250,
+    "avg_damage_taken": 36396,
+    "avg_heal_shield": 4824,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "1",
+    "hero": "黑暗之女",
+    "full_name": "黑暗之女",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "黑暗之女",
+      "1"
+    ],
+    "win_rate": 0.491425,
+    "pick_rate": 0.023868,
+    "games": 269081,
+    "wins": 132233,
+    "hex_score": 52.0,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.66,
+    "avg_damage": 34398,
+    "avg_damage_taken": 27576,
+    "avg_heal_shield": 1638,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "20",
+    "hero": "雪原双子",
+    "full_name": "雪原双子",
+    "roles": [
+      "法师",
+      "坦克"
+    ],
+    "search_terms": [
+      "雪原双子",
+      "20"
+    ],
+    "win_rate": 0.461054,
+    "pick_rate": 0.023746,
+    "games": 267704,
+    "wins": 123426,
+    "hex_score": 39.2,
+    "hex_tier": "trap",
+    "hex_label": "拉完了",
+    "hex_tier_color": "#7a3aa8",
+    "kda": 2.36,
+    "avg_damage": 33588,
+    "avg_damage_taken": 46206,
+    "avg_heal_shield": 14310,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "33",
+    "hero": "披甲龙龟",
+    "full_name": "披甲龙龟",
+    "roles": [
+      "坦克"
+    ],
+    "search_terms": [
+      "披甲龙龟",
+      "33"
+    ],
+    "win_rate": 0.466255,
+    "pick_rate": 0.02323,
+    "games": 261893,
+    "wins": 122109,
+    "hex_score": 41.4,
+    "hex_tier": "trap",
+    "hex_label": "拉完了",
+    "hex_tier_color": "#7a3aa8",
+    "kda": 2.41,
+    "avg_damage": 26010,
+    "avg_damage_taken": 71190,
+    "avg_heal_shield": 7542,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "154",
+    "hero": "生化魔人",
+    "full_name": "生化魔人",
+    "roles": [
+      "法师",
+      "坦克"
+    ],
+    "search_terms": [
+      "生化魔人",
+      "154"
+    ],
+    "win_rate": 0.452629,
+    "pick_rate": 0.022778,
+    "games": 256791,
+    "wins": 116231,
+    "hex_score": 35.7,
+    "hex_tier": "trap",
+    "hex_label": "拉完了",
+    "hex_tier_color": "#7a3aa8",
+    "kda": 2.28,
+    "avg_damage": 32166,
+    "avg_damage_taken": 82908,
+    "avg_heal_shield": 42786,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "19",
+    "hero": "祖安怒兽",
+    "full_name": "祖安怒兽",
+    "roles": [
+      "坦克",
+      "辅助"
+    ],
+    "search_terms": [
+      "祖安怒兽",
+      "19"
+    ],
+    "win_rate": 0.4975,
+    "pick_rate": 0.022671,
+    "games": 255588,
+    "wins": 127155,
+    "hex_score": 54.5,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 3.08,
+    "avg_damage": 37962,
+    "avg_damage_taken": 70452,
+    "avg_heal_shield": 26460,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "133",
+    "hero": "德玛西亚之翼",
+    "full_name": "德玛西亚之翼",
+    "roles": [
+      "射手"
+    ],
+    "search_terms": [
+      "德玛西亚之翼",
+      "133"
+    ],
+    "win_rate": 0.465031,
+    "pick_rate": 0.022191,
+    "games": 250179,
+    "wins": 116341,
+    "hex_score": 40.9,
+    "hex_tier": "trap",
+    "hex_label": "拉完了",
+    "hex_tier_color": "#7a3aa8",
+    "kda": 2.75,
+    "avg_damage": 38826,
+    "avg_damage_taken": 30492,
+    "avg_heal_shield": 3780,
+    "avg_cc_time": 18
+  },
+  {
+    "id": "142",
+    "hero": "暮光星灵",
+    "full_name": "暮光星灵",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "暮光星灵",
+      "142"
+    ],
+    "win_rate": 0.478723,
+    "pick_rate": 0.02213,
+    "games": 249491,
+    "wins": 119437,
+    "hex_score": 46.6,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.54,
+    "avg_damage": 37890,
+    "avg_damage_taken": 24948,
+    "avg_heal_shield": 2250,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "69",
+    "hero": "魔蛇之拥",
+    "full_name": "魔蛇之拥",
+    "roles": [
+      "法师",
+      "坦克"
+    ],
+    "search_terms": [
+      "魔蛇之拥",
+      "69"
+    ],
+    "win_rate": 0.461839,
+    "pick_rate": 0.022,
+    "games": 248026,
+    "wins": 114548,
+    "hex_score": 39.5,
+    "hex_tier": "trap",
+    "hex_label": "拉完了",
+    "hex_tier_color": "#7a3aa8",
+    "kda": 2.37,
+    "avg_damage": 36000,
+    "avg_damage_taken": 39258,
+    "avg_heal_shield": 7668,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "518",
+    "hero": "万花通灵",
+    "full_name": "万花通灵",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "万花通灵",
+      "518"
+    ],
+    "win_rate": 0.464403,
+    "pick_rate": 0.021702,
+    "games": 244667,
+    "wins": 113624,
+    "hex_score": 40.6,
+    "hex_tier": "trap",
+    "hex_label": "拉完了",
+    "hex_tier_color": "#7a3aa8",
+    "kda": 2.39,
+    "avg_damage": 33012,
+    "avg_damage_taken": 26964,
+    "avg_heal_shield": 1782,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "221",
+    "hero": "祖安花火",
+    "full_name": "祖安花火",
+    "roles": [
+      "射手"
+    ],
+    "search_terms": [
+      "祖安花火",
+      "221"
+    ],
+    "win_rate": 0.474527,
+    "pick_rate": 0.020954,
+    "games": 236229,
+    "wins": 112097,
+    "hex_score": 44.8,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.85,
+    "avg_damage": 40338,
+    "avg_damage_taken": 31374,
+    "avg_heal_shield": 3726,
+    "avg_cc_time": 18
+  },
+  {
+    "id": "40",
+    "hero": "风暴之怒",
+    "full_name": "风暴之怒",
+    "roles": [
+      "法师",
+      "辅助"
+    ],
+    "search_terms": [
+      "风暴之怒",
+      "40"
+    ],
+    "win_rate": 0.526655,
+    "pick_rate": 0.020611,
+    "games": 232361,
+    "wins": 122374,
+    "hex_score": 66.7,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 3.37,
+    "avg_damage": 12924,
+    "avg_damage_taken": 24534,
+    "avg_heal_shield": 16704,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "268",
+    "hero": "沙漠皇帝",
+    "full_name": "沙漠皇帝",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "沙漠皇帝",
+      "268"
+    ],
+    "win_rate": 0.476949,
+    "pick_rate": 0.020391,
+    "games": 229884,
+    "wins": 109643,
+    "hex_score": 45.8,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.52,
+    "avg_damage": 39204,
+    "avg_damage_taken": 31590,
+    "avg_heal_shield": 2448,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "902",
+    "hero": "明烛",
+    "full_name": "明烛",
+    "roles": [
+      "法师",
+      "辅助"
+    ],
+    "search_terms": [
+      "明烛",
+      "902"
+    ],
+    "win_rate": 0.496158,
+    "pick_rate": 0.020016,
+    "games": 225654,
+    "wins": 111960,
+    "hex_score": 53.9,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 3.06,
+    "avg_damage": 16452,
+    "avg_damage_taken": 23490,
+    "avg_heal_shield": 14742,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "117",
+    "hero": "仙灵女巫",
+    "full_name": "仙灵女巫",
+    "roles": [
+      "法师",
+      "辅助"
+    ],
+    "search_terms": [
+      "仙灵女巫",
+      "117"
+    ],
+    "win_rate": 0.469906,
+    "pick_rate": 0.01966,
+    "games": 221640,
+    "wins": 104150,
+    "hex_score": 42.9,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.8,
+    "avg_damage": 10458,
+    "avg_damage_taken": 24264,
+    "avg_heal_shield": 6462,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "2",
+    "hero": "狂战士",
+    "full_name": "狂战士",
+    "roles": [
+      "坦克",
+      "辅助"
+    ],
+    "search_terms": [
+      "狂战士",
+      "2"
+    ],
+    "win_rate": 0.484907,
+    "pick_rate": 0.019438,
+    "games": 219135,
+    "wins": 106260,
+    "hex_score": 49.1,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.95,
+    "avg_damage": 39690,
+    "avg_damage_taken": 52758,
+    "avg_heal_shield": 12330,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "201",
+    "hero": "弗雷尔卓德之心",
+    "full_name": "弗雷尔卓德之心",
+    "roles": [
+      "坦克"
+    ],
+    "search_terms": [
+      "弗雷尔卓德之心",
+      "201"
+    ],
+    "win_rate": 0.481042,
+    "pick_rate": 0.01899,
+    "games": 214083,
+    "wins": 102983,
+    "hex_score": 47.5,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.56,
+    "avg_damage": 21780,
+    "avg_damage_taken": 69390,
+    "avg_heal_shield": 7614,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "888",
+    "hero": "炼金男爵",
+    "full_name": "炼金男爵",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "炼金男爵",
+      "888"
+    ],
+    "win_rate": 0.508672,
+    "pick_rate": 0.016576,
+    "games": 186875,
+    "wins": 95058,
+    "hex_score": 59.1,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 2.84,
+    "avg_damage": 17550,
+    "avg_damage_taken": 27702,
+    "avg_heal_shield": 3204,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "267",
+    "hero": "唤潮鲛姬",
+    "full_name": "唤潮鲛姬",
+    "roles": [
+      "法师",
+      "辅助"
+    ],
+    "search_terms": [
+      "唤潮鲛姬",
+      "267"
+    ],
+    "win_rate": 0.496278,
+    "pick_rate": 0.016184,
+    "games": 182450,
+    "wins": 90546,
+    "hex_score": 53.8,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 3.06,
+    "avg_damage": 16362,
+    "avg_damage_taken": 25740,
+    "avg_heal_shield": 18882,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "72",
+    "hero": "上古领主",
+    "full_name": "上古领主",
+    "roles": [
+      "坦克"
+    ],
+    "search_terms": [
+      "上古领主",
+      "72"
+    ],
+    "win_rate": 0.489735,
+    "pick_rate": 0.0159,
+    "games": 179256,
+    "wins": 87788,
+    "hex_score": 51.1,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.65,
+    "avg_damage": 39636,
+    "avg_damage_taken": 67428,
+    "avg_heal_shield": 8118,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "497",
+    "hero": "幻翎",
+    "full_name": "幻翎",
+    "roles": [
+      "坦克",
+      "辅助"
+    ],
+    "search_terms": [
+      "幻翎",
+      "497"
+    ],
+    "win_rate": 0.467733,
+    "pick_rate": 0.014333,
+    "games": 161590,
+    "wins": 75581,
+    "hex_score": 41.8,
+    "hex_tier": "trap",
+    "hex_label": "拉完了",
+    "hex_tier_color": "#7a3aa8",
+    "kda": 2.78,
+    "avg_damage": 19458,
+    "avg_damage_taken": 62532,
+    "avg_heal_shield": 12600,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "432",
+    "hero": "星界游神",
+    "full_name": "星界游神",
+    "roles": [
+      "法师",
+      "辅助"
+    ],
+    "search_terms": [
+      "星界游神",
+      "432"
+    ],
+    "win_rate": 0.460902,
+    "pick_rate": 0.01287,
+    "games": 145096,
+    "wins": 66875,
+    "hex_score": 38.9,
+    "hex_tier": "trap",
+    "hex_label": "拉完了",
+    "hex_tier_color": "#7a3aa8",
+    "kda": 2.71,
+    "avg_damage": 23130,
+    "avg_damage_taken": 33264,
+    "avg_heal_shield": 13716,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "44",
+    "hero": "瓦洛兰之盾",
+    "full_name": "瓦洛兰之盾",
+    "roles": [
+      "坦克",
+      "辅助"
+    ],
+    "search_terms": [
+      "瓦洛兰之盾",
+      "44"
+    ],
+    "win_rate": 0.530106,
+    "pick_rate": 0.012865,
+    "games": 145037,
+    "wins": 76885,
+    "hex_score": 68.0,
+    "hex_tier": "top",
+    "hex_label": "顶级",
+    "hex_tier_color": "#e8751a",
+    "kda": 3.4,
+    "avg_damage": 20268,
+    "avg_damage_taken": 69624,
+    "avg_heal_shield": 25398,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "240",
+    "hero": "暴怒骑士",
+    "full_name": "暴怒骑士",
+    "roles": [
+      "坦克"
+    ],
+    "search_terms": [
+      "暴怒骑士",
+      "240"
+    ],
+    "win_rate": 0.497049,
+    "pick_rate": 0.01252,
+    "games": 141143,
+    "wins": 70155,
+    "hex_score": 54.1,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.72,
+    "avg_damage": 39042,
+    "avg_damage_taken": 73026,
+    "avg_heal_shield": 7488,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "83",
+    "hero": "牧魂人",
+    "full_name": "牧魂人",
+    "roles": [
+      "坦克",
+      "辅助"
+    ],
+    "search_terms": [
+      "牧魂人",
+      "83"
+    ],
+    "win_rate": 0.448469,
+    "pick_rate": 0.011258,
+    "games": 126923,
+    "wins": 56921,
+    "hex_score": 33.6,
+    "hex_tier": "trap",
+    "hex_label": "拉完了",
+    "hex_tier_color": "#7a3aa8",
+    "kda": 2.58,
+    "avg_damage": 31122,
+    "avg_damage_taken": 61146,
+    "avg_heal_shield": 15390,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "28",
+    "hero": "痛苦之拥",
+    "full_name": "痛苦之拥",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "痛苦之拥",
+      "28"
+    ],
+    "win_rate": 0.463714,
+    "pick_rate": 0.00981,
+    "games": 110594,
+    "wins": 51284,
+    "hex_score": 40.0,
+    "hex_tier": "trap",
+    "hex_label": "拉完了",
+    "hex_tier_color": "#7a3aa8",
+    "kda": 2.39,
+    "avg_damage": 43074,
+    "avg_damage_taken": 34146,
+    "avg_heal_shield": 7524,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "60",
+    "hero": "蜘蛛女皇",
+    "full_name": "蜘蛛女皇",
+    "roles": [
+      "法师"
+    ],
+    "search_terms": [
+      "蜘蛛女皇",
+      "60"
+    ],
+    "win_rate": 0.487411,
+    "pick_rate": 0.009562,
+    "games": 107794,
+    "wins": 52540,
+    "hex_score": 50.0,
+    "hex_tier": "npc",
+    "hex_label": "NPC",
+    "hex_tier_color": "#5a7a8a",
+    "kda": 2.62,
+    "avg_damage": 37908,
+    "avg_damage_taken": 31518,
+    "avg_heal_shield": 4752,
+    "avg_cc_time": 28
+  },
+  {
+    "id": "895",
+    "hero": "不羁之悦",
+    "full_name": "不羁之悦",
+    "roles": [
+      "射手",
+      "坦克"
+    ],
+    "search_terms": [
+      "不羁之悦",
+      "895"
+    ],
+    "win_rate": 0.519429,
+    "pick_rate": 0.008576,
+    "games": 96685,
+    "wins": 50221,
+    "hex_score": 63.4,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 3.29,
+    "avg_damage": 37872,
+    "avg_damage_taken": 38934,
+    "avg_heal_shield": 9720,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "427",
+    "hero": "翠神",
+    "full_name": "翠神",
+    "roles": [
+      "法师",
+      "辅助"
+    ],
+    "search_terms": [
+      "翠神",
+      "427"
+    ],
+    "win_rate": 0.508053,
+    "pick_rate": 0.00668,
+    "games": 75309,
+    "wins": 38261,
+    "hex_score": 58.5,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 3.18,
+    "avg_damage": 12924,
+    "avg_damage_taken": 24516,
+    "avg_heal_shield": 6354,
+    "avg_cc_time": 42
+  },
+  {
+    "id": "421",
+    "hero": "虚空遁地兽",
+    "full_name": "虚空遁地兽",
+    "roles": [
+      "坦克",
+      "辅助"
+    ],
+    "search_terms": [
+      "虚空遁地兽",
+      "421"
+    ],
+    "win_rate": 0.500459,
+    "pick_rate": 0.006384,
+    "games": 71970,
+    "wins": 36018,
+    "hex_score": 55.4,
+    "hex_tier": "elite",
+    "hex_label": "人上人",
+    "hex_tier_color": "#b08a2d",
+    "kda": 3.1,
+    "avg_damage": 32040,
+    "avg_damage_taken": 70938,
+    "avg_heal_shield": 25182,
+    "avg_cc_time": 42
+  }
+]

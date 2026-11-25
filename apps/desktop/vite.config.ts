@@ -30,10 +30,17 @@ function hexboxDevMiddleware(): Plugin {
     closeBundle() {
       // Copy offline JSON datasets into dist/data so standalone Tauri builds serve /data/* cleanly
       if (!fs.existsSync(DATA_ROOT)) return;
+      const skipFiles = new Set([
+        "user_settings.json",
+        "overlay_layout.json",
+        "player_markers.json",
+        "player_encounters.json",
+        "augment_offer_stats.json",
+      ]);
       const distDataDir = path.join(__dirname, "dist", "data");
       fs.mkdirSync(distDataDir, { recursive: true });
       for (const entry of fs.readdirSync(DATA_ROOT)) {
-        if (!entry.endsWith(".json")) continue;
+        if (!entry.endsWith(".json") || skipFiles.has(entry)) continue;
         fs.copyFileSync(path.join(DATA_ROOT, entry), path.join(distDataDir, entry));
       }
     },

@@ -168,10 +168,21 @@ impl HexBoxCore {
     }
 
     pub fn set_overlay_state(&self, next: OverlayStatePayload) -> OverlayStatePayload {
+        self.set_overlay_state_if_changed(next).0
+    }
+
+    pub fn set_overlay_state_if_changed(
+        &self,
+        next: OverlayStatePayload,
+    ) -> (OverlayStatePayload, bool) {
         if let Ok(mut guard) = self.overlay_state.write() {
+            if *guard == next {
+                return (guard.clone(), false);
+            }
             *guard = next.clone();
+            return (next, true);
         }
-        next
+        (next, false)
     }
 
     pub fn champion_name_by_id(&self, id: u32) -> Option<String> {
@@ -1746,5 +1757,21 @@ mod tests {
         let cancelled = core.cancel_bench_grab();
         assert!(!cancelled.active);
         assert!(core.get_bench_grab_status().status_text.contains("暂停"));
+    }
+
+    #[test]
+    fn set_overlay_state_if_changed_ignores_identical_echo() {
+        let root = workspace_root();
+        let core = HexBoxCore::initialize(&root).expect("initialize HexBoxCore");
+        let mut payload = core.get_overlay_state();
+        payload.ocr_status = Some("常驻 OCR 识别成功：亮出你的剑 / 风语者的祝福 / 男爵之手".into());
+        payload.ocr_ms = Some(72.3);
+
+        let (saved, changed) = core.set_overlay_state_if_changed(payload.clone());
+        assert!(changed);
+        assert_eq!(saved.ocr_status, payload.ocr_status);
+
+        let (_, changed_again) = core.set_overlay_state_if_changed(payload);
+        assert!(!changed_again);
     }
 }

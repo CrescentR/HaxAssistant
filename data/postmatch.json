@@ -1,0 +1,1722 @@
+{
+  "22": {
+    "heroId": "22",
+    "heroName": "寒冰射手",
+    "avgDamage": 26046,
+    "avgDamageTaken": 22698,
+    "avgHealShield": 1998,
+    "avgCcTime": 18,
+    "physicalShare": 0.6126,
+    "magicShare": 0.3518
+  },
+  "21": {
+    "heroId": "21",
+    "heroName": "赏金猎人",
+    "avgDamage": 38376,
+    "avgDamageTaken": 25902,
+    "avgHealShield": 2340,
+    "avgCcTime": 28,
+    "physicalShare": 0.4362,
+    "magicShare": 0.5187
+  },
+  "17": {
+    "heroId": "17",
+    "heroName": "迅捷斥候",
+    "avgDamage": 34956,
+    "avgDamageTaken": 26316,
+    "avgHealShield": 2034,
+    "avgCcTime": 28,
+    "physicalShare": 0.0609,
+    "magicShare": 0.8949
+  },
+  "145": {
+    "heroId": "145",
+    "heroName": "虚空之女",
+    "avgDamage": 39978,
+    "avgDamageTaken": 25884,
+    "avgHealShield": 2754,
+    "avgCcTime": 18,
+    "physicalShare": 0.3717,
+    "magicShare": 0.5955
+  },
+  "223": {
+    "heroId": "223",
+    "heroName": "河流之王",
+    "avgDamage": 38412,
+    "avgDamageTaken": 83538,
+    "avgHealShield": 28044,
+    "avgCcTime": 42,
+    "physicalShare": 0.2076,
+    "magicShare": 0.742
+  },
+  "236": {
+    "heroId": "236",
+    "heroName": "圣枪游侠",
+    "avgDamage": 44046,
+    "avgDamageTaken": 30978,
+    "avgHealShield": 3888,
+    "avgCcTime": 18,
+    "physicalShare": 0.8516,
+    "magicShare": 0.1022
+  },
+  "51": {
+    "heroId": "51",
+    "heroName": "皮城女警",
+    "avgDamage": 41976,
+    "avgDamageTaken": 28746,
+    "avgHealShield": 3924,
+    "avgCcTime": 18,
+    "physicalShare": 0.9105,
+    "magicShare": 0.061
+  },
+  "30": {
+    "heroId": "30",
+    "heroName": "死亡颂唱者",
+    "avgDamage": 56232,
+    "avgDamageTaken": 37566,
+    "avgHealShield": 774,
+    "avgCcTime": 28,
+    "physicalShare": 0.0072,
+    "magicShare": 0.8951
+  },
+  "202": {
+    "heroId": "202",
+    "heroName": "戏命师",
+    "avgDamage": 39366,
+    "avgDamageTaken": 26892,
+    "avgHealShield": 2862,
+    "avgCcTime": 18,
+    "physicalShare": 0.8828,
+    "magicShare": 0.0818
+  },
+  "81": {
+    "heroId": "81",
+    "heroName": "探险家",
+    "avgDamage": 42426,
+    "avgDamageTaken": 28350,
+    "avgHealShield": 4068,
+    "avgCcTime": 18,
+    "physicalShare": 0.5866,
+    "magicShare": 0.3758
+  },
+  "63": {
+    "heroId": "63",
+    "heroName": "复仇焰魂",
+    "avgDamage": 41364,
+    "avgDamageTaken": 32508,
+    "avgHealShield": 2520,
+    "avgCcTime": 28,
+    "physicalShare": 0.0203,
+    "magicShare": 0.9308
+  },
+  "4": {
+    "heroId": "4",
+    "heroName": "卡牌大师",
+    "avgDamage": 38520,
+    "avgDamageTaken": 27126,
+    "avgHealShield": 2160,
+    "avgCcTime": 28,
+    "physicalShare": 0.0657,
+    "magicShare": 0.8956
+  },
+  "136": {
+    "heroId": "136",
+    "heroName": "铸星龙王",
+    "avgDamage": 39654,
+    "avgDamageTaken": 35496,
+    "avgHealShield": 4410,
+    "avgCcTime": 28,
+    "physicalShare": 0.0095,
+    "magicShare": 0.9266
+  },
+  "157": {
+    "heroId": "157",
+    "heroName": "疾风剑豪",
+    "avgDamage": 39492,
+    "avgDamageTaken": 36630,
+    "avgHealShield": 5652,
+    "avgCcTime": 18,
+    "physicalShare": 0.8323,
+    "magicShare": 0.1186
+  },
+  "104": {
+    "heroId": "104",
+    "heroName": "法外狂徒",
+    "avgDamage": 44766,
+    "avgDamageTaken": 35532,
+    "avgHealShield": 6246,
+    "avgCcTime": 18,
+    "physicalShare": 0.8905,
+    "magicShare": 0.0439
+  },
+  "11": {
+    "heroId": "11",
+    "heroName": "无极剑圣",
+    "avgDamage": 43416,
+    "avgDamageTaken": 39240,
+    "avgHealShield": 6282,
+    "avgCcTime": 42,
+    "physicalShare": 0.7284,
+    "magicShare": 0.0286
+  },
+  "901": {
+    "heroId": "901",
+    "heroName": "炽炎雏龙",
+    "avgDamage": 41580,
+    "avgDamageTaken": 29682,
+    "avgHealShield": 4248,
+    "avgCcTime": 18,
+    "physicalShare": 0.7227,
+    "magicShare": 0.1431
+  },
+  "13": {
+    "heroId": "13",
+    "heroName": "符文法师",
+    "avgDamage": 43956,
+    "avgDamageTaken": 46620,
+    "avgHealShield": 8694,
+    "avgCcTime": 42,
+    "physicalShare": 0.0375,
+    "magicShare": 0.9319
+  },
+  "54": {
+    "heroId": "54",
+    "heroName": "熔岩巨兽",
+    "avgDamage": 33858,
+    "avgDamageTaken": 38880,
+    "avgHealShield": 2880,
+    "avgCcTime": 42,
+    "physicalShare": 0.2679,
+    "magicShare": 0.6457
+  },
+  "875": {
+    "heroId": "875",
+    "heroName": "腕豪",
+    "avgDamage": 44748,
+    "avgDamageTaken": 74034,
+    "avgHealShield": 6210,
+    "avgCcTime": 42,
+    "physicalShare": 0.6958,
+    "magicShare": 0.0401
+  },
+  "25": {
+    "heroId": "25",
+    "heroName": "堕落天使",
+    "avgDamage": 33876,
+    "avgDamageTaken": 29466,
+    "avgHealShield": 6534,
+    "avgCcTime": 28,
+    "physicalShare": 0.0255,
+    "magicShare": 0.9268
+  },
+  "110": {
+    "heroId": "110",
+    "heroName": "惩戒之箭",
+    "avgDamage": 39996,
+    "avgDamageTaken": 27738,
+    "avgHealShield": 2754,
+    "avgCcTime": 18,
+    "physicalShare": 0.609,
+    "magicShare": 0.3578
+  },
+  "120": {
+    "heroId": "120",
+    "heroName": "战争之影",
+    "avgDamage": 44424,
+    "avgDamageTaken": 59328,
+    "avgHealShield": 20610,
+    "avgCcTime": 42,
+    "physicalShare": 0.8022,
+    "magicShare": 0.1479
+  },
+  "35": {
+    "heroId": "35",
+    "heroName": "恶魔小丑",
+    "avgDamage": 34560,
+    "avgDamageTaken": 29178,
+    "avgHealShield": 2502,
+    "avgCcTime": 28,
+    "physicalShare": 0.3865,
+    "magicShare": 0.5343
+  },
+  "126": {
+    "heroId": "126",
+    "heroName": "未来守护者",
+    "avgDamage": 43326,
+    "avgDamageTaken": 29106,
+    "avgHealShield": 2430,
+    "avgCcTime": 18,
+    "physicalShare": 0.7637,
+    "magicShare": 0.1751
+  },
+  "5": {
+    "heroId": "5",
+    "heroName": "德邦总管",
+    "avgDamage": 40932,
+    "avgDamageTaken": 68652,
+    "avgHealShield": 26388,
+    "avgCcTime": 42,
+    "physicalShare": 0.7294,
+    "magicShare": 0.2203
+  },
+  "222": {
+    "heroId": "222",
+    "heroName": "暴走萝莉",
+    "avgDamage": 37764,
+    "avgDamageTaken": 29214,
+    "avgHealShield": 3276,
+    "avgCcTime": 18,
+    "physicalShare": 0.8872,
+    "magicShare": 0.0833
+  },
+  "48": {
+    "heroId": "48",
+    "heroName": "巨魔之王",
+    "avgDamage": 31104,
+    "avgDamageTaken": 56358,
+    "avgHealShield": 20988,
+    "avgCcTime": 42,
+    "physicalShare": 0.5493,
+    "magicShare": 0.3883
+  },
+  "235": {
+    "heroId": "235",
+    "heroName": "涤魂圣枪",
+    "avgDamage": 32238,
+    "avgDamageTaken": 28908,
+    "avgHealShield": 12654,
+    "avgCcTime": 42,
+    "physicalShare": 0.8882,
+    "magicShare": 0.078
+  },
+  "777": {
+    "heroId": "777",
+    "heroName": "封魔剑魂",
+    "avgDamage": 47304,
+    "avgDamageTaken": 36630,
+    "avgHealShield": 6498,
+    "avgCcTime": 18,
+    "physicalShare": 0.7125,
+    "magicShare": 0.1733
+  },
+  "67": {
+    "heroId": "67",
+    "heroName": "暗夜猎手",
+    "avgDamage": 39600,
+    "avgDamageTaken": 30708,
+    "avgHealShield": 4122,
+    "avgCcTime": 18,
+    "physicalShare": 0.6287,
+    "magicShare": 0.051
+  },
+  "59": {
+    "heroId": "59",
+    "heroName": "德玛西亚皇子",
+    "avgDamage": 36486,
+    "avgDamageTaken": 46404,
+    "avgHealShield": 5112,
+    "avgCcTime": 42,
+    "physicalShare": 0.769,
+    "magicShare": 0.1434
+  },
+  "238": {
+    "heroId": "238",
+    "heroName": "影流之主",
+    "avgDamage": 44622,
+    "avgDamageTaken": 33498,
+    "avgHealShield": 3258,
+    "avgCcTime": 18,
+    "physicalShare": 0.8689,
+    "magicShare": 0.0603
+  },
+  "41": {
+    "heroId": "41",
+    "heroName": "海洋之灾",
+    "avgDamage": 44208,
+    "avgDamageTaken": 37350,
+    "avgHealShield": 9234,
+    "avgCcTime": 18,
+    "physicalShare": 0.6945,
+    "magicShare": 0.1571
+  },
+  "50": {
+    "heroId": "50",
+    "heroName": "诺克萨斯统领",
+    "avgDamage": 40086,
+    "avgDamageTaken": 90954,
+    "avgHealShield": 37818,
+    "avgCcTime": 42,
+    "physicalShare": 0.1805,
+    "magicShare": 0.7577
+  },
+  "105": {
+    "heroId": "105",
+    "heroName": "潮汐海灵",
+    "avgDamage": 39186,
+    "avgDamageTaken": 37332,
+    "avgHealShield": 2736,
+    "avgCcTime": 28,
+    "physicalShare": 0.1528,
+    "magicShare": 0.7847
+  },
+  "36": {
+    "heroId": "36",
+    "heroName": "祖安狂人",
+    "avgDamage": 41418,
+    "avgDamageTaken": 95256,
+    "avgHealShield": 19476,
+    "avgCcTime": 42,
+    "physicalShare": 0.4556,
+    "magicShare": 0.488
+  },
+  "29": {
+    "heroId": "29",
+    "heroName": "瘟疫之源",
+    "avgDamage": 41616,
+    "avgDamageTaken": 30006,
+    "avgHealShield": 3204,
+    "avgCcTime": 18,
+    "physicalShare": 0.7807,
+    "magicShare": 0.0746
+  },
+  "876": {
+    "heroId": "876",
+    "heroName": "含羞蓓蕾",
+    "avgDamage": 45162,
+    "avgDamageTaken": 41382,
+    "avgHealShield": 12438,
+    "avgCcTime": 42,
+    "physicalShare": 0.0192,
+    "magicShare": 0.806
+  },
+  "245": {
+    "heroId": "245",
+    "heroName": "时间刺客",
+    "avgDamage": 43128,
+    "avgDamageTaken": 42606,
+    "avgHealShield": 10998,
+    "avgCcTime": 42,
+    "physicalShare": 0.1072,
+    "magicShare": 0.8413
+  },
+  "517": {
+    "heroId": "517",
+    "heroName": "解脱者",
+    "avgDamage": 40158,
+    "avgDamageTaken": 57546,
+    "avgHealShield": 15894,
+    "avgCcTime": 42,
+    "physicalShare": 0.1311,
+    "magicShare": 0.8073
+  },
+  "31": {
+    "heroId": "31",
+    "heroName": "虚空恐惧",
+    "avgDamage": 35334,
+    "avgDamageTaken": 78570,
+    "avgHealShield": 10908,
+    "avgCcTime": 42,
+    "physicalShare": 0.2036,
+    "magicShare": 0.5853
+  },
+  "122": {
+    "heroId": "122",
+    "heroName": "诺克萨斯之手",
+    "avgDamage": 36882,
+    "avgDamageTaken": 65268,
+    "avgHealShield": 15876,
+    "avgCcTime": 42,
+    "physicalShare": 0.7712,
+    "magicShare": 0.0655
+  },
+  "57": {
+    "heroId": "57",
+    "heroName": "扭曲树精",
+    "avgDamage": 34542,
+    "avgDamageTaken": 66690,
+    "avgHealShield": 16722,
+    "avgCcTime": 42,
+    "physicalShare": 0.1648,
+    "magicShare": 0.7658
+  },
+  "18": {
+    "heroId": "18",
+    "heroName": "麦林炮手",
+    "avgDamage": 38520,
+    "avgDamageTaken": 31284,
+    "avgHealShield": 3942,
+    "avgCcTime": 18,
+    "physicalShare": 0.872,
+    "magicShare": 0.0957
+  },
+  "55": {
+    "heroId": "55",
+    "heroName": "不祥之刃",
+    "avgDamage": 45846,
+    "avgDamageTaken": 42696,
+    "avgHealShield": 5112,
+    "avgCcTime": 42,
+    "physicalShare": 0.5365,
+    "magicShare": 0.396
+  },
+  "76": {
+    "heroId": "76",
+    "heroName": "狂野女猎手",
+    "avgDamage": 38934,
+    "avgDamageTaken": 29268,
+    "avgHealShield": 12384,
+    "avgCcTime": 42,
+    "physicalShare": 0.037,
+    "magicShare": 0.9136
+  },
+  "101": {
+    "heroId": "101",
+    "heroName": "远古巫灵",
+    "avgDamage": 36720,
+    "avgDamageTaken": 21672,
+    "avgHealShield": 1818,
+    "avgCcTime": 28,
+    "physicalShare": 0.0152,
+    "magicShare": 0.9273
+  },
+  "68": {
+    "heroId": "68",
+    "heroName": "机械公敌",
+    "avgDamage": 48132,
+    "avgDamageTaken": 40572,
+    "avgHealShield": 4266,
+    "avgCcTime": 42,
+    "physicalShare": 0.0379,
+    "magicShare": 0.9134
+  },
+  "804": {
+    "heroId": "804",
+    "heroName": "不破之誓",
+    "avgDamage": 44028,
+    "avgDamageTaken": 32148,
+    "avgHealShield": 4356,
+    "avgCcTime": 18,
+    "physicalShare": 0.626,
+    "magicShare": 0.3476
+  },
+  "53": {
+    "heroId": "53",
+    "heroName": "蒸汽机器人",
+    "avgDamage": 24696,
+    "avgDamageTaken": 48888,
+    "avgHealShield": 4122,
+    "avgCcTime": 42,
+    "physicalShare": 0.2765,
+    "magicShare": 0.6285
+  },
+  "64": {
+    "heroId": "64",
+    "heroName": "盲僧",
+    "avgDamage": 36000,
+    "avgDamageTaken": 41544,
+    "avgHealShield": 8046,
+    "avgCcTime": 42,
+    "physicalShare": 0.736,
+    "magicShare": 0.1869
+  },
+  "119": {
+    "heroId": "119",
+    "heroName": "荣耀行刑官",
+    "avgDamage": 44766,
+    "avgDamageTaken": 33588,
+    "avgHealShield": 5220,
+    "avgCcTime": 18,
+    "physicalShare": 0.9472,
+    "magicShare": 0.0209
+  },
+  "106": {
+    "heroId": "106",
+    "heroName": "不灭狂雷",
+    "avgDamage": 37260,
+    "avgDamageTaken": 70380,
+    "avgHealShield": 12150,
+    "avgCcTime": 42,
+    "physicalShare": 0.4885,
+    "magicShare": 0.4537
+  },
+  "141": {
+    "heroId": "141",
+    "heroName": "影流之镰",
+    "avgDamage": 45792,
+    "avgDamageTaken": 46314,
+    "avgHealShield": 13950,
+    "avgCcTime": 42,
+    "physicalShare": 0.9153,
+    "magicShare": 0.0285
+  },
+  "86": {
+    "heroId": "86",
+    "heroName": "德玛西亚之力",
+    "avgDamage": 35694,
+    "avgDamageTaken": 49410,
+    "avgHealShield": 4554,
+    "avgCcTime": 42,
+    "physicalShare": 0.7223,
+    "magicShare": 0.0612
+  },
+  "45": {
+    "heroId": "45",
+    "heroName": "邪恶小法师",
+    "avgDamage": 31986,
+    "avgDamageTaken": 29466,
+    "avgHealShield": 3888,
+    "avgCcTime": 28,
+    "physicalShare": 0.0233,
+    "magicShare": 0.9481
+  },
+  "412": {
+    "heroId": "412",
+    "heroName": "魂锁典狱长",
+    "avgDamage": 25506,
+    "avgDamageTaken": 66204,
+    "avgHealShield": 6714,
+    "avgCcTime": 42,
+    "physicalShare": 0.2632,
+    "magicShare": 0.657
+  },
+  "99": {
+    "heroId": "99",
+    "heroName": "光辉女郎",
+    "avgDamage": 29862,
+    "avgDamageTaken": 20790,
+    "avgHealShield": 1944,
+    "avgCcTime": 28,
+    "physicalShare": 0.0371,
+    "magicShare": 0.9159
+  },
+  "8": {
+    "heroId": "8",
+    "heroName": "猩红收割者",
+    "avgDamage": 40464,
+    "avgDamageTaken": 56664,
+    "avgHealShield": 32400,
+    "avgCcTime": 42,
+    "physicalShare": 0.07,
+    "magicShare": 0.8833
+  },
+  "111": {
+    "heroId": "111",
+    "heroName": "深海泰坦",
+    "avgDamage": 27756,
+    "avgDamageTaken": 69372,
+    "avgHealShield": 8190,
+    "avgCcTime": 42,
+    "physicalShare": 0.347,
+    "magicShare": 0.5659
+  },
+  "115": {
+    "heroId": "115",
+    "heroName": "爆破鬼才",
+    "avgDamage": 37098,
+    "avgDamageTaken": 23958,
+    "avgHealShield": 1998,
+    "avgCcTime": 28,
+    "physicalShare": 0.0193,
+    "magicShare": 0.9261
+  },
+  "42": {
+    "heroId": "42",
+    "heroName": "英勇投弹手",
+    "avgDamage": 46962,
+    "avgDamageTaken": 32886,
+    "avgHealShield": 4932,
+    "avgCcTime": 18,
+    "physicalShare": 0.6388,
+    "magicShare": 0.1948
+  },
+  "23": {
+    "heroId": "23",
+    "heroName": "蛮族之王",
+    "avgDamage": 40986,
+    "avgDamageTaken": 52974,
+    "avgHealShield": 12942,
+    "avgCcTime": 42,
+    "physicalShare": 0.9003,
+    "magicShare": 0.0384
+  },
+  "62": {
+    "heroId": "62",
+    "heroName": "齐天大圣",
+    "avgDamage": 35154,
+    "avgDamageTaken": 49698,
+    "avgHealShield": 7182,
+    "avgCcTime": 42,
+    "physicalShare": 0.7374,
+    "magicShare": 0.1878
+  },
+  "147": {
+    "heroId": "147",
+    "heroName": "星籁歌姬",
+    "avgDamage": 33282,
+    "avgDamageTaken": 25506,
+    "avgHealShield": 4338,
+    "avgCcTime": 28,
+    "physicalShare": 0.0442,
+    "magicShare": 0.9072
+  },
+  "800": {
+    "heroId": "800",
+    "heroName": "流光镜影",
+    "avgDamage": 38916,
+    "avgDamageTaken": 26478,
+    "avgHealShield": 2628,
+    "avgCcTime": 28,
+    "physicalShare": 0.0373,
+    "magicShare": 0.9353
+  },
+  "80": {
+    "heroId": "80",
+    "heroName": "不屈之枪",
+    "avgDamage": 41472,
+    "avgDamageTaken": 42570,
+    "avgHealShield": 6012,
+    "avgCcTime": 42,
+    "physicalShare": 0.8797,
+    "magicShare": 0.0536
+  },
+  "10": {
+    "heroId": "10",
+    "heroName": "正义天使",
+    "avgDamage": 35568,
+    "avgDamageTaken": 33930,
+    "avgHealShield": 9594,
+    "avgCcTime": 18,
+    "physicalShare": 0.3755,
+    "magicShare": 0.6035
+  },
+  "82": {
+    "heroId": "82",
+    "heroName": "铁铠冥魂",
+    "avgDamage": 40878,
+    "avgDamageTaken": 63630,
+    "avgHealShield": 13680,
+    "avgCcTime": 42,
+    "physicalShare": 0.1455,
+    "magicShare": 0.7958
+  },
+  "90": {
+    "heroId": "90",
+    "heroName": "虚空先知",
+    "avgDamage": 32580,
+    "avgDamageTaken": 28566,
+    "avgHealShield": 2178,
+    "avgCcTime": 28,
+    "physicalShare": 0.0228,
+    "magicShare": 0.9353
+  },
+  "114": {
+    "heroId": "114",
+    "heroName": "无双剑姬",
+    "avgDamage": 40860,
+    "avgDamageTaken": 51534,
+    "avgHealShield": 18648,
+    "avgCcTime": 42,
+    "physicalShare": 0.57,
+    "magicShare": 0.0461
+  },
+  "103": {
+    "heroId": "103",
+    "heroName": "九尾妖狐",
+    "avgDamage": 38700,
+    "avgDamageTaken": 31212,
+    "avgHealShield": 7614,
+    "avgCcTime": 28,
+    "physicalShare": 0.0357,
+    "magicShare": 0.6805
+  },
+  "24": {
+    "heroId": "24",
+    "heroName": "武器大师",
+    "avgDamage": 38934,
+    "avgDamageTaken": 49986,
+    "avgHealShield": 7362,
+    "avgCcTime": 42,
+    "physicalShare": 0.5316,
+    "magicShare": 0.4114
+  },
+  "27": {
+    "heroId": "27",
+    "heroName": "炼金术士",
+    "avgDamage": 35856,
+    "avgDamageTaken": 59166,
+    "avgHealShield": 8460,
+    "avgCcTime": 42,
+    "physicalShare": 0.066,
+    "magicShare": 0.8501
+  },
+  "112": {
+    "heroId": "112",
+    "heroName": "奥术先驱",
+    "avgDamage": 42408,
+    "avgDamageTaken": 27504,
+    "avgHealShield": 3024,
+    "avgCcTime": 28,
+    "physicalShare": 0.0233,
+    "magicShare": 0.9377
+  },
+  "75": {
+    "heroId": "75",
+    "heroName": "沙漠死神",
+    "avgDamage": 34740,
+    "avgDamageTaken": 54396,
+    "avgHealShield": 10566,
+    "avgCcTime": 42,
+    "physicalShare": 0.522,
+    "magicShare": 0.4218
+  },
+  "121": {
+    "heroId": "121",
+    "heroName": "虚空掠夺者",
+    "avgDamage": 41022,
+    "avgDamageTaken": 35136,
+    "avgHealShield": 6246,
+    "avgCcTime": 18,
+    "physicalShare": 0.8642,
+    "magicShare": 0.0596
+  },
+  "134": {
+    "heroId": "134",
+    "heroName": "暗黑元首",
+    "avgDamage": 37656,
+    "avgDamageTaken": 25866,
+    "avgHealShield": 2412,
+    "avgCcTime": 28,
+    "physicalShare": 0.022,
+    "magicShare": 0.9029
+  },
+  "266": {
+    "heroId": "266",
+    "heroName": "暗裔剑魔",
+    "avgDamage": 39852,
+    "avgDamageTaken": 59994,
+    "avgHealShield": 24282,
+    "avgCcTime": 42,
+    "physicalShare": 0.8022,
+    "magicShare": 0.1452
+  },
+  "107": {
+    "heroId": "107",
+    "heroName": "傲之追猎者",
+    "avgDamage": 42624,
+    "avgDamageTaken": 40860,
+    "avgHealShield": 7272,
+    "avgCcTime": 42,
+    "physicalShare": 0.8464,
+    "magicShare": 0.0772
+  },
+  "91": {
+    "heroId": "91",
+    "heroName": "刀锋之影",
+    "avgDamage": 48042,
+    "avgDamageTaken": 38034,
+    "avgHealShield": 3474,
+    "avgCcTime": 42,
+    "physicalShare": 0.8849,
+    "magicShare": 0.0156
+  },
+  "3": {
+    "heroId": "3",
+    "heroName": "正义巨像",
+    "avgDamage": 31914,
+    "avgDamageTaken": 68202,
+    "avgHealShield": 7686,
+    "avgCcTime": 42,
+    "physicalShare": 0.1505,
+    "magicShare": 0.7712
+  },
+  "161": {
+    "heroId": "161",
+    "heroName": "虚空之眼",
+    "avgDamage": 40302,
+    "avgDamageTaken": 24984,
+    "avgHealShield": 2214,
+    "avgCcTime": 28,
+    "physicalShare": 0.014,
+    "magicShare": 0.7202
+  },
+  "893": {
+    "heroId": "893",
+    "heroName": "双界灵兔",
+    "avgDamage": 45684,
+    "avgDamageTaken": 31968,
+    "avgHealShield": 6894,
+    "avgCcTime": 28,
+    "physicalShare": 0.0315,
+    "magicShare": 0.9287
+  },
+  "12": {
+    "heroId": "12",
+    "heroName": "牛头酋长",
+    "avgDamage": 26730,
+    "avgDamageTaken": 78336,
+    "avgHealShield": 28386,
+    "avgCcTime": 42,
+    "physicalShare": 0.2484,
+    "magicShare": 0.6535
+  },
+  "89": {
+    "heroId": "89",
+    "heroName": "曙光女神",
+    "avgDamage": 29250,
+    "avgDamageTaken": 77292,
+    "avgHealShield": 9468,
+    "avgCcTime": 42,
+    "physicalShare": 0.3578,
+    "magicShare": 0.5514
+  },
+  "77": {
+    "heroId": "77",
+    "heroName": "兽灵行者",
+    "avgDamage": 47952,
+    "avgDamageTaken": 39546,
+    "avgHealShield": 3222,
+    "avgCcTime": 42,
+    "physicalShare": 0.21,
+    "magicShare": 0.6923
+  },
+  "14": {
+    "heroId": "14",
+    "heroName": "亡灵战神",
+    "avgDamage": 41472,
+    "avgDamageTaken": 116892,
+    "avgHealShield": 13410,
+    "avgCcTime": 42,
+    "physicalShare": 0.6222,
+    "magicShare": 0.2711
+  },
+  "555": {
+    "heroId": "555",
+    "heroName": "血港鬼影",
+    "avgDamage": 26370,
+    "avgDamageTaken": 35226,
+    "avgHealShield": 10260,
+    "avgCcTime": 18,
+    "physicalShare": 0.7949,
+    "magicShare": 0.0294
+  },
+  "498": {
+    "heroId": "498",
+    "heroName": "逆羽",
+    "avgDamage": 41184,
+    "avgDamageTaken": 30726,
+    "avgHealShield": 3924,
+    "avgCcTime": 18,
+    "physicalShare": 0.9225,
+    "magicShare": 0.0411
+  },
+  "96": {
+    "heroId": "96",
+    "heroName": "深渊巨口",
+    "avgDamage": 44046,
+    "avgDamageTaken": 30078,
+    "avgHealShield": 3042,
+    "avgCcTime": 28,
+    "physicalShare": 0.2944,
+    "magicShare": 0.5644
+  },
+  "39": {
+    "heroId": "39",
+    "heroName": "刀锋舞者",
+    "avgDamage": 39996,
+    "avgDamageTaken": 54108,
+    "avgHealShield": 11682,
+    "avgCcTime": 42,
+    "physicalShare": 0.7266,
+    "magicShare": 0.2217
+  },
+  "15": {
+    "heroId": "15",
+    "heroName": "战争女神",
+    "avgDamage": 37224,
+    "avgDamageTaken": 30096,
+    "avgHealShield": 4518,
+    "avgCcTime": 18,
+    "physicalShare": 0.9223,
+    "magicShare": 0.0496
+  },
+  "234": {
+    "heroId": "234",
+    "heroName": "破败之王",
+    "avgDamage": 44280,
+    "avgDamageTaken": 43074,
+    "avgHealShield": 11574,
+    "avgCcTime": 42,
+    "physicalShare": 0.8186,
+    "magicShare": 0.1111
+  },
+  "98": {
+    "heroId": "98",
+    "heroName": "暮光之眼",
+    "avgDamage": 34668,
+    "avgDamageTaken": 73404,
+    "avgHealShield": 10386,
+    "avgCcTime": 42,
+    "physicalShare": 0.5014,
+    "magicShare": 0.4258
+  },
+  "910": {
+    "heroId": "910",
+    "heroName": "异画师",
+    "avgDamage": 40230,
+    "avgDamageTaken": 26118,
+    "avgHealShield": 2700,
+    "avgCcTime": 28,
+    "physicalShare": 0.0208,
+    "magicShare": 0.9314
+  },
+  "360": {
+    "heroId": "360",
+    "heroName": "沙漠玫瑰",
+    "avgDamage": 43848,
+    "avgDamageTaken": 38088,
+    "avgHealShield": 6030,
+    "avgCcTime": 42,
+    "physicalShare": 0.8129,
+    "magicShare": 0.1189
+  },
+  "56": {
+    "heroId": "56",
+    "heroName": "永恒梦魇",
+    "avgDamage": 39942,
+    "avgDamageTaken": 39672,
+    "avgHealShield": 5130,
+    "avgCcTime": 42,
+    "physicalShare": 0.8468,
+    "magicShare": 0.06
+  },
+  "26": {
+    "heroId": "26",
+    "heroName": "时光守护者",
+    "avgDamage": 25560,
+    "avgDamageTaken": 27846,
+    "avgHealShield": 10476,
+    "avgCcTime": 28,
+    "physicalShare": 0.0372,
+    "magicShare": 0.9273
+  },
+  "143": {
+    "heroId": "143",
+    "heroName": "荆棘之兴",
+    "avgDamage": 34524,
+    "avgDamageTaken": 26334,
+    "avgHealShield": 2394,
+    "avgCcTime": 28,
+    "physicalShare": 0.0289,
+    "magicShare": 0.915
+  },
+  "516": {
+    "heroId": "516",
+    "heroName": "山隐之焰",
+    "avgDamage": 32328,
+    "avgDamageTaken": 85518,
+    "avgHealShield": 9738,
+    "avgCcTime": 42,
+    "physicalShare": 0.331,
+    "magicShare": 0.5845
+  },
+  "79": {
+    "heroId": "79",
+    "heroName": "酒桶",
+    "avgDamage": 36720,
+    "avgDamageTaken": 43056,
+    "avgHealShield": 11952,
+    "avgCcTime": 42,
+    "physicalShare": 0.1151,
+    "magicShare": 0.822
+  },
+  "200": {
+    "heroId": "200",
+    "heroName": "虚空女皇",
+    "avgDamage": 40536,
+    "avgDamageTaken": 50148,
+    "avgHealShield": 14220,
+    "avgCcTime": 42,
+    "physicalShare": 0.6142,
+    "magicShare": 0.1226
+  },
+  "32": {
+    "heroId": "32",
+    "heroName": "殇之木乃伊",
+    "avgDamage": 33498,
+    "avgDamageTaken": 69066,
+    "avgHealShield": 5850,
+    "avgCcTime": 42,
+    "physicalShare": 0.1683,
+    "magicShare": 0.6792
+  },
+  "799": {
+    "heroId": "799",
+    "heroName": "铁血狼母",
+    "avgDamage": 45792,
+    "avgDamageTaken": 44766,
+    "avgHealShield": 11322,
+    "avgCcTime": 42,
+    "physicalShare": 0.9357,
+    "magicShare": 0.0105
+  },
+  "61": {
+    "heroId": "61",
+    "heroName": "发条魔灵",
+    "avgDamage": 33480,
+    "avgDamageTaken": 25686,
+    "avgHealShield": 2268,
+    "avgCcTime": 28,
+    "physicalShare": 0.0384,
+    "magicShare": 0.9152
+  },
+  "420": {
+    "heroId": "420",
+    "heroName": "海兽祭司",
+    "avgDamage": 39186,
+    "avgDamageTaken": 80946,
+    "avgHealShield": 20412,
+    "avgCcTime": 42,
+    "physicalShare": 0.8712,
+    "magicShare": 0.0708
+  },
+  "9": {
+    "heroId": "9",
+    "heroName": "远古恐惧",
+    "avgDamage": 37206,
+    "avgDamageTaken": 39978,
+    "avgHealShield": 10008,
+    "avgCcTime": 42,
+    "physicalShare": 0.0156,
+    "magicShare": 0.9096
+  },
+  "523": {
+    "heroId": "523",
+    "heroName": "残月之肃",
+    "avgDamage": 42408,
+    "avgDamageTaken": 31500,
+    "avgHealShield": 5706,
+    "avgCcTime": 18,
+    "physicalShare": 0.9013,
+    "magicShare": 0.0628
+  },
+  "37": {
+    "heroId": "37",
+    "heroName": "琴瑟仙女",
+    "avgDamage": 18666,
+    "avgDamageTaken": 31590,
+    "avgHealShield": 21510,
+    "avgCcTime": 42,
+    "physicalShare": 0.1424,
+    "magicShare": 0.796
+  },
+  "887": {
+    "heroId": "887",
+    "heroName": "灵罗娃娃",
+    "avgDamage": 45972,
+    "avgDamageTaken": 54072,
+    "avgHealShield": 17118,
+    "avgCcTime": 42,
+    "physicalShare": 0.1437,
+    "magicShare": 0.7111
+  },
+  "113": {
+    "heroId": "113",
+    "heroName": "北地之怒",
+    "avgDamage": 37224,
+    "avgDamageTaken": 81522,
+    "avgHealShield": 9882,
+    "avgCcTime": 42,
+    "physicalShare": 0.5848,
+    "magicShare": 0.3401
+  },
+  "6": {
+    "heroId": "6",
+    "heroName": "无畏战车",
+    "avgDamage": 37746,
+    "avgDamageTaken": 66006,
+    "avgHealShield": 6408,
+    "avgCcTime": 42,
+    "physicalShare": 0.8349,
+    "magicShare": 0.0614
+  },
+  "150": {
+    "heroId": "150",
+    "heroName": "迷失之牙",
+    "avgDamage": 39402,
+    "avgDamageTaken": 57798,
+    "avgHealShield": 6174,
+    "avgCcTime": 42,
+    "physicalShare": 0.6682,
+    "magicShare": 0.2686
+  },
+  "43": {
+    "heroId": "43",
+    "heroName": "天启者",
+    "avgDamage": 23454,
+    "avgDamageTaken": 25596,
+    "avgHealShield": 4338,
+    "avgCcTime": 42,
+    "physicalShare": 0.0502,
+    "magicShare": 0.8945
+  },
+  "7": {
+    "heroId": "7",
+    "heroName": "诡术妖姬",
+    "avgDamage": 38934,
+    "avgDamageTaken": 30006,
+    "avgHealShield": 2628,
+    "avgCcTime": 28,
+    "physicalShare": 0.0394,
+    "magicShare": 0.9137
+  },
+  "526": {
+    "heroId": "526",
+    "heroName": "镕铁少女",
+    "avgDamage": 29754,
+    "avgDamageTaken": 77112,
+    "avgHealShield": 10134,
+    "avgCcTime": 42,
+    "physicalShare": 0.3255,
+    "magicShare": 0.5878
+  },
+  "102": {
+    "heroId": "102",
+    "heroName": "龙血武姬",
+    "avgDamage": 42066,
+    "avgDamageTaken": 52182,
+    "avgHealShield": 9414,
+    "avgCcTime": 42,
+    "physicalShare": 0.2809,
+    "magicShare": 0.6228
+  },
+  "74": {
+    "heroId": "74",
+    "heroName": "大发明家",
+    "avgDamage": 39132,
+    "avgDamageTaken": 27702,
+    "avgHealShield": 2340,
+    "avgCcTime": 28,
+    "physicalShare": 0.0169,
+    "magicShare": 0.9408
+  },
+  "16": {
+    "heroId": "16",
+    "heroName": "众星之子",
+    "avgDamage": 10152,
+    "avgDamageTaken": 31284,
+    "avgHealShield": 41598,
+    "avgCcTime": 42,
+    "physicalShare": 0.093,
+    "magicShare": 0.8085
+  },
+  "38": {
+    "heroId": "38",
+    "heroName": "虚空行者",
+    "avgDamage": 41364,
+    "avgDamageTaken": 45144,
+    "avgHealShield": 6336,
+    "avgCcTime": 42,
+    "physicalShare": 0.094,
+    "magicShare": 0.8479
+  },
+  "78": {
+    "heroId": "78",
+    "heroName": "圣锤之毅",
+    "avgDamage": 35748,
+    "avgDamageTaken": 72774,
+    "avgHealShield": 10116,
+    "avgCcTime": 42,
+    "physicalShare": 0.713,
+    "magicShare": 0.2068
+  },
+  "246": {
+    "heroId": "246",
+    "heroName": "元素女皇",
+    "avgDamage": 41508,
+    "avgDamageTaken": 34794,
+    "avgHealShield": 2574,
+    "avgCcTime": 18,
+    "physicalShare": 0.846,
+    "magicShare": 0.0869
+  },
+  "904": {
+    "heroId": "904",
+    "heroName": "不落魔锋",
+    "avgDamage": 40086,
+    "avgDamageTaken": 63432,
+    "avgHealShield": 19170,
+    "avgCcTime": 42,
+    "physicalShare": 0.862,
+    "magicShare": 0.0777
+  },
+  "254": {
+    "heroId": "254",
+    "heroName": "皮城执法官",
+    "avgDamage": 36000,
+    "avgDamageTaken": 42588,
+    "avgHealShield": 4734,
+    "avgCcTime": 42,
+    "physicalShare": 0.8956,
+    "magicShare": 0.0393
+  },
+  "131": {
+    "heroId": "131",
+    "heroName": "皎月女神",
+    "avgDamage": 39114,
+    "avgDamageTaken": 48708,
+    "avgHealShield": 5472,
+    "avgCcTime": 42,
+    "physicalShare": 0.1929,
+    "magicShare": 0.7361
+  },
+  "84": {
+    "heroId": "84",
+    "heroName": "离群之刺",
+    "avgDamage": 38772,
+    "avgDamageTaken": 39474,
+    "avgHealShield": 5742,
+    "avgCcTime": 42,
+    "physicalShare": 0.0904,
+    "magicShare": 0.8449
+  },
+  "203": {
+    "heroId": "203",
+    "heroName": "永猎双子",
+    "avgDamage": 39114,
+    "avgDamageTaken": 33102,
+    "avgHealShield": 10926,
+    "avgCcTime": 18,
+    "physicalShare": 0.8174,
+    "magicShare": 0.1437
+  },
+  "58": {
+    "heroId": "58",
+    "heroName": "荒漠屠夫",
+    "avgDamage": 34002,
+    "avgDamageTaken": 62406,
+    "avgHealShield": 14166,
+    "avgCcTime": 42,
+    "physicalShare": 0.7506,
+    "magicShare": 0.1764
+  },
+  "92": {
+    "heroId": "92",
+    "heroName": "放逐之刃",
+    "avgDamage": 32418,
+    "avgDamageTaken": 39798,
+    "avgHealShield": 6210,
+    "avgCcTime": 42,
+    "physicalShare": 0.8999,
+    "magicShare": 0.0286
+  },
+  "166": {
+    "heroId": "166",
+    "heroName": "影哨",
+    "avgDamage": 36000,
+    "avgDamageTaken": 29574,
+    "avgHealShield": 3456,
+    "avgCcTime": 18,
+    "physicalShare": 0.8209,
+    "magicShare": 0.1338
+  },
+  "950": {
+    "heroId": "950",
+    "heroName": "百裂冥犬",
+    "avgDamage": 39114,
+    "avgDamageTaken": 36036,
+    "avgHealShield": 6768,
+    "avgCcTime": 18,
+    "physicalShare": 0.9091,
+    "magicShare": 0.0149
+  },
+  "127": {
+    "heroId": "127",
+    "heroName": "冰霜女巫",
+    "avgDamage": 34884,
+    "avgDamageTaken": 36018,
+    "avgHealShield": 4464,
+    "avgCcTime": 28,
+    "physicalShare": 0.0331,
+    "magicShare": 0.8912
+  },
+  "85": {
+    "heroId": "85",
+    "heroName": "狂暴之心",
+    "avgDamage": 35352,
+    "avgDamageTaken": 29592,
+    "avgHealShield": 1800,
+    "avgCcTime": 28,
+    "physicalShare": 0.0616,
+    "magicShare": 0.8602
+  },
+  "897": {
+    "heroId": "897",
+    "heroName": "纳祖芒荣耀",
+    "avgDamage": 31230,
+    "avgDamageTaken": 67410,
+    "avgHealShield": 8964,
+    "avgCcTime": 42,
+    "physicalShare": 0.7695,
+    "magicShare": 0.1245
+  },
+  "350": {
+    "heroId": "350",
+    "heroName": "魔法猫咪",
+    "avgDamage": 11322,
+    "avgDamageTaken": 14616,
+    "avgHealShield": 13014,
+    "avgCcTime": 42,
+    "physicalShare": 0.0257,
+    "magicShare": 0.7975
+  },
+  "164": {
+    "heroId": "164",
+    "heroName": "青钢影",
+    "avgDamage": 37098,
+    "avgDamageTaken": 49554,
+    "avgHealShield": 10206,
+    "avgCcTime": 42,
+    "physicalShare": 0.6757,
+    "magicShare": 0.046
+  },
+  "233": {
+    "heroId": "233",
+    "heroName": "狂厄蔷薇",
+    "avgDamage": 45234,
+    "avgDamageTaken": 50940,
+    "avgHealShield": 24426,
+    "avgCcTime": 42,
+    "physicalShare": 0.82,
+    "magicShare": 0.1117
+  },
+  "711": {
+    "heroId": "711",
+    "heroName": "愁云使者",
+    "avgDamage": 39744,
+    "avgDamageTaken": 26802,
+    "avgHealShield": 2160,
+    "avgCcTime": 28,
+    "physicalShare": 0.0313,
+    "magicShare": 0.9096
+  },
+  "429": {
+    "heroId": "429",
+    "heroName": "复仇之矛",
+    "avgDamage": 40374,
+    "avgDamageTaken": 32526,
+    "avgHealShield": 5184,
+    "avgCcTime": 18,
+    "physicalShare": 0.8177,
+    "magicShare": 0.1597
+  },
+  "163": {
+    "heroId": "163",
+    "heroName": "岩雀",
+    "avgDamage": 38448,
+    "avgDamageTaken": 28944,
+    "avgHealShield": 2484,
+    "avgCcTime": 28,
+    "physicalShare": 0.0188,
+    "magicShare": 0.9345
+  },
+  "34": {
+    "heroId": "34",
+    "heroName": "冰晶凤凰",
+    "avgDamage": 29250,
+    "avgDamageTaken": 36396,
+    "avgHealShield": 4824,
+    "avgCcTime": 28,
+    "physicalShare": 0.0366,
+    "magicShare": 0.9091
+  },
+  "1": {
+    "heroId": "1",
+    "heroName": "黑暗之女",
+    "avgDamage": 34398,
+    "avgDamageTaken": 27576,
+    "avgHealShield": 1638,
+    "avgCcTime": 28,
+    "physicalShare": 0.026,
+    "magicShare": 0.9217
+  },
+  "20": {
+    "heroId": "20",
+    "heroName": "雪原双子",
+    "avgDamage": 33588,
+    "avgDamageTaken": 46206,
+    "avgHealShield": 14310,
+    "avgCcTime": 42,
+    "physicalShare": 0.1149,
+    "magicShare": 0.8048
+  },
+  "33": {
+    "heroId": "33",
+    "heroName": "披甲龙龟",
+    "avgDamage": 26010,
+    "avgDamageTaken": 71190,
+    "avgHealShield": 7542,
+    "avgCcTime": 42,
+    "physicalShare": 0.3803,
+    "magicShare": 0.5103
+  },
+  "154": {
+    "heroId": "154",
+    "heroName": "生化魔人",
+    "avgDamage": 32166,
+    "avgDamageTaken": 82908,
+    "avgHealShield": 42786,
+    "avgCcTime": 42,
+    "physicalShare": 0.1691,
+    "magicShare": 0.7547
+  },
+  "19": {
+    "heroId": "19",
+    "heroName": "祖安怒兽",
+    "avgDamage": 37962,
+    "avgDamageTaken": 70452,
+    "avgHealShield": 26460,
+    "avgCcTime": 42,
+    "physicalShare": 0.4369,
+    "magicShare": 0.5083
+  },
+  "133": {
+    "heroId": "133",
+    "heroName": "德玛西亚之翼",
+    "avgDamage": 38826,
+    "avgDamageTaken": 30492,
+    "avgHealShield": 3780,
+    "avgCcTime": 18,
+    "physicalShare": 0.912,
+    "magicShare": 0.0434
+  },
+  "142": {
+    "heroId": "142",
+    "heroName": "暮光星灵",
+    "avgDamage": 37890,
+    "avgDamageTaken": 24948,
+    "avgHealShield": 2250,
+    "avgCcTime": 28,
+    "physicalShare": 0.0556,
+    "magicShare": 0.7825
+  },
+  "69": {
+    "heroId": "69",
+    "heroName": "魔蛇之拥",
+    "avgDamage": 36000,
+    "avgDamageTaken": 39258,
+    "avgHealShield": 7668,
+    "avgCcTime": 42,
+    "physicalShare": 0.035,
+    "magicShare": 0.9031
+  },
+  "518": {
+    "heroId": "518",
+    "heroName": "万花通灵",
+    "avgDamage": 33012,
+    "avgDamageTaken": 26964,
+    "avgHealShield": 1782,
+    "avgCcTime": 28,
+    "physicalShare": 0.047,
+    "magicShare": 0.881
+  },
+  "221": {
+    "heroId": "221",
+    "heroName": "祖安花火",
+    "avgDamage": 40338,
+    "avgDamageTaken": 31374,
+    "avgHealShield": 3726,
+    "avgCcTime": 18,
+    "physicalShare": 0.704,
+    "magicShare": 0.257
+  },
+  "40": {
+    "heroId": "40",
+    "heroName": "风暴之怒",
+    "avgDamage": 12924,
+    "avgDamageTaken": 24534,
+    "avgHealShield": 16704,
+    "avgCcTime": 42,
+    "physicalShare": 0.0792,
+    "magicShare": 0.8468
+  },
+  "268": {
+    "heroId": "268",
+    "heroName": "沙漠皇帝",
+    "avgDamage": 39204,
+    "avgDamageTaken": 31590,
+    "avgHealShield": 2448,
+    "avgCcTime": 28,
+    "physicalShare": 0.0599,
+    "magicShare": 0.8943
+  },
+  "902": {
+    "heroId": "902",
+    "heroName": "明烛",
+    "avgDamage": 16452,
+    "avgDamageTaken": 23490,
+    "avgHealShield": 14742,
+    "avgCcTime": 42,
+    "physicalShare": 0.0628,
+    "magicShare": 0.8689
+  },
+  "117": {
+    "heroId": "117",
+    "heroName": "仙灵女巫",
+    "avgDamage": 10458,
+    "avgDamageTaken": 24264,
+    "avgHealShield": 6462,
+    "avgCcTime": 42,
+    "physicalShare": 0.1646,
+    "magicShare": 0.7512
+  },
+  "2": {
+    "heroId": "2",
+    "heroName": "狂战士",
+    "avgDamage": 39690,
+    "avgDamageTaken": 52758,
+    "avgHealShield": 12330,
+    "avgCcTime": 42,
+    "physicalShare": 0.6929,
+    "magicShare": 0.0282
+  },
+  "201": {
+    "heroId": "201",
+    "heroName": "弗雷尔卓德之心",
+    "avgDamage": 21780,
+    "avgDamageTaken": 69390,
+    "avgHealShield": 7614,
+    "avgCcTime": 42,
+    "physicalShare": 0.3303,
+    "magicShare": 0.574
+  },
+  "888": {
+    "heroId": "888",
+    "heroName": "炼金男爵",
+    "avgDamage": 17550,
+    "avgDamageTaken": 27702,
+    "avgHealShield": 3204,
+    "avgCcTime": 28,
+    "physicalShare": 0.0789,
+    "magicShare": 0.7115
+  },
+  "267": {
+    "heroId": "267",
+    "heroName": "唤潮鲛姬",
+    "avgDamage": 16362,
+    "avgDamageTaken": 25740,
+    "avgHealShield": 18882,
+    "avgCcTime": 42,
+    "physicalShare": 0.0692,
+    "magicShare": 0.8607
+  },
+  "72": {
+    "heroId": "72",
+    "heroName": "上古领主",
+    "avgDamage": 39636,
+    "avgDamageTaken": 67428,
+    "avgHealShield": 8118,
+    "avgCcTime": 42,
+    "physicalShare": 0.5268,
+    "magicShare": 0.4001
+  },
+  "497": {
+    "heroId": "497",
+    "heroName": "幻翎",
+    "avgDamage": 19458,
+    "avgDamageTaken": 62532,
+    "avgHealShield": 12600,
+    "avgCcTime": 42,
+    "physicalShare": 0.3261,
+    "magicShare": 0.5745
+  },
+  "432": {
+    "heroId": "432",
+    "heroName": "星界游神",
+    "avgDamage": 23130,
+    "avgDamageTaken": 33264,
+    "avgHealShield": 13716,
+    "avgCcTime": 42,
+    "physicalShare": 0.3263,
+    "magicShare": 0.6214
+  },
+  "44": {
+    "heroId": "44",
+    "heroName": "瓦洛兰之盾",
+    "avgDamage": 20268,
+    "avgDamageTaken": 69624,
+    "avgHealShield": 25398,
+    "avgCcTime": 42,
+    "physicalShare": 0.3709,
+    "magicShare": 0.5467
+  },
+  "240": {
+    "heroId": "240",
+    "heroName": "暴怒骑士",
+    "avgDamage": 39042,
+    "avgDamageTaken": 73026,
+    "avgHealShield": 7488,
+    "avgCcTime": 42,
+    "physicalShare": 0.8297,
+    "magicShare": 0.0997
+  },
+  "83": {
+    "heroId": "83",
+    "heroName": "牧魂人",
+    "avgDamage": 31122,
+    "avgDamageTaken": 61146,
+    "avgHealShield": 15390,
+    "avgCcTime": 42,
+    "physicalShare": 0.6004,
+    "magicShare": 0.3302
+  },
+  "28": {
+    "heroId": "28",
+    "heroName": "痛苦之拥",
+    "avgDamage": 43074,
+    "avgDamageTaken": 34146,
+    "avgHealShield": 7524,
+    "avgCcTime": 28,
+    "physicalShare": 0.0418,
+    "magicShare": 0.8924
+  },
+  "60": {
+    "heroId": "60",
+    "heroName": "蜘蛛女皇",
+    "avgDamage": 37908,
+    "avgDamageTaken": 31518,
+    "avgHealShield": 4752,
+    "avgCcTime": 28,
+    "physicalShare": 0.0662,
+    "magicShare": 0.8694
+  },
+  "895": {
+    "heroId": "895",
+    "heroName": "不羁之悦",
+    "avgDamage": 37872,
+    "avgDamageTaken": 38934,
+    "avgHealShield": 9720,
+    "avgCcTime": 42,
+    "physicalShare": 0.9164,
+    "magicShare": 0.0226
+  },
+  "427": {
+    "heroId": "427",
+    "heroName": "翠神",
+    "avgDamage": 12924,
+    "avgDamageTaken": 24516,
+    "avgHealShield": 6354,
+    "avgCcTime": 42,
+    "physicalShare": 0.2676,
+    "magicShare": 0.6508
+  },
+  "421": {
+    "heroId": "421",
+    "heroName": "虚空遁地兽",
+    "avgDamage": 32040,
+    "avgDamageTaken": 70938,
+    "avgHealShield": 25182,
+    "avgCcTime": 42,
+    "physicalShare": 0.6165,
+    "magicShare": 0.2401
+  }
+}

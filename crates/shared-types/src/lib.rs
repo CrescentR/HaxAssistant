@@ -333,7 +333,7 @@ pub struct LineupEvaluation {
     pub bench_suggestions: Vec<BenchSuggestion>,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct LcuStatus {
     pub connected: bool,
     pub phase: String,
@@ -354,7 +354,7 @@ pub struct ChampSelectSnapshot {
     pub timer_phase: String,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LivePlayerScore {
     pub summoner_name: String,
@@ -388,7 +388,7 @@ pub struct LiveGameSnapshot {
     pub active_summoner_name: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OverlayStatePayload {
     pub hero_name: String,

@@ -37,6 +37,11 @@ export async function tauriGetRuntimeSummary(): Promise<RuntimeSummary | null> {
   return invoke<RuntimeSummary>("get_runtime_summary");
 }
 
+export async function tauriReadDataFile(fileName: string): Promise<string | null> {
+  if (!isTauriRuntime()) return null;
+  return invoke<string>("read_data_file", { fileName });
+}
+
 export async function tauriGetSettings(): Promise<AppSettings | null> {
   if (!isTauriRuntime()) return null;
   return invoke<AppSettings>("get_settings");

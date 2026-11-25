@@ -63,6 +63,19 @@ interface Props {
   onOpenOverlayPreview: (overlayKind: string) => void;
 }
 
+function sameStringList(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((item, idx) => item === b[idx]);
+}
+
+function formatOcrStatus(status: string, ocrMs?: number | null): string {
+  const trimmed = status.trim();
+  if (typeof ocrMs !== "number" || !Number.isFinite(ocrMs) || ocrMs <= 0) {
+    return trimmed;
+  }
+  const suffix = ` · ${ocrMs.toFixed(1)}ms`;
+  return trimmed.endsWith(suffix) ? trimmed : `${trimmed}${suffix}`;
+}
+
 export const OngoingWorkspace: React.FC<Props> = ({
   db,
   settings,
@@ -153,30 +166,64 @@ export const OngoingWorkspace: React.FC<Props> = ({
   useEffect(() => {
     if (!liveOverlayState) return;
     if (liveOverlayState.lcu?.connected) {
-      if (liveOverlayState.phase === "ChampSelect") setPhase("ChampSelect");
-      else if (liveOverlayState.phase === "InProgress") setPhase("InProgress");
-      if (liveOverlayState.heroName) setSelectedHero(liveOverlayState.heroName);
-      if (liveOverlayState.allyTeam.length > 0) setAllyTeam(liveOverlayState.allyTeam);
-      if (liveOverlayState.enemyTeam.length > 0) setEnemyTeam(liveOverlayState.enemyTeam);
-      if (liveOverlayState.benchPool.length > 0) setBenchPool(liveOverlayState.benchPool);
+      if (liveOverlayState.phase === "ChampSelect") {
+        setPhase((prev) => (prev === "ChampSelect" ? prev : "ChampSelect"));
+      } else if (liveOverlayState.phase === "InProgress") {
+        setPhase((prev) => (prev === "InProgress" ? prev : "InProgress"));
+      }
+      if (liveOverlayState.heroName) {
+        setSelectedHero((prev) =>
+          prev === liveOverlayState.heroName ? prev : liveOverlayState.heroName
+        );
+      }
+      if (liveOverlayState.allyTeam.length > 0) {
+        setAllyTeam((prev) =>
+          sameStringList(prev, liveOverlayState.allyTeam) ? prev : liveOverlayState.allyTeam
+        );
+      }
+      if (liveOverlayState.enemyTeam.length > 0) {
+        setEnemyTeam((prev) =>
+          sameStringList(prev, liveOverlayState.enemyTeam) ? prev : liveOverlayState.enemyTeam
+        );
+      }
+      if (liveOverlayState.benchPool.length > 0) {
+        setBenchPool((prev) =>
+          sameStringList(prev, liveOverlayState.benchPool) ? prev : liveOverlayState.benchPool
+        );
+      }
     }
     if (liveOverlayState.candidateAugments.length === 3) {
-      setCandidateOffer(liveOverlayState.candidateAugments);
+      setCandidateOffer((prev) =>
+        sameStringList(prev, liveOverlayState.candidateAugments)
+          ? prev
+          : liveOverlayState.candidateAugments
+      );
     }
     if (liveOverlayState.ocrStatus) {
-      setOcrStatus(
-        liveOverlayState.ocrMs
-          ? `${liveOverlayState.ocrStatus} · ${liveOverlayState.ocrMs.toFixed(1)}ms`
-          : liveOverlayState.ocrStatus
-      );
+      const formatted = formatOcrStatus(liveOverlayState.ocrStatus, liveOverlayState.ocrMs);
+      setOcrStatus((prev) => (prev === formatted ? prev : formatted));
     }
   }, [liveOverlayState]);
 
   useEffect(() => {
     if (!isTauriRuntime()) return;
+    const nextPhase = lcuStatus?.connected ? lcuStatus.phase : phase;
+    if (
+      liveOverlayState &&
+      liveOverlayState.heroName === selectedHero &&
+      liveOverlayState.phase === nextPhase &&
+      liveOverlayState.stage === stage &&
+      sameStringList(liveOverlayState.candidateAugments, candidateOffer) &&
+      sameStringList(liveOverlayState.confirmedAugments, confirmedAugments) &&
+      sameStringList(liveOverlayState.allyTeam, allyTeam) &&
+      sameStringList(liveOverlayState.enemyTeam, enemyTeam) &&
+      sameStringList(liveOverlayState.benchPool, benchPool)
+    ) {
+      return;
+    }
     const payload: OverlayStatePayload = {
       heroName: selectedHero,
-      phase: lcuStatus?.connected ? lcuStatus.phase : phase,
+      phase: nextPhase,
       stage,
       candidateAugments: candidateOffer,
       confirmedAugments,
@@ -184,6 +231,7 @@ export const OngoingWorkspace: React.FC<Props> = ({
       enemyTeam,
       benchPool,
       currentGold: liveOverlayState?.currentGold ?? 2850,
+      ownedItemIds: liveOverlayState?.ownedItemIds ?? [],
       isDead: liveOverlayState?.isDead ?? false,
       lcu: lcuStatus ?? {
         connected: false,
@@ -191,9 +239,10 @@ export const OngoingWorkspace: React.FC<Props> = ({
         port: null,
         summoner_name: null,
         lockfile_path: null,
+        locale: liveOverlayState?.lcu?.locale ?? null,
       },
       livePlayers: liveOverlayState?.livePlayers ?? [],
-      ocrStatus,
+      ocrStatus: liveOverlayState?.ocrStatus ?? null,
       ocrMs: liveOverlayState?.ocrMs ?? null,
     };
     tauriSetOverlayState(payload).catch(() => {});
@@ -215,11 +264,15 @@ export const OngoingWorkspace: React.FC<Props> = ({
           .map((r) => r.match_name)
           .filter((n): n is string => typeof n === "string" && n.length > 0);
         if (names.length === 3) {
-          setCandidateOffer(names);
+          setCandidateOffer((prev) => (sameStringList(prev, names) ? prev : names));
         }
         const timings = data.timings as { ocr_ms?: number; total_ms?: number } | undefined;
+        const ocrMsText =
+          typeof timings?.ocr_ms === "number" ? timings.ocr_ms.toFixed(1) : "0.0";
+        const totalMsText =
+          typeof timings?.total_ms === "number" ? timings.total_ms.toFixed(1) : "0.0";
         setOcrStatus(
-          `常驻 ONNX 识别成功：${names.join(" / ")} · 推理 ${timings?.ocr_ms ?? 0}ms (总耗时 ${timings?.total_ms ?? 0}ms)`
+          `常驻 ONNX 识别成功：${names.join(" / ")} · 推理 ${ocrMsText}ms (总耗时 ${totalMsText}ms)`
         );
       } else {
         setOcrStatus(`OCR 返回异常：${String(data.error ?? "unknown")}`);
