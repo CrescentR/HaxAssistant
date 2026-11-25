@@ -13,9 +13,12 @@ use std::time::Duration;
 use app_core::HexBoxCore;
 use serde_json::Value;
 use shared_types::{
-    AppSettings, AugmentRecommendationCard, EnemyCounterAnalysis, ItemPlan, LcuStatus,
-    LineupEvaluation, MatchHistoryEntry, MatchHistoryResponse, OverlayStatePayload,
-    PostgameReview, RuntimeSummary,
+    AppSettings, ArurfRecommendation, AssetSyncResult, AssetSyncStatus, AugmentOfferStatsReport,
+    AugmentRecommendationCard, BenchGrabStatus, EnemyCounterAnalysis, GamePlayerIntel,
+    IntelCacheStatus, ItemPlan, ItemSetSyncResult, LcuStatus, LineupEvaluation, MatchHistoryEntry,
+    MatchHistoryResponse, OcrCacheCleanupReport, OverlayStatePayload, PlayerEncounterRecord,
+    PlayerEncounterSummary, PlayerLibraryBundle, PlayerMarker, PlayerProfile, PlayerSearchResult,
+    PostgameReview, RunePagePlan, RuntimeSummary, SummonerSpellSnapshot,
 };
 use overlay_layout::{OverlayLayoutStore, SavedPosition};
 use tauri::{AppHandle, Emitter, Manager, State, WebviewWindow, WindowEvent};
@@ -313,6 +316,259 @@ fn set_overlay_visible(app: &AppHandle, kind: &str, visible: bool) {
 }
 
 #[tauri::command]
+fn get_asset_sync_status(state: State<'_, AppState>) -> AssetSyncStatus {
+    state.core.get_asset_sync_status()
+}
+
+#[tauri::command]
+async fn sync_remote_assets(
+    state: State<'_, AppState>,
+    source_url: Option<String>,
+    include_models: Option<bool>,
+) -> Result<AssetSyncResult, String> {
+    state
+        .core
+        .sync_remote_assets(source_url.as_deref(), include_models.unwrap_or(true))
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn cleanup_ocr_cache(state: State<'_, AppState>) -> OcrCacheCleanupReport {
+    state.core.cleanup_ocr_cache()
+}
+
+#[tauri::command]
+async fn get_client_locale(state: State<'_, AppState>) -> Result<String, String> {
+    Ok(state.core.get_client_locale().await)
+}
+
+#[tauri::command]
+fn list_player_markers(state: State<'_, AppState>) -> Vec<PlayerMarker> {
+    state.core.list_player_markers()
+}
+
+#[tauri::command]
+fn save_player_marker(
+    state: State<'_, AppState>,
+    marker: PlayerMarker,
+) -> Result<PlayerMarker, String> {
+    state
+        .core
+        .save_player_marker(marker)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn delete_player_marker(
+    state: State<'_, AppState>,
+    puuid_or_name: String,
+) -> Result<bool, String> {
+    state
+        .core
+        .delete_player_marker(&puuid_or_name)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn list_player_encounters(
+    state: State<'_, AppState>,
+    limit: Option<usize>,
+) -> Vec<PlayerEncounterRecord> {
+    state.core.list_player_encounters(limit.unwrap_or(100))
+}
+
+#[tauri::command]
+fn get_encounter_summary(state: State<'_, AppState>, query: String) -> PlayerEncounterSummary {
+    state.core.get_encounter_summary(&query)
+}
+
+#[tauri::command]
+fn delete_player_encounters(
+    state: State<'_, AppState>,
+    puuid_or_name: String,
+) -> Result<usize, String> {
+    state
+        .core
+        .delete_player_encounters(&puuid_or_name)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn prune_player_encounters(
+    state: State<'_, AppState>,
+    max_age_days: u64,
+) -> Result<usize, String> {
+    state
+        .core
+        .prune_player_encounters(max_age_days)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn export_player_library(state: State<'_, AppState>) -> PlayerLibraryBundle {
+    state.core.export_player_library()
+}
+
+#[tauri::command]
+fn import_player_library(
+    state: State<'_, AppState>,
+    bundle: PlayerLibraryBundle,
+    replace: Option<bool>,
+) -> Result<(usize, usize), String> {
+    state
+        .core
+        .import_player_library(bundle, replace.unwrap_or(false))
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn search_player(
+    state: State<'_, AppState>,
+    query: String,
+) -> Result<PlayerSearchResult, String> {
+    state
+        .core
+        .search_player(&query)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn get_player_profile(
+    state: State<'_, AppState>,
+    query: String,
+    count: Option<usize>,
+) -> Result<PlayerProfile, String> {
+    state
+        .core
+        .get_player_profile(&query, count.unwrap_or(15))
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn get_game_players(state: State<'_, AppState>) -> Result<Vec<GamePlayerIntel>, String> {
+    Ok(state.core.get_game_players(false).await)
+}
+
+#[tauri::command]
+async fn refresh_game_player_intel(
+    state: State<'_, AppState>,
+) -> Result<Vec<GamePlayerIntel>, String> {
+    Ok(state.core.get_game_players(true).await)
+}
+
+#[tauri::command]
+fn get_intel_cache_status(state: State<'_, AppState>) -> IntelCacheStatus {
+    state.core.get_intel_cache_status()
+}
+
+#[tauri::command]
+async fn get_summoner_spell_snapshot(
+    state: State<'_, AppState>,
+) -> Result<SummonerSpellSnapshot, String> {
+    Ok(state.core.get_summoner_spell_snapshot().await)
+}
+
+#[tauri::command]
+async fn apply_summoner_spells(
+    state: State<'_, AppState>,
+    spell1_id: Option<u32>,
+    spell2_id: Option<u32>,
+) -> Result<SummonerSpellSnapshot, String> {
+    state
+        .core
+        .apply_summoner_spells(spell1_id, spell2_id)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn sync_item_set_to_client(
+    state: State<'_, AppState>,
+    hero_name: Option<String>,
+) -> Result<ItemSetSyncResult, String> {
+    state
+        .core
+        .sync_item_set_to_client(hero_name.as_deref())
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn get_arurf_recommendation(
+    state: State<'_, AppState>,
+    hero_name: Option<String>,
+) -> ArurfRecommendation {
+    state.core.get_arurf_recommendation(hero_name.as_deref())
+}
+
+#[tauri::command]
+async fn apply_arurf_rune_page(
+    state: State<'_, AppState>,
+    hero_name: Option<String>,
+) -> Result<RunePagePlan, String> {
+    state
+        .core
+        .apply_arurf_rune_page(hero_name.as_deref())
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn set_manual_augment_selection(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    confirmed_augments: Vec<String>,
+) -> OverlayStatePayload {
+    let saved = state.core.set_manual_augment_selection(confirmed_augments);
+    let _ = app.emit("hexbox://overlay-state", &saved);
+    saved
+}
+
+#[tauri::command]
+fn set_manual_augment_override(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    slot: usize,
+    augment_name: String,
+) -> Result<OverlayStatePayload, String> {
+    let saved = state
+        .core
+        .set_manual_augment_override(slot, augment_name)
+        .map_err(|e| e.to_string())?;
+    let _ = app.emit("hexbox://overlay-state", &saved);
+    Ok(saved)
+}
+
+#[tauri::command]
+fn get_augment_offer_stats(
+    state: State<'_, AppState>,
+    top_n: Option<usize>,
+) -> AugmentOfferStatsReport {
+    state.core.get_augment_offer_stats(top_n.unwrap_or(30))
+}
+
+#[tauri::command]
+async fn grab_bench_champion(
+    state: State<'_, AppState>,
+    champion_id: u32,
+) -> Result<BenchGrabStatus, String> {
+    Ok(state.core.grab_bench_champion(champion_id).await)
+}
+
+#[tauri::command]
+fn cancel_bench_grab(state: State<'_, AppState>) -> BenchGrabStatus {
+    state.core.cancel_bench_grab()
+}
+
+#[tauri::command]
+fn get_bench_grab_status(state: State<'_, AppState>) -> BenchGrabStatus {
+    state.core.get_bench_grab_status()
+}
+
+#[tauri::command]
 fn show_overlay(app: AppHandle, kind: String) -> Result<(), String> {
     let label = overlay_label(&kind);
     if let Some(win) = app.get_webview_window(label) {
@@ -549,7 +805,7 @@ fn main() {
             spawn_background_lcu_poller(app.handle().clone(), core.clone(), lcu_wake.clone());
             spawn_lcu_event_listener(lcu_wake);
             spawn_background_auto_ocr_watcher(app.handle().clone(), core.clone());
-            let layout = Arc::new(OverlayLayoutStore::load(&core.dataset.data_dir));
+            let layout = Arc::new(OverlayLayoutStore::load(&core.data_dir()));
             overlay_layout::apply_zoom(app.handle(), core.get_settings().overlay_zoom);
             overlay_layout::restore_positions(app.handle(), &layout);
             let layout_flush = layout.clone();
@@ -604,6 +860,35 @@ fn main() {
             reset_overlay_zoom,
             reset_overlay_position,
             start_overlay_drag,
+            get_asset_sync_status,
+            sync_remote_assets,
+            cleanup_ocr_cache,
+            get_client_locale,
+            list_player_markers,
+            save_player_marker,
+            delete_player_marker,
+            list_player_encounters,
+            get_encounter_summary,
+            delete_player_encounters,
+            prune_player_encounters,
+            export_player_library,
+            import_player_library,
+            search_player,
+            get_player_profile,
+            get_game_players,
+            refresh_game_player_intel,
+            get_intel_cache_status,
+            get_summoner_spell_snapshot,
+            apply_summoner_spells,
+            sync_item_set_to_client,
+            get_arurf_recommendation,
+            apply_arurf_rune_page,
+            set_manual_augment_selection,
+            set_manual_augment_override,
+            get_augment_offer_stats,
+            grab_bench_champion,
+            cancel_bench_grab,
+            get_bench_grab_status,
         ])
         .run(tauri::generate_context!())
         .expect("error while running HexBox Tauri application");

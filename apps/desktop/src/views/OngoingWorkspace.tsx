@@ -23,11 +23,35 @@ import {
 } from "../api/dataService";
 import {
   isTauriRuntime,
+  tauriApplyArurfRunePage,
+  tauriApplySummonerSpells,
   tauriBenchSwap,
+  tauriCancelBenchGrab,
+  tauriGetArurfRecommendation,
+  tauriGetAugmentOfferStats,
+  tauriGetBenchGrabStatus,
+  tauriGetGamePlayers,
+  tauriGetIntelCacheStatus,
+  tauriGetSummonerSpellSnapshot,
+  tauriGrabBenchChampion,
+  tauriRefreshGamePlayerIntel,
   tauriRunOcrPreset,
+  tauriSetManualAugmentOverride,
+  tauriSetManualAugmentSelection,
   tauriSetOverlayState,
+  tauriSyncItemSetToClient,
 } from "../api/tauriBridge";
-import type { AppSettings, LcuStatus, OverlayStatePayload } from "../types/hexbox";
+import type {
+  AppSettings,
+  ArurfRecommendation,
+  AugmentOfferStatsReport,
+  BenchGrabStatus,
+  GamePlayerIntel,
+  IntelCacheStatus,
+  LcuStatus,
+  OverlayStatePayload,
+  SummonerSpellSnapshot,
+} from "../types/hexbox";
 import { getChampionIconUrl, getItemIconUrl, getTierMeta } from "../utils/hexScore";
 
 interface Props {
@@ -77,6 +101,14 @@ export const OngoingWorkspace: React.FC<Props> = ({
     "虚空女皇",
   ]);
   const [autoGrabIds, setAutoGrabIds] = useState<string[]>(["卡牌大师", "曙光女神"]);
+  const [benchGrabStatus, setBenchGrabStatus] = useState<BenchGrabStatus | null>(null);
+  const [spellSnapshot, setSpellSnapshot] = useState<SummonerSpellSnapshot | null>(null);
+  const [arurfRec, setArurfRec] = useState<ArurfRecommendation | null>(null);
+  const [clientActionMsg, setClientActionMsg] = useState<string>("");
+  const [liveIntel, setLiveIntel] = useState<GamePlayerIntel[]>([]);
+  const [intelCache, setIntelCache] = useState<IntelCacheStatus | null>(null);
+  const [intelLoading, setIntelLoading] = useState<boolean>(false);
+  const [offerStats, setOfferStats] = useState<AugmentOfferStatsReport | null>(null);
   const [ocrStatus, setOcrStatus] = useState<string>("ONNX Runtime 就绪 · 35.1ms");
   const [ocrRunning, setOcrRunning] = useState<boolean>(false);
 
@@ -96,8 +128,16 @@ export const OngoingWorkspace: React.FC<Props> = ({
   );
 
   const evaluatedCards = useMemo(
-    () => evaluateAugmentOffer(db, selectedHero, candidateOffer, stage, confirmedAugments),
-    [db, selectedHero, candidateOffer, stage, confirmedAugments]
+    () =>
+      evaluateAugmentOffer(
+        db,
+        selectedHero,
+        candidateOffer,
+        stage,
+        confirmedAugments,
+        settings?.augment_value_mode || "balanced"
+      ),
+    [db, selectedHero, candidateOffer, stage, confirmedAugments, settings?.augment_value_mode]
   );
 
   const enemyCounter = useMemo(
@@ -204,10 +244,113 @@ export const OngoingWorkspace: React.FC<Props> = ({
     }
   };
 
-  const toggleAutoGrab = (heroName: string) => {
+  const toggleAutoGrab = async (heroName: string) => {
+    const exists = autoGrabIds.includes(heroName);
     setAutoGrabIds((prev) =>
       prev.includes(heroName) ? prev.filter((x) => x !== heroName) : [...prev, heroName]
     );
+    if (!isTauriRuntime()) return;
+    if (exists) {
+      const st = await tauriCancelBenchGrab().catch(() => null);
+      if (st) setBenchGrabStatus(st);
+    } else {
+      const target = db.champions.find((c) => c.hero === heroName);
+      const champId = Number(target?.id);
+      if (Number.isFinite(champId) && champId > 0) {
+        const st = await tauriGrabBenchChampion(champId).catch(() => null);
+        if (st) setBenchGrabStatus(st);
+      }
+    }
+  };
+
+  const handleCancelBenchGrab = async () => {
+    setAutoGrabIds([]);
+    if (!isTauriRuntime()) {
+      setBenchGrabStatus({
+        active: false,
+        targetChampionId: null,
+        targetHeroName: null,
+        statusText: "已取消本局自动秒抢",
+      });
+      return;
+    }
+    const st = await tauriCancelBenchGrab().catch(() => null);
+    if (st) setBenchGrabStatus(st);
+  };
+
+  useEffect(() => {
+    if (!isTauriRuntime()) return;
+    tauriGetBenchGrabStatus().then((st) => st && setBenchGrabStatus(st)).catch(() => {});
+    tauriGetSummonerSpellSnapshot().then((sp) => sp && setSpellSnapshot(sp)).catch(() => {});
+    tauriGetArurfRecommendation(selectedHero).then((r) => r && setArurfRec(r)).catch(() => {});
+    tauriGetAugmentOfferStats(8).then((r) => r && setOfferStats(r)).catch(() => {});
+    tauriGetIntelCacheStatus().then((c) => c && setIntelCache(c)).catch(() => {});
+  }, [selectedHero, phase]);
+
+  const handleApplySpells = async () => {
+    if (!isTauriRuntime()) {
+      setClientActionMsg("当前为浏览器预览模式，在桌面端选人阶段可一键应用推荐召唤师技能。");
+      return;
+    }
+    try {
+      const updated = await tauriApplySummonerSpells();
+      if (updated) {
+        setSpellSnapshot(updated);
+        setClientActionMsg(
+          `已应用召唤师技能：${updated.recommendedSpell1Name} + ${updated.recommendedSpell2Name}（闪现 ${updated.flashSlot} 键）`
+        );
+      }
+    } catch (err) {
+      setClientActionMsg(`应用召唤师技能失败：${String(err)}`);
+    }
+  };
+
+  const handleSyncItemSet = async () => {
+    if (!isTauriRuntime()) {
+      setClientActionMsg("当前为浏览器预览模式，在桌面端连接客户端后可一键同步装备方案。");
+      return;
+    }
+    try {
+      const res = await tauriSyncItemSetToClient(selectedHero);
+      if (res) {
+        setClientActionMsg(res.message);
+      }
+    } catch (err) {
+      setClientActionMsg(`同步装备方案失败：${String(err)}`);
+    }
+  };
+
+  const handleApplyArurfRunes = async () => {
+    if (!isTauriRuntime()) {
+      setClientActionMsg("当前为浏览器预览模式，在桌面端连接客户端后可一键写入无限火力符文页。");
+      return;
+    }
+    try {
+      const page = await tauriApplyArurfRunePage(selectedHero);
+      if (page) {
+        setClientActionMsg(`已写入客户端符文页：${page.name}（基石：${page.keystoneName}）`);
+      }
+    } catch (err) {
+      setClientActionMsg(`写入符文页失败：${String(err)}`);
+    }
+  };
+
+  const handleRefreshIntel = async (force = true) => {
+    if (!isTauriRuntime()) {
+      setClientActionMsg("当前为浏览器预览模式，连接客户端进入对局后可拉取真实 10 人 SGP/LCU 战力情报。");
+      return;
+    }
+    setIntelLoading(true);
+    try {
+      const players = force ? await tauriRefreshGamePlayerIntel() : await tauriGetGamePlayers();
+      if (players) setLiveIntel(players);
+      const cache = await tauriGetIntelCacheStatus();
+      if (cache) setIntelCache(cache);
+    } catch {
+      // ignore
+    } finally {
+      setIntelLoading(false);
+    }
   };
 
   const presetOffers: Array<{ label: string; cards: string[]; confirmed: string[] }> = [
@@ -348,8 +491,22 @@ export const OngoingWorkspace: React.FC<Props> = ({
               <h3>
                 <Zap size={16} className="gold-text" /> 替补席毫秒级秒抢 & 换人胜率增益
               </h3>
-              <span className="tag-badge success">bench_autograb_worker 监听中 (30ms)</span>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <span className="tag-badge success">
+                  {benchGrabStatus?.active
+                    ? `秒抢待命：${benchGrabStatus.targetHeroName || benchGrabStatus.targetChampionId}`
+                    : "bench_autograb_worker 监听中 (30ms)"}
+                </span>
+                <button className="hex-btn ghost sm" onClick={handleCancelBenchGrab}>
+                  取消本局自动抢
+                </button>
+              </div>
             </div>
+            {benchGrabStatus?.statusText && (
+              <div className="card-sub" style={{ marginBottom: 8 }}>
+                秒抢状态：{benchGrabStatus.statusText}
+              </div>
+            )}
             <p className="card-desc">
               点击“立即换入”模拟 LCU <code>POST /lol-champ-select/v1/session/bench/swap/&#123;id&#125;</code>
               ；勾选“预订秒抢”后一旦队友换下该英雄将毫秒级自动抢入。
@@ -476,6 +633,49 @@ export const OngoingWorkspace: React.FC<Props> = ({
                     </div>
                   </div>
                 )}
+
+                {/* P1: One-click client actions: Summoner Spells, Item Set Sync, ARURF Runes */}
+                <div
+                  style={{
+                    marginTop: 12,
+                    paddingTop: 12,
+                    borderTop: "1px solid rgba(255,255,255,0.08)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
+                  }}
+                >
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                    <button className="hex-btn primary sm" onClick={handleApplySpells}>
+                      一键应用召唤师技能 (
+                      {spellSnapshot
+                        ? `${spellSnapshot.recommendedSpell1Name}+${spellSnapshot.recommendedSpell2Name}`
+                        : settings?.summoner_flash_slot === "D"
+                        ? "闪现+标记"
+                        : "标记+闪现"}
+                      )
+                    </button>
+                    <button className="hex-btn ghost sm" onClick={handleSyncItemSet}>
+                      同步装备方案到客户端
+                    </button>
+                    <button className="hex-btn ghost sm" onClick={handleApplyArurfRunes}>
+                      一键写入无限火力符文
+                      {arurfRec ? ` (${arurfRec.runePage.keystoneName})` : ""}
+                    </button>
+                  </div>
+                  {arurfRec && (
+                    <div className="card-sub">
+                      ARURF 推荐：{arurfRec.roleTag} · {arurfRec.runePage.primaryName} /{" "}
+                      {arurfRec.runePage.subName}（基石：{arurfRec.runePage.keystoneName}）· 召唤师技能{" "}
+                      {arurfRec.spellNames.join(" + ")}
+                    </div>
+                  )}
+                  {clientActionMsg && (
+                    <div className="card-sub" style={{ color: "#facc15" }}>
+                      {clientActionMsg}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -540,9 +740,11 @@ export const OngoingWorkspace: React.FC<Props> = ({
                   <span key={ca} className="confirmed-aug-chip">
                     {ca}
                     <button
-                      onClick={() =>
-                        setConfirmedAugments((prev) => prev.filter((x) => x !== ca))
-                      }
+                      onClick={() => {
+                        const next = confirmedAugments.filter((x) => x !== ca);
+                        setConfirmedAugments(next);
+                        tauriSetManualAugmentSelection(next).catch(() => {});
+                      }}
                     >
                       ×
                     </button>
@@ -553,7 +755,11 @@ export const OngoingWorkspace: React.FC<Props> = ({
                   value=""
                   onChange={(e) => {
                     if (e.target.value && !confirmedAugments.includes(e.target.value)) {
-                      setConfirmedAugments([...confirmedAugments, e.target.value]);
+                      const next = [...confirmedAugments, e.target.value];
+                      setConfirmedAugments(next);
+                      tauriSetManualAugmentSelection(next)
+                        .then(() => tauriGetAugmentOfferStats(8).then((r) => r && setOfferStats(r)))
+                        .catch(() => {});
                     }
                   }}
                 >
@@ -586,6 +792,7 @@ export const OngoingWorkspace: React.FC<Props> = ({
                           const next = [...candidateOffer];
                           next[idx] = e.target.value;
                           setCandidateOffer(next);
+                          tauriSetManualAugmentOverride(idx + 1, e.target.value).catch(() => {});
                         }}
                       >
                         {db.augments.map((a) => (
@@ -675,6 +882,31 @@ export const OngoingWorkspace: React.FC<Props> = ({
                 </div>
               ))}
             </div>
+
+            {offerStats && offerStats.totalOffers > 0 && (
+              <div
+                style={{
+                  marginTop: 12,
+                  padding: "8px 12px",
+                  borderRadius: 8,
+                  background: "rgba(255,255,255,0.03)",
+                  fontSize: 12,
+                  display: "flex",
+                  gap: 10,
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                }}
+              >
+                <span className="gold-text">
+                  本机海克斯出现统计（累计识别 {offerStats.totalOffers} 次 · 已选 {offerStats.totalPicks} 次）：
+                </span>
+                {offerStats.topOffered.slice(0, 5).map((entry) => (
+                  <span key={entry.augmentName} className="tag-badge">
+                    {entry.augmentName} ({entry.offered}次 / 选{entry.picked})
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Dynamic Formula & Enemy Counter Item Build + 10-Player Intel */}
@@ -776,15 +1008,85 @@ export const OngoingWorkspace: React.FC<Props> = ({
                 <h3>
                   <Activity size={16} className="gold-text" /> 10 人实时战力评分 (HexScore) & 车队识别
                 </h3>
-                <button
-                  className="hex-btn ghost sm"
-                  onClick={() => onOpenOverlayPreview("player-scores")}
-                >
-                  <Eye size={13} /> 预览战力悬浮窗
-                </button>
+                <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                  {intelCache && (
+                    <span className="tag-badge">
+                      缓存 {intelCache.cachedPlayers} 人{intelCache.sgpEnabled ? " · SGP" : " · LCU"}
+                    </span>
+                  )}
+                  <button
+                    className="hex-btn ghost sm"
+                    onClick={() => handleRefreshIntel(true)}
+                    disabled={intelLoading}
+                  >
+                    <RefreshCw size={13} className={intelLoading ? "spin" : ""} />{" "}
+                    {intelLoading ? "拉取中..." : "刷新实时情报"}
+                  </button>
+                  <button
+                    className="hex-btn ghost sm"
+                    onClick={() => onOpenOverlayPreview("player-scores")}
+                  >
+                    <Eye size={13} /> 预览战力悬浮窗
+                  </button>
+                </div>
               </div>
 
-              <div className="roster-dual-columns">
+              {liveIntel.length > 0 ? (
+                <div className="roster-dual-columns">
+                  {(["ORDER", "CHAOS"] as const).map((side) => {
+                    const list = liveIntel.filter((p) => p.team === side);
+                    return (
+                      <div key={side} className="roster-col">
+                        <div className={`roster-col-title ${side === "ORDER" ? "ally" : "enemy"}`}>
+                          {side === "ORDER" ? "蓝队实时情报" : "红队实时情报"} ({list.length} 人)
+                        </div>
+                        {list.map((p, idx) => {
+                          const ch = db.champions.find((c) => c.hero === p.championName);
+                          const score = p.avgHexScore ?? 60;
+                          const tier = getTierMeta(score);
+                          return (
+                            <div key={`${p.summonerName}-${idx}`} className="roster-player-row">
+                              <img
+                                src={getChampionIconUrl(ch?.id || "22")}
+                                alt={p.championName}
+                                className="hero-avatar-sm"
+                                onError={(e) => ((e.target as HTMLImageElement).src = "/hexbox-logo.png")}
+                              />
+                              <div className="roster-p-main">
+                                <div className="roster-p-name">
+                                  <strong>{p.summonerName}</strong>{" "}
+                                  <span style={{ opacity: 0.75, fontSize: 12 }}>{p.championName}</span>
+                                  {p.marker && (
+                                    <span className="premade-badge">{p.marker.tagLabel}</span>
+                                  )}
+                                  {p.encounterCount > 0 && (
+                                    <span className="self-badge">偶遇 {p.encounterCount} 次</span>
+                                  )}
+                                </div>
+                                <div className="roster-p-sub">
+                                  {p.recentGames > 0
+                                    ? `近 ${p.recentGames} 场胜率 ${((p.recentWinRate ?? 0) * 100).toFixed(0)}% · KDA ${p.avgKda ?? "-"}`
+                                    : p.tags.join(" · ") || "暂无近期战绩缓存"}
+                                </div>
+                              </div>
+                              <div className="roster-score-right">
+                                <span
+                                  className="tier-pill"
+                                  style={{ background: tier.bg, color: tier.color }}
+                                >
+                                  {tier.label} {score.toFixed(1)}
+                                </span>
+                                <span className="mmr-sub">{p.source.toUpperCase()}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="roster-dual-columns">
                 <div className="roster-col">
                   <div className="roster-col-title ally">我方蓝队 (平均 HexScore 74.6 · 预估 2480分)</div>
                   {allyTeam.map((hname, idx) => {
@@ -880,6 +1182,7 @@ export const OngoingWorkspace: React.FC<Props> = ({
                   })}
                 </div>
               </div>
+              )}
             </div>
           </div>
         </>

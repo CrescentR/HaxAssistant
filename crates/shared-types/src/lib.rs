@@ -23,8 +23,28 @@ pub struct AppSettings {
     pub show_augment_stats: bool,
     pub sgp_enabled: bool,
     pub ready_check_auto_accept: bool,
+    #[serde(default)]
+    pub ready_check_accept_delay_ms: u64,
+    #[serde(default = "default_flash_slot")]
+    pub summoner_flash_slot: String,
+    #[serde(default)]
+    pub auto_apply_summoner_spells: bool,
+    #[serde(default = "default_augment_value_mode")]
+    pub augment_value_mode: String,
+    #[serde(default)]
+    pub data_sync_url: String,
+    #[serde(default)]
+    pub allow_non_lol_foreground: bool,
     pub overlay_opacity: u8,
     pub overlay_zoom: u16,
+}
+
+fn default_flash_slot() -> String {
+    "F".to_string()
+}
+
+fn default_augment_value_mode() -> String {
+    "balanced".to_string()
 }
 
 impl Default for AppSettings {
@@ -46,6 +66,12 @@ impl Default for AppSettings {
             show_augment_stats: true,
             sgp_enabled: true,
             ready_check_auto_accept: true,
+            ready_check_accept_delay_ms: 0,
+            summoner_flash_slot: default_flash_slot(),
+            auto_apply_summoner_spells: false,
+            augment_value_mode: default_augment_value_mode(),
+            data_sync_url: String::new(),
+            allow_non_lol_foreground: false,
             overlay_opacity: 95,
             overlay_zoom: 100,
         }
@@ -314,6 +340,8 @@ pub struct LcuStatus {
     pub port: Option<u16>,
     pub summoner_name: Option<String>,
     pub lockfile_path: Option<String>,
+    #[serde(default)]
+    pub locale: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -352,6 +380,12 @@ pub struct LiveGameSnapshot {
     pub allies: Vec<String>,
     pub enemies: Vec<String>,
     pub players: Vec<LivePlayerScore>,
+    /// Team of the active player ("ORDER" or "CHAOS"); empty if undetermined.
+    #[serde(default)]
+    pub active_team: String,
+    /// Summoner name of the active player as reported by liveclientdata.
+    #[serde(default)]
+    pub active_summoner_name: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -416,6 +450,7 @@ impl Default for OverlayStatePayload {
                 port: None,
                 summoner_name: None,
                 lockfile_path: None,
+                locale: None,
             },
             live_players: Vec::new(),
             ocr_status: None,
@@ -615,4 +650,249 @@ pub struct PostgameReview {
     pub core_items_total: u32,
     pub missing_core_items: Vec<String>,
     pub summary: Vec<String>,
+}
+
+// ---------------------------------------------------------------------------
+// P0: Data/Model sync & OCR maintenance
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AssetSyncStatus {
+    pub patch: String,
+    pub report_date: String,
+    pub data_dir: String,
+    pub model_dir: String,
+    pub expected_data_files: usize,
+    pub present_data_files: usize,
+    pub missing_data_files: Vec<String>,
+    pub expected_model_files: usize,
+    pub present_model_files: usize,
+    pub missing_model_files: Vec<String>,
+    pub ready_for_offline: bool,
+    pub ready_for_ocr: bool,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AssetSyncResult {
+    pub source_url: String,
+    pub patch: String,
+    pub report_date: String,
+    pub downloaded_data_files: Vec<String>,
+    pub downloaded_model_files: Vec<String>,
+    pub skipped_files: usize,
+    pub failed_files: Vec<String>,
+    pub status: AssetSyncStatus,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OcrCacheCleanupReport {
+    pub removed_files: usize,
+    pub freed_bytes: u64,
+    pub scanned_dirs: Vec<String>,
+}
+
+// ---------------------------------------------------------------------------
+// P1: Player markers, encounters, SGP/LCU player query & 10-player intel
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlayerMarker {
+    pub puuid: String,
+    pub summoner_name: String,
+    pub tag: String,
+    pub tag_label: String,
+    pub note: String,
+    #[serde(default)]
+    pub encounters: u32,
+    #[serde(default)]
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlayerEncounterRecord {
+    pub id: String,
+    pub puuid: String,
+    pub summoner_name: String,
+    pub champion_name: String,
+    /// `ally` or `enemy`.
+    pub relation: String,
+    /// `WIN`, `LOSS`, or `UNKNOWN`.
+    pub result: String,
+    pub kda: String,
+    pub timestamp: u64,
+    pub time_label: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlayerEncounterSummary {
+    pub query: String,
+    pub total_encounters: usize,
+    pub ally_games: usize,
+    pub enemy_games: usize,
+    pub ally_wins: usize,
+    pub enemy_wins: usize,
+    pub marker: Option<PlayerMarker>,
+    pub recent: Vec<PlayerEncounterRecord>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlayerLibraryBundle {
+    pub schema_version: String,
+    pub exported_at: u64,
+    #[serde(default)]
+    pub markers: Vec<PlayerMarker>,
+    #[serde(default)]
+    pub encounters: Vec<PlayerEncounterRecord>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlayerSearchResult {
+    pub puuid: String,
+    pub summoner_id: Option<u64>,
+    pub summoner_name: String,
+    pub tag_line: String,
+    pub summoner_level: u32,
+    pub profile_icon_id: u32,
+    pub source: String,
+    pub marker: Option<PlayerMarker>,
+    pub encounter_count: usize,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlayerProfile {
+    pub summoner: PlayerSearchResult,
+    pub source: String,
+    pub games_analyzed: usize,
+    pub win_rate: f64,
+    pub avg_kda: String,
+    pub avg_damage: u64,
+    pub avg_hex_score: f64,
+    pub top_champions: Vec<String>,
+    pub recent_matches: Vec<MatchHistoryEntry>,
+    pub encounter_summary: PlayerEncounterSummary,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GamePlayerIntel {
+    pub puuid: String,
+    pub summoner_name: String,
+    pub champion_name: String,
+    pub team: String,
+    pub recent_games: usize,
+    pub recent_win_rate: Option<f64>,
+    pub avg_kda: Option<String>,
+    pub avg_hex_score: Option<f64>,
+    pub tags: Vec<String>,
+    pub marker: Option<PlayerMarker>,
+    pub encounter_count: usize,
+    pub source: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IntelCacheStatus {
+    pub cached_players: usize,
+    pub sgp_enabled: bool,
+    pub last_refresh_epoch: Option<u64>,
+    pub ttl_secs: u64,
+}
+
+// ---------------------------------------------------------------------------
+// P1: Summoner spells, Item Set sync, ARURF & Rune Page
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SummonerSpellSnapshot {
+    pub in_champ_select: bool,
+    pub champion_id: Option<u32>,
+    pub hero_name: Option<String>,
+    pub spell1_id: Option<u32>,
+    pub spell2_id: Option<u32>,
+    pub spell1_name: String,
+    pub spell2_name: String,
+    pub recommended_spell1_id: u32,
+    pub recommended_spell2_id: u32,
+    pub recommended_spell1_name: String,
+    pub recommended_spell2_name: String,
+    pub flash_slot: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ItemSetSyncResult {
+    pub hero_name: String,
+    pub champion_id: u32,
+    pub title: String,
+    pub item_count: usize,
+    pub synced_to_client: bool,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RunePagePlan {
+    pub name: String,
+    pub primary_style_id: u32,
+    pub sub_style_id: u32,
+    pub selected_perk_ids: Vec<u32>,
+    pub primary_name: String,
+    pub sub_name: String,
+    pub keystone_name: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ArurfRecommendation {
+    pub hero_name: String,
+    pub hero_id: String,
+    pub role_tag: String,
+    pub spell1_id: u32,
+    pub spell2_id: u32,
+    pub spell_names: Vec<String>,
+    pub rune_page: RunePagePlan,
+    pub core_items: Vec<FormulaItemRef>,
+    pub tips: Vec<String>,
+}
+
+// ---------------------------------------------------------------------------
+// P1: Augment offer stats & Bench grab state
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AugmentOfferStatEntry {
+    pub augment_name: String,
+    pub offered: u64,
+    pub picked: u64,
+    pub pick_rate: f64,
+    pub last_seen_epoch: u64,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AugmentOfferStatsReport {
+    pub total_offers: u64,
+    pub total_picks: u64,
+    pub unique_augments: usize,
+    pub top_offered: Vec<AugmentOfferStatEntry>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BenchGrabStatus {
+    pub active: bool,
+    pub target_champion_id: Option<u32>,
+    pub target_hero_name: Option<String>,
+    pub status_text: String,
 }

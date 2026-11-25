@@ -15,6 +15,12 @@ export interface AppSettings {
   show_augment_stats: boolean;
   sgp_enabled: boolean;
   ready_check_auto_accept: boolean;
+  ready_check_accept_delay_ms: number;
+  summoner_flash_slot: "D" | "F" | string;
+  auto_apply_summoner_spells: boolean;
+  augment_value_mode: "balanced" | "winrate" | "highroll" | "stable" | string;
+  data_sync_url: string;
+  allow_non_lol_foreground: boolean;
   overlay_opacity: number;
   overlay_zoom: number;
 }
@@ -182,6 +188,7 @@ export interface LcuStatus {
   port: number | null;
   summoner_name: string | null;
   lockfile_path: string | null;
+  locale?: string | null;
 }
 
 export interface LivePlayerScore {
@@ -318,4 +325,181 @@ export interface PostgameReview {
   coreItemsTotal: number;
   missingCoreItems: string[];
   summary: string[];
+}
+
+export interface AssetSyncStatus {
+  patch: string;
+  reportDate: string;
+  dataDir: string;
+  modelDir: string;
+  expectedDataFiles: number;
+  presentDataFiles: number;
+  missingDataFiles: string[];
+  expectedModelFiles: number;
+  presentModelFiles: number;
+  missingModelFiles: string[];
+  readyForOffline: boolean;
+  readyForOcr: boolean;
+}
+
+export interface AssetSyncResult {
+  sourceUrl: string;
+  patch: string;
+  reportDate: string;
+  downloadedDataFiles: string[];
+  downloadedModelFiles: string[];
+  skippedFiles: number;
+  failedFiles: string[];
+  status: AssetSyncStatus;
+}
+
+export interface OcrCacheCleanupReport {
+  removedFiles: number;
+  freedBytes: number;
+  scannedDirs: string[];
+}
+
+export interface PlayerEncounterRecord {
+  id: string;
+  puuid: string;
+  summonerName: string;
+  championName: string;
+  relation: "ally" | "enemy" | string;
+  result: "WIN" | "LOSS" | "UNKNOWN" | string;
+  kda: string;
+  timestamp: number;
+  timeLabel: string;
+}
+
+export interface PlayerEncounterSummary {
+  query: string;
+  totalEncounters: number;
+  allyGames: number;
+  enemyGames: number;
+  allyWins: number;
+  enemyWins: number;
+  marker: PlayerMarker | null;
+  recent: PlayerEncounterRecord[];
+}
+
+export interface PlayerLibraryBundle {
+  schemaVersion: string;
+  exportedAt: number;
+  markers: PlayerMarker[];
+  encounters: PlayerEncounterRecord[];
+}
+
+export interface PlayerSearchResult {
+  puuid: string;
+  summonerId: number | null;
+  summonerName: string;
+  tagLine: string;
+  summonerLevel: number;
+  profileIconId: number;
+  source: string;
+  marker: PlayerMarker | null;
+  encounterCount: number;
+}
+
+export interface PlayerProfile {
+  summoner: PlayerSearchResult;
+  source: string;
+  gamesAnalyzed: number;
+  winRate: number;
+  avgKda: string;
+  avgDamage: number;
+  avgHexScore: number;
+  topChampions: string[];
+  recentMatches: MatchHistoryEntry[];
+  encounterSummary: PlayerEncounterSummary;
+}
+
+export interface GamePlayerIntel {
+  puuid: string;
+  summonerName: string;
+  championName: string;
+  team: string;
+  recentGames: number;
+  recentWinRate: number | null;
+  avgKda: string | null;
+  avgHexScore: number | null;
+  tags: string[];
+  marker: PlayerMarker | null;
+  encounterCount: number;
+  source: string;
+}
+
+export interface IntelCacheStatus {
+  cachedPlayers: number;
+  sgpEnabled: boolean;
+  lastRefreshEpoch: number | null;
+  ttlSecs: number;
+}
+
+export interface SummonerSpellSnapshot {
+  inChampSelect: boolean;
+  championId: number | null;
+  heroName: string | null;
+  spell1Id: number | null;
+  spell2Id: number | null;
+  spell1Name: string;
+  spell2Name: string;
+  recommendedSpell1Id: number;
+  recommendedSpell2Id: number;
+  recommendedSpell1Name: string;
+  recommendedSpell2Name: string;
+  flashSlot: string;
+}
+
+export interface ItemSetSyncResult {
+  heroName: string;
+  championId: number;
+  title: string;
+  itemCount: number;
+  syncedToClient: boolean;
+  message: string;
+}
+
+export interface RunePagePlan {
+  name: string;
+  primaryStyleId: number;
+  subStyleId: number;
+  selectedPerkIds: number[];
+  primaryName: string;
+  subName: string;
+  keystoneName: string;
+}
+
+export interface ArurfRecommendation {
+  heroName: string;
+  heroId: string;
+  roleTag: string;
+  spell1Id: number;
+  spell2Id: number;
+  spellNames: string[];
+  runePage: RunePagePlan;
+  coreItems: FormulaItemRef[];
+  tips: string[];
+}
+
+export interface AugmentOfferStatEntry {
+  augmentName: string;
+  offered: number;
+  picked: number;
+  pickRate: number;
+  lastSeenEpoch: number;
+}
+
+export interface AugmentOfferStatsReport {
+  totalOffers: number;
+  totalPicks: number;
+  uniqueAugments: number;
+  topOffered: AugmentOfferStatEntry[];
+}
+
+export interface BenchGrabStatus {
+  active: boolean;
+  targetChampionId: number | null;
+  targetHeroName: string | null;
+  statusText: string;
 }

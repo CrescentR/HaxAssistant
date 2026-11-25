@@ -1,3 +1,4 @@
+pub mod sgp;
 pub mod websocket;
 
 use std::fs;
@@ -6,9 +7,10 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use anyhow::{anyhow, Result};
 use base64::Engine;
-use serde_json::Value;
+use serde_json::{json, Value};
 use shared_types::{
     ChampSelectSnapshot, LcuStatus, LiveGameSnapshot, LivePlayerScore, MatchHistoryEntry,
+    RunePagePlan,
 };
 
 #[derive(Debug, Clone)]
@@ -99,6 +101,9 @@ pub fn discover_lockfile() -> Option<LockfileCredentials> {
 #[derive(Debug, Clone)]
 pub struct LcuClient {
     http: reqwest::Client,
+    /// Locale rarely changes; cache per client endpoint to avoid an extra LCU
+    /// request on every status poll.
+    cached_locale: std::sync::Arc<std::sync::Mutex<Option<(u16, String)>>>,
 }
 
 impl Default for LcuClient {
@@ -114,7 +119,46 @@ impl LcuClient {
             .timeout(Duration::from_millis(2500))
             .build()
             .unwrap_or_else(|_| reqwest::Client::new());
-        Self { http }
+        Self {
+            http,
+            cached_locale: std::sync::Arc::new(std::sync::Mutex::new(None)),
+        }
+    }
+
+    /// HTTP client for remote (non-loopback) requests with normal TLS verification.
+    /// `self.http` trusts invalid certs, which is only acceptable for the
+    /// self-signed LCU/liveclientdata endpoints on 127.0.0.1 — never for hosts
+    /// like the SGP proxy that receive bearer tokens.
+    pub(crate) fn secure_http_client(&self) -> reqwest::Client {
+        reqwest::Client::builder()
+            .timeout(Duration::from_secs(15))
+            .build()
+            .unwrap_or_else(|_| reqwest::Client::new())
+    }
+
+    pub async fn fetch_client_locale(&self, creds: &LockfileCredentials) -> Option<String> {
+        if let Ok(guard) = self.cached_locale.lock() {
+            if let Some((port, ref locale)) = *guard {
+                if port == creds.port {
+                    return Some(locale.clone());
+                }
+            }
+        }
+        let locale = self
+            .get_json(creds, "/riotclient/region-locale")
+            .await
+            .ok()
+            .and_then(|v| {
+                v.get("locale")
+                    .and_then(|n| n.as_str())
+                    .map(ToString::to_string)
+            });
+        if let Some(ref l) = locale {
+            if let Ok(mut guard) = self.cached_locale.lock() {
+                *guard = Some((creds.port, l.clone()));
+            }
+        }
+        locale
     }
 
     pub async fn probe_status(&self) -> LcuStatus {
@@ -125,6 +169,7 @@ impl LcuClient {
                 port: None,
                 summoner_name: None,
                 lockfile_path: None,
+                locale: None,
             };
         };
 
@@ -146,12 +191,15 @@ impl LcuClient {
                     .map(ToString::to_string)
             });
 
+        let locale = self.fetch_client_locale(&creds).await;
+
         LcuStatus {
             connected: true,
             phase,
             port: Some(creds.port),
             summoner_name,
             lockfile_path: Some(creds.path.display().to_string()),
+            locale,
         }
     }
 
@@ -168,6 +216,86 @@ impl LcuClient {
             return Err(anyhow!("LCU GET {endpoint} failed: {status}"));
         }
         Ok(res.json::<Value>().await?)
+    }
+
+    pub async fn patch_json(
+        &self,
+        creds: &LockfileCredentials,
+        endpoint: &str,
+        body: &Value,
+    ) -> Result<Value> {
+        let url = format!("{}{}", creds.base_url(), endpoint);
+        let res = self
+            .http
+            .patch(&url)
+            .header("Authorization", creds.auth_header())
+            .json(body)
+            .send()
+            .await?;
+        let status = res.status();
+        if !status.is_success() {
+            return Err(anyhow!("LCU PATCH {endpoint} failed: {status}"));
+        }
+        let text = res.text().await.unwrap_or_default();
+        Ok(serde_json::from_str(&text).unwrap_or(Value::Null))
+    }
+
+    pub async fn post_json(
+        &self,
+        creds: &LockfileCredentials,
+        endpoint: &str,
+        body: &Value,
+    ) -> Result<Value> {
+        let url = format!("{}{}", creds.base_url(), endpoint);
+        let res = self
+            .http
+            .post(&url)
+            .header("Authorization", creds.auth_header())
+            .json(body)
+            .send()
+            .await?;
+        let status = res.status();
+        if !status.is_success() {
+            return Err(anyhow!("LCU POST {endpoint} failed: {status}"));
+        }
+        let text = res.text().await.unwrap_or_default();
+        Ok(serde_json::from_str(&text).unwrap_or(Value::Null))
+    }
+
+    pub async fn put_json(
+        &self,
+        creds: &LockfileCredentials,
+        endpoint: &str,
+        body: &Value,
+    ) -> Result<Value> {
+        let url = format!("{}{}", creds.base_url(), endpoint);
+        let res = self
+            .http
+            .put(&url)
+            .header("Authorization", creds.auth_header())
+            .json(body)
+            .send()
+            .await?;
+        let status = res.status();
+        if !status.is_success() {
+            return Err(anyhow!("LCU PUT {endpoint} failed: {status}"));
+        }
+        let text = res.text().await.unwrap_or_default();
+        Ok(serde_json::from_str(&text).unwrap_or(Value::Null))
+    }
+
+    pub async fn delete_endpoint(&self, creds: &LockfileCredentials, endpoint: &str) -> Result<()> {
+        let url = format!("{}{}", creds.base_url(), endpoint);
+        let res = self
+            .http
+            .delete(&url)
+            .header("Authorization", creds.auth_header())
+            .send()
+            .await?;
+        if !res.status().is_success() {
+            return Err(anyhow!("LCU DELETE {endpoint} failed: {}", res.status()));
+        }
+        Ok(())
     }
 
     pub async fn accept_ready_check(&self, creds: &LockfileCredentials) -> Result<()> {
@@ -237,6 +365,222 @@ impl LcuClient {
         );
         self.get_json(creds, &endpoint).await
     }
+
+    pub async fn fetch_match_history_by_puuid(
+        &self,
+        creds: &LockfileCredentials,
+        puuid: &str,
+        count: usize,
+    ) -> Result<Value> {
+        let end_index = count.clamp(1, 50);
+        let endpoint = format!(
+            "/lol-match-history/v1/products/lol/{puuid}/matches?begIndex=0&endIndex={end_index}"
+        );
+        self.get_json(creds, &endpoint).await
+    }
+
+    /// Look up a summoner by Riot ID (`GameName#Tag`) or legacy display name.
+    pub async fn lookup_summoner(
+        &self,
+        creds: &LockfileCredentials,
+        query: &str,
+    ) -> Result<Value> {
+        let trimmed = query.trim();
+        if trimmed.is_empty() {
+            return Err(anyhow!("summoner query is empty"));
+        }
+        if let Some((game_name, tag_line)) = trimmed.split_once('#') {
+            let encoded_name = urlencoding_component(game_name.trim());
+            let encoded_tag = urlencoding_component(tag_line.trim());
+            let alias_endpoint = format!(
+                "/lol-summoner/v1/alias/lookup?gameName={encoded_name}&tagLine={encoded_tag}"
+            );
+            if let Ok(alias_res) = self.get_json(creds, &alias_endpoint).await {
+                if let Some(puuid) = alias_res.get("puuid").and_then(|v| v.as_str()) {
+                    if let Ok(full) = self
+                        .get_json(creds, &format!("/lol-summoner/v2/summoners/puuid/{puuid}"))
+                        .await
+                    {
+                        return Ok(full);
+                    }
+                }
+                return Ok(alias_res);
+            }
+        }
+        let encoded = urlencoding_component(trimmed);
+        self.get_json(creds, &format!("/lol-summoner/v1/summoners?name={encoded}"))
+            .await
+    }
+
+    pub async fn fetch_summoner_by_puuid(
+        &self,
+        creds: &LockfileCredentials,
+        puuid: &str,
+    ) -> Result<Value> {
+        self.get_json(creds, &format!("/lol-summoner/v2/summoners/puuid/{puuid}"))
+            .await
+    }
+
+    /// Return `(my_champion_id, spell1_id, spell2_id)` for the local player in champ select.
+    pub async fn fetch_current_summoner_spells(
+        &self,
+        creds: &LockfileCredentials,
+    ) -> Result<(Option<u32>, Option<u32>, Option<u32>)> {
+        let session = self.get_json(creds, "/lol-champ-select/v1/session").await?;
+        Ok(parse_local_summoner_spells(&session))
+    }
+
+    pub async fn apply_summoner_spells(
+        &self,
+        creds: &LockfileCredentials,
+        spell1_id: u32,
+        spell2_id: u32,
+    ) -> Result<()> {
+        let body = json!({
+            "spell1Id": spell1_id,
+            "spell2Id": spell2_id,
+        });
+        self.patch_json(creds, "/lol-champ-select/v1/session/my-selection", &body)
+            .await?;
+        Ok(())
+    }
+
+    /// Push a HexBox item set to the League client while preserving user-created sets.
+    pub async fn sync_item_set(
+        &self,
+        creds: &LockfileCredentials,
+        champion_id: u32,
+        title: &str,
+        blocks: Vec<Value>,
+    ) -> Result<()> {
+        let current = self
+            .get_json(creds, "/lol-summoner/v1/current-summoner")
+            .await?;
+        let summoner_id = current
+            .get("summonerId")
+            .and_then(|v| v.as_u64())
+            .ok_or_else(|| anyhow!("missing summonerId from current-summoner"))?;
+
+        let endpoint = format!("/lol-item-sets/v1/item-sets/{summoner_id}/sets");
+        let mut container = self
+            .get_json(creds, &endpoint)
+            .await
+            .unwrap_or_else(|_| json!({ "accountId": summoner_id, "itemSets": [] }));
+
+        let uid = format!("hexbox-aram-{champion_id}");
+        let new_set = json!({
+            "uid": uid,
+            "title": title,
+            "type": "custom",
+            "map": "any",
+            "mode": "any",
+            "associatedChampions": [champion_id],
+            "associatedMaps": [12, 11],
+            "blocks": blocks,
+            "sortrank": 0,
+            "startedFrom": "blank",
+            "isGlobalForChampions": false,
+            "isGlobalForMaps": true,
+            "preferredItemSlots": [],
+        });
+
+        let sets_arr = container
+            .as_object_mut()
+            .and_then(|o| o.entry("itemSets").or_insert_with(|| json!([])).as_array_mut())
+            .ok_or_else(|| anyhow!("invalid itemSets payload"))?;
+        sets_arr.retain(|s| s.get("uid").and_then(|v| v.as_str()) != Some(&uid));
+        sets_arr.insert(0, new_set);
+
+        self.put_json(creds, &endpoint, &container).await?;
+        Ok(())
+    }
+
+    /// Apply a rune page to the League client, replacing any previous HexBox page if full.
+    pub async fn apply_rune_page(
+        &self,
+        creds: &LockfileCredentials,
+        plan: &RunePagePlan,
+    ) -> Result<()> {
+        let pages = self
+            .get_json(creds, "/lol-perks/v1/pages")
+            .await
+            .unwrap_or_else(|_| json!([]));
+        if let Some(arr) = pages.as_array() {
+            if let Some(existing_id) = arr
+                .iter()
+                .find(|p| {
+                    p.get("isEditable").and_then(|v| v.as_bool()).unwrap_or(false)
+                        && p.get("name")
+                            .and_then(|v| v.as_str())
+                            .is_some_and(|n| n.starts_with("HexBox"))
+                })
+                .and_then(|p| p.get("id").and_then(|v| v.as_u64()))
+            {
+                let _ = self
+                    .delete_endpoint(creds, &format!("/lol-perks/v1/pages/{existing_id}"))
+                    .await;
+            }
+        }
+
+        let body = json!({
+            "name": plan.name,
+            "primaryStyleId": plan.primary_style_id,
+            "subStyleId": plan.sub_style_id,
+            "selectedPerkIds": plan.selected_perk_ids,
+            "current": true,
+        });
+        self.post_json(creds, "/lol-perks/v1/pages", &body).await?;
+        Ok(())
+    }
+
+    /// Fetch current gameflow session (used to discover PUUIDs of the 10 players in lobby/game).
+    pub async fn fetch_gameflow_session(&self, creds: &LockfileCredentials) -> Result<Value> {
+        self.get_json(creds, "/lol-gameflow/v1/session").await
+    }
+}
+
+fn urlencoding_component(input: &str) -> String {
+    let mut out = String::with_capacity(input.len());
+    for byte in input.as_bytes() {
+        match *byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(*byte as char);
+            }
+            b' ' => out.push_str("%20"),
+            b => out.push_str(&format!("%{b:02X}")),
+        }
+    }
+    out
+}
+
+pub fn parse_local_summoner_spells(session: &Value) -> (Option<u32>, Option<u32>, Option<u32>) {
+    let local_cell = session
+        .get("localPlayerCellId")
+        .and_then(|v| v.as_i64())
+        .unwrap_or(-1);
+    if let Some(my_team) = session.get("myTeam").and_then(|v| v.as_array()) {
+        for member in my_team {
+            if member.get("cellId").and_then(|v| v.as_i64()) == Some(local_cell) {
+                let champ = member
+                    .get("championId")
+                    .and_then(|v| v.as_u64())
+                    .filter(|&id| id > 0)
+                    .map(|id| id as u32);
+                let s1 = member
+                    .get("spell1Id")
+                    .and_then(|v| v.as_u64())
+                    .filter(|&id| id > 0)
+                    .map(|id| id as u32);
+                let s2 = member
+                    .get("spell2Id")
+                    .and_then(|v| v.as_u64())
+                    .filter(|&id| id > 0)
+                    .map(|id| id as u32);
+                return (champ, s1, s2);
+            }
+        }
+    }
+    (None, None, None)
 }
 
 pub fn parse_champ_select_session(session: &Value) -> ChampSelectSnapshot {
@@ -410,6 +754,8 @@ pub fn parse_live_game_data(data: &Value) -> LiveGameSnapshot {
         allies,
         enemies,
         players,
+        active_team,
+        active_summoner_name: active_name,
     }
 }
 

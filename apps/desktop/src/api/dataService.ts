@@ -136,7 +136,8 @@ export function evaluateAugmentOffer(
   heroName: string,
   candidateNames: string[],
   stage: number,
-  confirmedAugments: string[]
+  confirmedAugments: string[],
+  valueMode: string = "balanced"
 ): AugmentRecommendationCard[] {
   const heroStats = db.heroAugmentStats[heroName] || [];
   const cards: AugmentRecommendationCard[] = candidateNames.map((candName, idx) => {
@@ -178,7 +179,26 @@ export function evaluateAugmentOffer(
       }
     }
 
-    let finalHexScore = Math.min(100, Math.max(5, baseHex + stageShift * 180 + synergyBonus));
+    let modeAdjust = 0;
+    let modeTag = "";
+    switch (valueMode) {
+      case "winrate":
+        modeAdjust = deltaWr * 120;
+        modeTag = " · 模式:胜率优先";
+        break;
+      case "highroll":
+        modeAdjust = (rarity === "棱彩" ? 4.5 : rarity === "黄金" ? 1.5 : -1.0) + (synergyBonus > 0 ? 4.0 : 0);
+        modeTag = " · 模式:上限联动";
+        break;
+      case "stable":
+        modeAdjust = sampleSize >= 1500 ? 3.0 : sampleSize < 300 ? -5.0 : 0;
+        modeTag = " · 模式:稳健高样本";
+        break;
+      default:
+        break;
+    }
+
+    let finalHexScore = Math.min(100, Math.max(5, baseHex + stageShift * 180 + synergyBonus + modeAdjust));
     if (hasConflict) {
       finalHexScore = 12.0;
     }
@@ -205,7 +225,7 @@ export function evaluateAugmentOffer(
       delta_win_rate: deltaWr,
       sample_size: sampleSize,
       stage_shift: stageShift,
-      reason: `${rarity} · 基础 Hex ${baseHex.toFixed(1)} · 净胜率 ${deltaWr >= 0 ? "+" : ""}${(deltaWr * 100).toFixed(1)}%${stageTag}`,
+      reason: `${rarity} · 基础 Hex ${baseHex.toFixed(1)} · 净胜率 ${deltaWr >= 0 ? "+" : ""}${(deltaWr * 100).toFixed(1)}%${stageTag}${modeTag}`,
       synergy_note: synergyNote,
       conflict_note: conflictNote,
       top_items: row?.top_items?.slice(0, 4) || [],
@@ -491,6 +511,12 @@ export const DEFAULT_SETTINGS: AppSettings = {
   show_augment_stats: true,
   sgp_enabled: true,
   ready_check_auto_accept: true,
+  ready_check_accept_delay_ms: 0,
+  summoner_flash_slot: "F",
+  auto_apply_summoner_spells: false,
+  augment_value_mode: "balanced",
+  data_sync_url: "",
+  allow_non_lol_foreground: false,
   overlay_opacity: 95,
   overlay_zoom: 100,
 };

@@ -61,12 +61,17 @@ Python 的回退命令在 Windows 上从 `python3` 改成了 `python`，因为 `
 
 | 项 | 状态 |
 | --- | --- |
-| 2.1 自带 OCR 可执行文件 | **已实现**（用 PyInstaller，不是 Nuitka）。训练样本模块、命令行回退、截图缓存清理、前台窗口检查没做 |
-| 2.2 LCU WebSocket | **已实现事件监听**。WMIC 发现客户端、多客户端切换、事件录制没做 |
-| 2.10 悬浮窗缩放与位置记忆 | **已实现**缩放、拖动、位置记忆与重置。外观预设、自适应高度、紧凑窗口等没做 |
-| 2.7 出装顺序 | **已实现**出装顺序引擎和 `get_item_recommendations`。强化价值模式、出现率统计、手动改选等没做 |
-| 2.9 赛后复盘 | **已实现**单局复盘和 `get_postgame_augment_review`。队伍分析、对局回执没做 |
-| 其余各项 | 未开始 |
+| 2.1 自带 OCR 可执行文件与稳定性 | **已实现**：PyInstaller 编译 `hexbox-ocr[.exe]`、命令行 `--oneshot` 回退、前台 LoL 窗口守护（可设 `allow_non_lol_foreground`）、OCR 临时缓存清理 (`cleanup_ocr_cache`)、客户端语言检测 (`get_client_locale`) 与中/韩/英动态切换。训练样本模块不计划做 |
+| 2.2 LCU WebSocket | **已实现事件监听**。WMIC 发现客户端、多客户端切换、事件录制暂未做 |
+| 2.3 SGP 战绩与 10 人情报 | **已实现**：SGP 客户端 (`sgp.rs`) + LCU 玩家查询 (`search_player`/`get_player_profile`) + 10 人实时情报 (`get_game_players`/`refresh_game_player_intel`/`get_intel_cache_status`，含 5 分钟 TTL 缓存) |
+| 2.4 玩家标记与自动遭遇记录 | **已实现**：后端持久化 (`player_markers.json`/`player_encounters.json`)、局内自动记录同局玩家、查询汇总/删除/按天数清理及玩家库 JSON 导入导出 |
+| 2.5 ARURF 无限火力模式 | **已实现**：ARURF 英雄定位推荐、召唤师技能与符文方案生成 (`get_arurf_recommendation`) 及一键写入客户端符文页 (`apply_arurf_rune_page`) |
+| 2.6 选人自动化与客户端同步 | **已实现**：延迟接受对局 (`ready_check_accept_delay_ms`)、替补秒抢预订与取消 (`grab_bench_champion`/`cancel_bench_grab`/`get_bench_grab_status`)、召唤师技能读取与 D/F 闪现一键应用（含换英雄自动应用）、装备方案一键同步客户端 (`sync_item_set_to_client`) |
+| 2.7 出装顺序与强化高级能力 | **已实现**：出装顺序引擎 (`get_item_recommendations`)、强化价值模式 (`balanced`/`winrate`/`highroll`/`stable`)、本机出现/选取率统计 (`get_augment_offer_stats`)、手动改选与槽位覆盖 (`set_manual_augment_selection`/`set_manual_augment_override`) |
+| 2.9 赛后复盘 | **已实现**单局复盘和 `get_postgame_augment_review`。队伍分析、对局回执暂未做 |
+| 2.10 悬浮窗缩放与位置记忆 | **已实现**缩放、拖动、位置记忆与重置。外观预设、自适应高度、紧凑窗口等暂未做 |
+| 2.12 数据与模型远程同步 | **已实现**：应用内完整度检查 (`get_asset_sync_status`) + 远程数据/ONNX 模型下载与 SHA-256 校验 (`sync_remote_assets`) + 热重载数据集；`build.rs` 已排除用户状态 JSON |
+| 2.11 窗口与系统 / 自动更新 | 待实现（P2：无边框窗口修复、主窗口尺寸记忆、关闭按钮行为、应用自动更新等） |
 
 #### 2.1 的实现
 

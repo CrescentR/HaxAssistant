@@ -42,7 +42,15 @@ fn main() {
     let staged = manifest_dir.join("resources");
 
     stage(&workspace.join("data"), &staged.join("data"), |n| {
-        n.ends_with(".json") && n != "user_settings.json"
+        n.ends_with(".json")
+            && !matches!(
+                n,
+                "user_settings.json"
+                    | "overlay_layout.json"
+                    | "player_markers.json"
+                    | "player_encounters.json"
+                    | "augment_offer_stats.json"
+            )
     });
     stage(&workspace.join("models"), &staged.join("models"), |n| !n.starts_with('.'));
     stage(&workspace.join("ocr-sidecar"), &staged.join("ocr-sidecar"), |n| {

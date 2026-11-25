@@ -1,3 +1,4 @@
+pub mod arurf;
 pub mod conditional_items;
 pub mod item_order;
 pub mod lineup;
@@ -6,13 +7,13 @@ pub mod postgame;
 use data_runtime::Dataset;
 use shared_types::{get_tier_meta, AugmentRecommendationCard};
 
+pub use arurf::{build_arurf_recommendation, recommend_aram_spells, summoner_spell_name};
 pub use conditional_items::analyze_enemy_counter;
 pub use item_order::plan_item_order;
 pub use lineup::evaluate_5v5_lineup;
 pub use postgame::review_match;
 
-/// Evaluates 3 candidate Hextech Augment cards for a given hero, stage (1..4),
-/// and already confirmed augments. Algorithm matches `dataService.ts:evaluateAugmentOffer`.
+/// Evaluates 3 candidate Hextech Augment cards using the default `"balanced"` value mode.
 pub fn evaluate_augment_offer(
     ds: &Dataset,
     hero_name: &str,
@@ -20,6 +21,30 @@ pub fn evaluate_augment_offer(
     stage: u8,
     confirmed_augments: &[String],
 ) -> Vec<AugmentRecommendationCard> {
+    evaluate_augment_offer_with_mode(
+        ds,
+        hero_name,
+        candidate_names,
+        stage,
+        confirmed_augments,
+        "balanced",
+    )
+}
+
+/// Evaluates 3 candidate Hextech Augment cards under a selectable value mode:
+/// - `balanced`: default HexScore + stage shift + synergy bonus
+/// - `winrate`: emphasizes hero-specific delta win rate
+/// - `highroll`: emphasizes mechanic synergies & high ceiling cards
+/// - `stable`: penalizes low sample sizes and rewards consistent win rates
+pub fn evaluate_augment_offer_with_mode(
+    ds: &Dataset,
+    hero_name: &str,
+    candidate_names: &[String],
+    stage: u8,
+    confirmed_augments: &[String],
+    value_mode: &str,
+) -> Vec<AugmentRecommendationCard> {
+    let mode = value_mode.trim().to_ascii_lowercase();
     let hero_stats = ds
         .hero_augment_stats
         .get(hero_name)
@@ -98,13 +123,40 @@ pub fn evaluate_augment_offer(
                 }
             }
 
+            let mode_adjust = match mode.as_str() {
+                "winrate" => delta_wr * 160.0 + (win_rate - 0.5) * 40.0,
+                "highroll" => {
+                    let ceiling = if base_hex >= 65.0 { 4.5 } else { 0.0 };
+                    let extra_syn = if synergy_bonus > 0.0 { 5.0 } else { 0.0 };
+                    ceiling + extra_syn
+                }
+                "stable" => {
+                    let reliability = if sample_size >= 3000 {
+                        3.0
+                    } else if sample_size < 300 {
+                        -6.0
+                    } else {
+                        0.0
+                    };
+                    reliability + (win_rate - 0.5) * 30.0
+                }
+                _ => 0.0,
+            };
+
             let mut final_hex =
-                (base_hex + stage_shift * 180.0 + synergy_bonus).clamp(5.0, 100.0);
+                (base_hex + stage_shift * 180.0 + synergy_bonus + mode_adjust).clamp(5.0, 100.0);
             if has_conflict {
                 final_hex = 12.0;
             }
             final_hex = (final_hex * 10.0).round() / 10.0;
             let tier_meta = get_tier_meta(final_hex);
+
+            let mode_tag = match mode.as_str() {
+                "winrate" => " · 胜率优先",
+                "highroll" => " · 爽局上限",
+                "stable" => " · 稳健样本",
+                _ => "",
+            };
 
             let stage_tag = if stage_shift.abs() >= 0.01 {
                 format!(
@@ -142,12 +194,13 @@ pub fn evaluate_augment_offer(
                 sample_size,
                 stage_shift,
                 reason: format!(
-                    "{} · 基础 Hex {:.1} · 净胜率 {}{:.1}%{}",
+                    "{} · 基础 Hex {:.1} · 净胜率 {}{:.1}%{}{}",
                     rarity,
                     base_hex,
                     if delta_wr >= 0.0 { "+" } else { "" },
                     delta_wr * 100.0,
-                    stage_tag
+                    stage_tag,
+                    mode_tag
                 ),
                 synergy_note,
                 conflict_note,

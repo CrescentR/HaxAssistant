@@ -4,12 +4,16 @@ Persistent OCR Worker for HaxAssistant (HexBox).
 Provides:
 - PersistentOcrRunner: reusable neural card detection (or preset fallback) +
   PaddleOCR ONNX batch recognition + RapidFuzz augment dictionary matching +
-  AutoWatcher multi-frame stabilization.
-- main(): line-delimited JSON-RPC stdin/stdout loop for Tauri desktop integration.
+  AutoWatcher multi-frame stabilization + dynamic language switching +
+  foreground LoL window guard.
+- main(): line-delimited JSON-RPC stdin/stdout loop for Tauri desktop integration,
+  plus `--oneshot` CLI mode for single-shot fallback when the persistent pipe fails.
 """
 from __future__ import annotations
 
+import argparse
 import json
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -39,6 +43,72 @@ def _threads_for_mode(performance_mode: str) -> tuple[int, int]:
     return (4, 2)
 
 
+def _normalize_lang(lang: Optional[str]) -> str:
+    raw = (lang or "ch").strip().lower()
+    if raw.startswith("ko"):
+        return "ko"
+    if raw.startswith("en"):
+        return "en"
+    return "ch"
+
+
+def get_foreground_window_title() -> Optional[str]:
+    """Best-effort active window title/process name. Returns None if unavailable."""
+    if sys.platform == "win32":
+        try:
+            import ctypes
+
+            user32 = ctypes.windll.user32
+            hwnd = user32.GetForegroundWindow()
+            if not hwnd:
+                return None
+            length = user32.GetWindowTextLengthW(hwnd)
+            if length <= 0:
+                return None
+            buf = ctypes.create_unicode_buffer(length + 1)
+            user32.GetWindowTextW(hwnd, buf, length + 1)
+            return buf.value
+        except Exception:
+            return None
+    if sys.platform == "darwin":
+        try:
+            out = subprocess.run(
+                [
+                    "osascript",
+                    "-e",
+                    'tell application "System Events" to get name of first application process whose frontmost is true',
+                ],
+                capture_output=True,
+                text=True,
+                timeout=0.35,
+            )
+            if out.returncode == 0 and out.stdout.strip():
+                return out.stdout.strip()
+        except Exception:
+            return None
+    return None
+
+
+def is_lol_foreground_window() -> tuple[bool, Optional[str]]:
+    """
+    Returns (is_lol_or_unknown, window_title).
+    Fails open (True) when OS cannot query foreground window so OCR is never stuck.
+    """
+    title = get_foreground_window_title()
+    if not title:
+        return True, None
+    lower = title.lower()
+    keywords = (
+        "league of legends",
+        "leagueclient",
+        "riot",
+        "英雄联盟",
+        "리그 오브 레전드",
+        "hexbox",
+    )
+    return any(k in lower for k in keywords), title
+
+
 class PersistentOcrRunner:
     def __init__(
         self,
@@ -47,12 +117,33 @@ class PersistentOcrRunner:
         backend: str = "onnx",
     ) -> None:
         self.performance_mode = performance_mode
-        self.lang = lang
+        self.lang = _normalize_lang(lang)
         self.backend = backend
         self._recognizer: Optional[PpOcrOnnxRecognizer] = None
         self._locator: Optional[CardLocator] = None
         self._locator_failed = False
         self.watcher = AutoWatcher()
+
+    def reconfigure(
+        self,
+        performance_mode: Optional[str] = None,
+        lang: Optional[str] = None,
+        backend: Optional[str] = None,
+    ) -> None:
+        next_mode = performance_mode or self.performance_mode
+        next_lang = _normalize_lang(lang) if lang else self.lang
+        next_backend = backend or self.backend
+        if (
+            next_mode != self.performance_mode
+            or next_lang != self.lang
+            or next_backend != self.backend
+        ):
+            self.performance_mode = next_mode
+            self.lang = next_lang
+            self.backend = next_backend
+            self._recognizer = None
+            self._locator = None
+            self._locator_failed = False
 
     def _get_recognizer(self) -> PpOcrOnnxRecognizer:
         if self._recognizer is None:
@@ -61,6 +152,9 @@ class PersistentOcrRunner:
                 backend=self.backend,
                 lang=self.lang,
             )
+            # Fall back to Chinese v4 model if requested locale model is absent.
+            if not model_path.exists() and self.lang != "ch":
+                model_path, keys_path = resolve_model_paths(backend="onnx", lang="ch")
             self._recognizer = PpOcrOnnxRecognizer(
                 model_path=model_path,
                 keys_path=keys_path,
@@ -103,8 +197,23 @@ class PersistentOcrRunner:
         self,
         preset_key: str = "1920x1080@100",
         screen_image_path: Optional[str] = None,
+        allow_non_lol_foreground: bool = True,
     ) -> Dict[str, Any]:
         t_start = time.perf_counter()
+
+        # 0. Foreground window guard (for live screen capture only)
+        if not screen_image_path and not allow_non_lol_foreground:
+            is_lol, fg_title = is_lol_foreground_window()
+            if not is_lol:
+                return {
+                    "status": "skipped",
+                    "reason": "non_lol_foreground",
+                    "foreground_window": fg_title,
+                    "preset_key": preset_key,
+                    "lang": self.lang,
+                    "result": [],
+                    "ocr_matches": [],
+                }
 
         # 1. Acquire image
         t_cap = time.perf_counter()
@@ -176,6 +285,7 @@ class PersistentOcrRunner:
         return {
             "status": "ok",
             "preset_key": preset.key,
+            "lang": self.lang,
             "locate_source": locate_source,
             "capture": capture_meta,
             "frame_probe": probe_live_frame(image, preset),
@@ -197,10 +307,12 @@ class PersistentOcrRunner:
         self,
         preset_key: str = "1920x1080@100",
         screen_image_path: Optional[str] = None,
+        allow_non_lol_foreground: bool = False,
     ) -> Dict[str, Any]:
         cycle = self.run_pipeline(
             preset_key=preset_key,
             screen_image_path=screen_image_path,
+            allow_non_lol_foreground=allow_non_lol_foreground,
         )
         if cycle.get("status") != "ok":
             return cycle
@@ -217,7 +329,33 @@ def _write_json_line(payload: Dict[str, Any]) -> None:
     sys.stdout.flush()
 
 
+def _run_oneshot_cli(argv: List[str]) -> int:
+    parser = argparse.ArgumentParser(description="HexBox OCR one-shot fallback")
+    parser.add_argument("--oneshot", action="store_true")
+    parser.add_argument("--preset-key", default="1920x1080@100")
+    parser.add_argument("--performance-mode", default="balanced")
+    parser.add_argument("--lang", default="ch")
+    parser.add_argument("--screen-image", default=None)
+    parser.add_argument("--allow-non-lol-foreground", action="store_true")
+    args = parser.parse_args(argv)
+
+    runner = PersistentOcrRunner(
+        performance_mode=args.performance_mode,
+        lang=args.lang,
+    )
+    out = runner.run_pipeline(
+        preset_key=args.preset_key,
+        screen_image_path=args.screen_image,
+        allow_non_lol_foreground=args.allow_non_lol_foreground or bool(args.screen_image),
+    )
+    _write_json_line(out)
+    return 0 if out.get("status") in ("ok", "skipped") else 1
+
+
 def main() -> None:
+    if "--oneshot" in sys.argv[1:]:
+        raise SystemExit(_run_oneshot_cli(sys.argv[1:]))
+
     runner = PersistentOcrRunner()
     for raw_line in sys.stdin:
         line = raw_line.strip()
@@ -231,24 +369,30 @@ def main() -> None:
             params = req.get("params") or {}
 
             if method == "ping":
-                _write_json_line({"id": req_id, "status": "ok", "pong": True, "protocol": 1})
+                _write_json_line({"id": req_id, "status": "ok", "pong": True, "protocol": 2})
             elif method == "run_pipeline":
-                if params.get("performance_mode") and params["performance_mode"] != runner.performance_mode:
-                    runner = PersistentOcrRunner(
-                        performance_mode=str(params["performance_mode"]),
-                        lang=str(params.get("lang") or runner.lang),
-                        backend=str(params.get("backend") or runner.backend),
-                    )
+                runner.reconfigure(
+                    performance_mode=params.get("performance_mode"),
+                    lang=params.get("lang"),
+                    backend=params.get("backend"),
+                )
                 out = runner.run_pipeline(
                     preset_key=str(params.get("preset_key") or "1920x1080@100"),
                     screen_image_path=params.get("screen_image_path"),
+                    allow_non_lol_foreground=bool(params.get("allow_non_lol_foreground", True)),
                 )
                 out["id"] = req_id
                 _write_json_line(out)
             elif method == "watch_tick":
+                runner.reconfigure(
+                    performance_mode=params.get("performance_mode"),
+                    lang=params.get("lang"),
+                    backend=params.get("backend"),
+                )
                 out = runner.watch_tick(
                     preset_key=str(params.get("preset_key") or "1920x1080@100"),
                     screen_image_path=params.get("screen_image_path"),
+                    allow_non_lol_foreground=bool(params.get("allow_non_lol_foreground", False)),
                 )
                 out["id"] = req_id
                 _write_json_line(out)
