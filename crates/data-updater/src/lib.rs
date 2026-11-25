@@ -81,6 +81,23 @@ mod tests {
             .and_then(|p| p.parent())
             .unwrap()
             .join("data");
+        if !data_dir.join("manifest.json").exists() {
+            // `/data/` is gitignored in CI; verify with a synthetic temp manifest instead.
+            let tmp_dir = std::env::temp_dir().join("hexbox_manifest_test");
+            let _ = fs::create_dir_all(&tmp_dir);
+            fs::write(tmp_dir.join("sample.json"), b"{}").expect("write sample");
+            fs::write(
+                tmp_dir.join("manifest.json"),
+                br#"{"version":"16.22","report_date":"2026-11-09","files":["sample.json"]}"#,
+            )
+            .expect("write manifest");
+            let report = verify_manifest(&tmp_dir).expect("verify synthetic manifest");
+            assert_eq!(report.expected_files, 1);
+            assert_eq!(report.present_files, 1);
+            assert!(report.missing_files.is_empty());
+            let _ = fs::remove_dir_all(&tmp_dir);
+            return;
+        }
         let report = verify_manifest(&data_dir).expect("verify manifest");
         assert!(report.expected_files > 0);
         assert_eq!(report.present_files, report.expected_files);
