@@ -1700,8 +1700,15 @@ mod tests {
         let root = workspace_root();
         let sample = root.join("ocr-sidecar/sample_augment_1080p.png");
         let venv_py = root.join("ocr-sidecar/.venv/bin/python");
+        // Skip unless a runnable OCR engine *and* its inputs exist; CI builds
+        // the runner but `models/*.onnx` and `data/` are gitignored.
+        let model_dir = resolve_model_dir(&root);
+        let has_models = model_dir.join("ch_PP-OCRv4_rec_int8.onnx").exists()
+            && model_dir.join("ppocr_keys_v1.txt").exists();
+        let has_dict = root.join("data/augments_full.json").exists()
+            || root.join("data/augments.json").exists();
         let can_run = venv_py.exists() || resolve_compiled_ocr_runner(&root).is_some();
-        if !sample.exists() || !can_run {
+        if !sample.exists() || !can_run || !has_models || !has_dict {
             return;
         }
         let core = HexBoxCore::initialize(&root).expect("initialize HexBoxCore");
