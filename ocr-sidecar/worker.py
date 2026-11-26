@@ -353,9 +353,13 @@ def _run_oneshot_cli(argv: List[str]) -> int:
 
 
 def main() -> None:
+    # The Rust client uses UTF-8 JSON. A frozen Windows worker can default to
+    # the Windows code page because it ignores PYTHONIOENCODING.
+    sys.stdout.reconfigure(encoding="utf-8")
     if "--oneshot" in sys.argv[1:]:
         raise SystemExit(_run_oneshot_cli(sys.argv[1:]))
 
+    sys.stdin.reconfigure(encoding="utf-8")
     runner = PersistentOcrRunner()
     for raw_line in sys.stdin:
         line = raw_line.strip()

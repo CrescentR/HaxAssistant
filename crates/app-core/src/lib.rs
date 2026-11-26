@@ -1794,7 +1794,12 @@ mod tests {
         let res = core
             .run_ocr_preset("1920x1080@100", Some(sample.to_str().unwrap()))
             .expect("run persistent ocr worker");
-        assert_eq!(res.get("status").and_then(|v| v.as_str()), Some("ok"));
+        assert_eq!(
+            res.get("status").and_then(|v| v.as_str()),
+            Some("ok"),
+            "OCR sample failed: {}",
+            res.get("error").and_then(|v| v.as_str()).unwrap_or("no error returned")
+        );
         let state = core.get_overlay_state();
         assert_eq!(state.candidate_augments.len(), 3);
         assert_eq!(state.candidate_augments[0], "亮出你的剑");
