@@ -131,6 +131,8 @@ jobs:
           # and store the private key + password as repository secrets.
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # Private backend base URL compiled into release builds (invisible in UI)
+          HAXASSISTANT_DATA_SYNC_URL: ${{ secrets.HAXASSISTANT_DATA_SYNC_URL }}
         run: |
           extra=()
           if [[ -z "${TAURI_SIGNING_PRIVATE_KEY}" ]]; then
@@ -153,7 +155,7 @@ jobs:
           }
           $stage = "target/portable-win64"
           New-Item -ItemType Directory -Force -Path $stage | Out-Null
-          Copy-Item $exePath "$stage/HexBox.exe"
+          Copy-Item $exePath "$stage/HaxAssistant.exe"
           if (Test-Path "data") {
             New-Item -ItemType Directory -Force -Path "$stage/data" | Out-Null
             $skipData = @(
