@@ -23,6 +23,32 @@ export interface AppSettings {
   allow_non_lol_foreground: boolean;
   overlay_opacity: number;
   overlay_zoom: number;
+  /** What the main window's × does. */
+  close_button_action: "ask" | "tray" | "exit" | string;
+  auto_check_update: boolean;
+  /** Switch League to borderless when champ select starts. */
+  auto_fix_borderless: boolean;
+}
+
+export interface AppUpdateInfo {
+  available: boolean;
+  currentVersion: string;
+  version?: string | null;
+  notes?: string | null;
+  date?: string | null;
+}
+
+export interface AppUpdateProgress {
+  downloaded: number;
+  total?: number | null;
+  finished: boolean;
+}
+
+export interface LeagueWindowMode {
+  connected: boolean;
+  mode?: number | null;
+  label: string;
+  isBorderless: boolean;
 }
 
 export interface ChampionSummary {

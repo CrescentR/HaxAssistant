@@ -1,0 +1,11 @@
+{
+  "comment": "ONNX models are not in Git (see .gitignore). CI downloads them from the release named by `tag` and checks each SHA-256. To publish new models: upload the files to that release (or a new tag), then update this file.",
+  "tag": "models-v1",
+  "base_url": "https://github.com/CrescentR/HaxAssistant/releases/download/models-v1",
+  "models": {
+    "PP-OCRv5_mobile_rec.onnx": "243a0f06d826761323e9045e9b113ab2c191c3aa50565585e628300b8eda0224",
+    "ch_PP-OCRv4_rec_int8.onnx": "d7d0622b55e3e890a7fa1e0306b45b446fe47fe2251f913a80ec330c81110691",
+    "korean_PP-OCRv5_mobile_rec.onnx": "92f0b7785e64fc9090106a241cf4c1eb97472824558272751b88a2a4476d3a08",
+    "own-card-detector.onnx": "8618d830c9cb826ea971401548264aec19754ec10647e9762cd1d8510a4b4732"
+  }
+}

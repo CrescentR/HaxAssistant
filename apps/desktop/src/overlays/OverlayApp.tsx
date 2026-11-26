@@ -154,7 +154,7 @@ export const OverlayApp: React.FC<OverlayAppProps> = ({
                 <img
                   src={getItemIconUrl(it.id)}
                   alt={it.name}
-                  onError={(e) => ((e.target as HTMLImageElement).src = "/hexbox-logo.png")}
+                  onError={(e) => ((e.target as HTMLImageElement).src = "/app-logo.png")}
                 />
                 <span>{it.name}</span>
               </div>
@@ -214,7 +214,7 @@ export const OverlayApp: React.FC<OverlayAppProps> = ({
                 src={getChampionIconUrl(b.heroId)}
                 alt={b.heroName}
                 className="hero-avatar-sm"
-                onError={(e) => ((e.target as HTMLImageElement).src = "/hexbox-logo.png")}
+                onError={(e) => ((e.target as HTMLImageElement).src = "/app-logo.png")}
               />
               <span className="overlay-bench-name">{b.heroName}</span>
               <span className="tier-pill" style={{ background: b.hexColor, color: "#fff" }}>
@@ -252,7 +252,7 @@ export const OverlayApp: React.FC<OverlayAppProps> = ({
                     src={getChampionIconUrl(ch?.id || "22")}
                     alt={h}
                     className="hero-avatar-xs"
-                    onError={(e) => ((e.target as HTMLImageElement).src = "/hexbox-logo.png")}
+                    onError={(e) => ((e.target as HTMLImageElement).src = "/app-logo.png")}
                   />
                   <span>{h}</span>
                   <span style={{ color: tier.color, marginLeft: "auto", fontWeight: 700 }}>
@@ -273,7 +273,7 @@ export const OverlayApp: React.FC<OverlayAppProps> = ({
                     src={getChampionIconUrl(ch?.id || "157")}
                     alt={h}
                     className="hero-avatar-xs"
-                    onError={(e) => ((e.target as HTMLImageElement).src = "/hexbox-logo.png")}
+                    onError={(e) => ((e.target as HTMLImageElement).src = "/app-logo.png")}
                   />
                   <span>{h}</span>
                   <span style={{ color: tier.color, marginLeft: "auto", fontWeight: 700 }}>

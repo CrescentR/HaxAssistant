@@ -1704,3 +1704,19 @@ body.overlay-body {
 .history-row {
   flex-wrap: wrap;
 }
+
+/* Close prompt (main window ×) and update banner */
+.close-prompt {
+  width: min(440px, 92vw);
+  margin: 0;
+}
+.close-prompt h3 {
+  margin: 0 0 8px;
+}
+.update-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}

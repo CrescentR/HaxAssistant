@@ -17,6 +17,7 @@ __pycache__/
 # Runtime user state inside data/ (offline Patch datasets in data/*.json are tracked)
 /data/user_settings.json
 /data/overlay_layout.json
+/data/main_window.json
 /data/player_markers.json
 /data/player_encounters.json
 /data/augment_offer_stats.json
@@ -32,6 +33,7 @@ models/*.onnx
 Thumbs.db
 .vscode/
 .idea/
+.claude/
 
 # Runtime files staged for bundling by build.rs
 apps/desktop/src-tauri/resources/

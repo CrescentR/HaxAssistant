@@ -163,7 +163,7 @@ export const KaiheiView: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `hexbox-player-library-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `haxassistant-player-library-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
     setStatusMsg(`已导出 ${bundle.markers.length} 条玩家标记与 ${bundle.encounters.length} 条遭遇记录。`);
@@ -417,7 +417,7 @@ export const KaiheiView: React.FC = () => {
 
         {encounters.length === 0 ? (
           <div className="card-sub" style={{ padding: "12px 0" }}>
-            暂无自动遭遇记录。进入一场对局后，HexBox 将自动记录所有同局玩家信息。
+            暂无自动遭遇记录。进入一场对局后，HaxAssistant 将自动记录所有同局玩家信息。
           </div>
         ) : (
           <div className="table-scroll-lg">

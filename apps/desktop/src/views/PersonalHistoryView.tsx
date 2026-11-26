@@ -273,7 +273,7 @@ export const PersonalHistoryView: React.FC<PersonalHistoryViewProps> = ({
                   src={getChampionIconUrl(ch?.id || String(m.championId || 22))}
                   alt={m.heroName}
                   className="hero-avatar-md"
-                  onError={(e) => ((e.target as HTMLImageElement).src = "/hexbox-logo.png")}
+                  onError={(e) => ((e.target as HTMLImageElement).src = "/app-logo.png")}
                 />
                 <div className="history-main">
                   <div className="history-title-row">

@@ -20,16 +20,24 @@ import {
 } from "./api/dataService";
 import {
   isTauriRuntime,
+  subscribeCloseRequested,
   subscribeLcuStatus,
   subscribeOverlayState,
   subscribeSettingsUpdated,
+  subscribeUpdateAvailable,
   tauriGetOverlayState,
   tauriGetSettings,
+  tauriHandleMainClose,
   tauriProbeLcuStatus,
   tauriToggleOverlay,
   tauriUpdateSettings,
 } from "./api/tauriBridge";
-import type { AppSettings, LcuStatus, OverlayStatePayload } from "./types/hexbox";
+import type {
+  AppSettings,
+  AppUpdateInfo,
+  LcuStatus,
+  OverlayStatePayload,
+} from "./types/hexbox";
 import { OngoingWorkspace } from "./views/OngoingWorkspace";
 import { HexdataDataView } from "./views/HexdataDataView";
 import { RecommendView } from "./views/RecommendView";
@@ -56,6 +64,9 @@ const App: React.FC = () => {
     lockfile_path: null,
   });
   const [liveOverlayState, setLiveOverlayState] = useState<OverlayStatePayload | null>(null);
+  const [closePromptOpen, setClosePromptOpen] = useState(false);
+  const [rememberClose, setRememberClose] = useState(false);
+  const [pendingUpdate, setPendingUpdate] = useState<AppUpdateInfo | null>(null);
 
   useEffect(() => {
     loadDatabase()
@@ -103,6 +114,12 @@ const App: React.FC = () => {
           setSettings(remote);
         }
       }),
+      subscribeCloseRequested(() => {
+        if (active) setClosePromptOpen(true);
+      }),
+      subscribeUpdateAvailable((info) => {
+        if (active) setPendingUpdate(info);
+      }),
     ];
 
     return () => {
@@ -119,6 +136,11 @@ const App: React.FC = () => {
     const next = saveSettings(patch);
     setSettings(next);
     tauriUpdateSettings(next).catch(() => {});
+  };
+
+  const handleCloseChoice = (action: "tray" | "exit") => {
+    setClosePromptOpen(false);
+    tauriHandleMainClose(action, rememberClose).catch(() => {});
   };
 
   const handleOpenHeroRecommend = (heroName: string) => {
@@ -157,10 +179,10 @@ const App: React.FC = () => {
     <div className="app-shell">
       <aside className="app-sidebar">
         <div className="brand-block">
-          <img src="/hexbox-logo.png" alt="HexBox" className="brand-logo" />
+          <img src="/app-logo.png" alt="HaxAssistant" className="brand-logo" />
           <div>
-            <div className="brand-name">HexBox</div>
-            <div className="brand-sub">海克斯大乱斗助手</div>
+            <div className="brand-name">HaxAssistant</div>
+            <div className="brand-sub">海克斯助手</div>
           </div>
         </div>
 
@@ -204,6 +226,28 @@ const App: React.FC = () => {
       </aside>
 
       <main className="app-main">
+        {pendingUpdate?.available && (
+          <div className="panel-card update-banner">
+            <span>
+              发现新版本 {pendingUpdate.version}（当前 {pendingUpdate.currentVersion}）
+            </span>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                className="hex-btn primary sm"
+                onClick={() => {
+                  setPendingUpdate(null);
+                  setActiveTab("settings");
+                }}
+              >
+                查看并更新
+              </button>
+              <button className="hex-btn ghost sm" onClick={() => setPendingUpdate(null)}>
+                稍后
+              </button>
+            </div>
+          </div>
+        )}
+
         {loadError && (
           <div className="panel-card error-card">
             数据加载失败：{loadError}
@@ -244,9 +288,40 @@ const App: React.FC = () => {
             settings={settings}
             onUpdateSettings={handleUpdateSettings}
             onOpenOverlayPreview={handleOpenOverlayPreview}
+            onDatabaseReloaded={(fresh) => setDb(fresh)}
           />
         )}
       </main>
+
+      {closePromptOpen && (
+        <div className="overlay-modal-backdrop" onClick={() => setClosePromptOpen(false)}>
+          <div className="panel-card close-prompt" onClick={(e) => e.stopPropagation()}>
+            <h3>关闭 HaxAssistant</h3>
+            <div className="card-sub">
+              最小化到托盘后，悬浮窗、自动接受对局和 OCR 会继续工作；点托盘图标可以重新打开主窗口。
+            </div>
+            <label className="setting-row" style={{ marginTop: 12 }}>
+              <span>记住我的选择（可在设置中心修改）</span>
+              <input
+                type="checkbox"
+                checked={rememberClose}
+                onChange={(e) => setRememberClose(e.target.checked)}
+              />
+            </label>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 12 }}>
+              <button className="hex-btn ghost sm" onClick={() => setClosePromptOpen(false)}>
+                取消
+              </button>
+              <button className="hex-btn ghost sm" onClick={() => handleCloseChoice("exit")}>
+                退出程序
+              </button>
+              <button className="hex-btn primary sm" onClick={() => handleCloseChoice("tray")}>
+                最小化到托盘
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {overlayPreview && db && (
         <div className="overlay-modal-backdrop" onClick={() => setOverlayPreview(null)}>

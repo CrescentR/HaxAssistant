@@ -1,21 +1,32 @@
 import React, { useEffect, useState } from "react";
-import { CloudDownload, Eye, Globe, RotateCcw, Settings, Trash2 } from "lucide-react";
+import { CloudDownload, Eye, Globe, RefreshCw, RotateCcw, Settings, Trash2 } from "lucide-react";
 import { DEFAULT_SETTINGS, loadDatabase, type LoadedHexBoxDatabase } from "../api/dataService";
 import {
   isTauriRuntime,
+  subscribeUpdateProgress,
+  tauriCheckAppUpdate,
   tauriCleanupOcrCache,
   tauriGetAssetSyncStatus,
+  tauriFixGameBorderless,
   tauriGetClientLocale,
+  tauriGetGameWindowMode,
+  tauriInstallAppUpdate,
   tauriResetOverlayPosition,
   tauriSyncRemoteAssets,
 } from "../api/tauriBridge";
-import type { AppSettings, AssetSyncStatus } from "../types/hexbox";
+import type {
+  AppSettings,
+  AppUpdateInfo,
+  AssetSyncStatus,
+  LeagueWindowMode,
+} from "../types/hexbox";
 
 interface SettingsHubViewProps {
   db: LoadedHexBoxDatabase;
   settings: AppSettings;
   onUpdateSettings: (patch: Partial<AppSettings>) => void;
   onOpenOverlayPreview: (overlayKind: string) => void;
+  onDatabaseReloaded?: (fresh: LoadedHexBoxDatabase) => void;
 }
 
 export const SettingsHubView: React.FC<SettingsHubViewProps> = ({
@@ -23,12 +34,103 @@ export const SettingsHubView: React.FC<SettingsHubViewProps> = ({
   settings,
   onUpdateSettings,
   onOpenOverlayPreview,
+  onDatabaseReloaded,
 }) => {
   const [assetStatus, setAssetStatus] = useState<AssetSyncStatus | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [cleaning, setCleaning] = useState(false);
   const [localeText, setLocaleText] = useState<string | null>(null);
   const [maintenanceMsg, setMaintenanceMsg] = useState<string>("");
+  const [updateInfo, setUpdateInfo] = useState<AppUpdateInfo | null>(null);
+  const [updateBusy, setUpdateBusy] = useState<"" | "checking" | "installing">("");
+  const [updateMsg, setUpdateMsg] = useState<string>("");
+  const [windowMode, setWindowMode] = useState<LeagueWindowMode | null>(null);
+  const [windowModeBusy, setWindowModeBusy] = useState(false);
+  const [windowModeMsg, setWindowModeMsg] = useState<string>("");
+
+  const refreshWindowMode = async () => {
+    try {
+      const mode = await tauriGetGameWindowMode();
+      if (mode) setWindowMode(mode);
+    } catch {
+      // ignore: client not running or browser preview
+    }
+  };
+
+  useEffect(() => {
+    refreshWindowMode();
+  }, []);
+
+  const handleFixBorderless = async () => {
+    if (!isTauriRuntime()) {
+      setWindowModeMsg("当前为浏览器预览模式，请在桌面端修改游戏窗口模式。");
+      return;
+    }
+    setWindowModeBusy(true);
+    try {
+      const mode = await tauriFixGameBorderless();
+      if (mode) {
+        setWindowMode(mode);
+        setWindowModeMsg("已切换为无边框，下次进入游戏时生效。");
+      }
+    } catch (err) {
+      setWindowModeMsg(`切换失败：${String(err)}`);
+    } finally {
+      setWindowModeBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    subscribeUpdateProgress((p) => {
+      if (p.finished) {
+        setUpdateMsg("下载完成，正在安装，安装后会自动重启…");
+      } else {
+        const mb = (n: number) => (n / 1024 / 1024).toFixed(1);
+        setUpdateMsg(
+          p.total
+            ? `正在下载更新 ${mb(p.downloaded)} / ${mb(p.total)} MB`
+            : `正在下载更新 ${mb(p.downloaded)} MB`
+        );
+      }
+    }).then((fn) => {
+      unlisten = fn;
+    });
+    return () => unlisten?.();
+  }, []);
+
+  const handleCheckUpdate = async () => {
+    if (!isTauriRuntime()) {
+      setUpdateMsg("当前为浏览器预览模式，请在桌面端检查更新。");
+      return;
+    }
+    setUpdateBusy("checking");
+    setUpdateMsg("正在检查更新…");
+    try {
+      const info = await tauriCheckAppUpdate();
+      setUpdateInfo(info);
+      if (info?.available) {
+        setUpdateMsg(`发现新版本 ${info.version}（当前 ${info.currentVersion}）`);
+      } else if (info) {
+        setUpdateMsg(`已经是最新版本（${info.currentVersion}）`);
+      }
+    } catch (err) {
+      setUpdateMsg(String(err));
+    } finally {
+      setUpdateBusy("");
+    }
+  };
+
+  const handleInstallUpdate = async () => {
+    setUpdateBusy("installing");
+    setUpdateMsg("正在下载更新…");
+    try {
+      await tauriInstallAppUpdate();
+    } catch (err) {
+      setUpdateMsg(String(err));
+      setUpdateBusy("");
+    }
+  };
 
   const refreshAssetStatus = async () => {
     try {
@@ -45,11 +147,11 @@ export const SettingsHubView: React.FC<SettingsHubViewProps> = ({
 
   const handleSyncAssets = async () => {
     if (!isTauriRuntime()) {
-      setMaintenanceMsg("当前为纯浏览器预览模式，请在桌面端内执行远程数据/模型同步。");
+      setMaintenanceMsg("当前为纯浏览器预览模式，请在桌面端内执行数据更新。");
       return;
     }
     setSyncing(true);
-    setMaintenanceMsg("正在拉取远程数据与 ONNX 模型并校验 SHA-256...");
+    setMaintenanceMsg("正在检查并同步最新统计数据...");
     try {
       const result = await tauriSyncRemoteAssets(
         settings.data_sync_url.trim() || undefined,
@@ -57,16 +159,19 @@ export const SettingsHubView: React.FC<SettingsHubViewProps> = ({
       );
       if (result) {
         setAssetStatus(result.status);
-        await loadDatabase(true);
+        const fresh = await loadDatabase(true);
+        onDatabaseReloaded?.(fresh);
         const dlCount = result.downloadedDataFiles.length + result.downloadedModelFiles.length;
         const failMsg =
-          result.failedFiles.length > 0 ? `，失败 ${result.failedFiles.length} 项` : "";
+          result.failedFiles.length > 0 ? `，${result.failedFiles.length} 项校验未通过` : "";
         setMaintenanceMsg(
-          `同步完成（版本 ${result.patch}）：下载 ${dlCount} 项，跳过未变更 ${result.skippedFiles} 项${failMsg}。`
+          dlCount > 0
+            ? `数据已更新至 Patch ${result.patch}（更新 ${dlCount} 项，已是最新 ${result.skippedFiles} 项${failMsg}）。`
+            : `当前已是最新数据（Patch ${result.patch}，已校验 ${result.skippedFiles} 项${failMsg}）。`
         );
       }
     } catch (err) {
-      setMaintenanceMsg(`同步失败：${String(err)}`);
+      setMaintenanceMsg(`数据更新失败：${String(err)}`);
     } finally {
       setSyncing(false);
     }
@@ -116,7 +221,7 @@ export const SettingsHubView: React.FC<SettingsHubViewProps> = ({
         <div className="card-header">
           <div>
             <h3>
-              <Settings size={18} className="gold-text" /> HexBox 设置中心
+              <Settings size={18} className="gold-text" /> HaxAssistant 设置中心
             </h3>
             <div className="card-sub">
               本地持久化保存快捷键、OCR 推理档位、悬浮窗透明度、召唤师技能与选人自动化开关
@@ -348,6 +453,46 @@ export const SettingsHubView: React.FC<SettingsHubViewProps> = ({
                 全部重置
               </button>
             </div>
+            <div className="setting-row">
+              <span>
+                游戏窗口模式：
+                {windowMode?.connected
+                  ? windowMode.label
+                  : "未连接客户端"}
+                {windowMode?.connected && !windowMode.isBorderless
+                  ? "（全屏下悬浮窗不可见）"
+                  : ""}
+              </span>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button
+                  className="hex-btn ghost sm"
+                  onClick={refreshWindowMode}
+                  title="刷新"
+                >
+                  <RefreshCw size={13} />
+                </button>
+                <button
+                  className="hex-btn primary sm"
+                  disabled={
+                    windowModeBusy || !windowMode?.connected || windowMode.isBorderless
+                  }
+                  onClick={handleFixBorderless}
+                >
+                  {windowModeBusy ? "切换中…" : "一键切换无边框"}
+                </button>
+              </div>
+            </div>
+            {windowModeMsg && <div className="card-sub">{windowModeMsg}</div>}
+            <label className="setting-row">
+              <span>进入选人时自动切换为无边框</span>
+              <input
+                type="checkbox"
+                checked={settings.auto_fix_borderless}
+                onChange={(e) =>
+                  onUpdateSettings({ auto_fix_borderless: e.target.checked })
+                }
+              />
+            </label>
           </div>
         </div>
 
@@ -373,51 +518,38 @@ export const SettingsHubView: React.FC<SettingsHubViewProps> = ({
         </div>
       </div>
 
-      {/* P0: Remote Data/Model Sync & OCR Maintenance */}
+      {/* Data & Component Maintenance */}
       <div className="panel-card">
         <div className="card-header">
           <div>
             <h3>
-              <CloudDownload size={17} className="gold-text" /> 本地数据 / ONNX 模型同步与维护
+              <CloudDownload size={17} className="gold-text" /> 数据与组件维护
             </h3>
             <div className="card-sub">
-              支持应用内一键下载数据包与 OCR 模型（带 SHA-256 校验）、清理 OCR 临时缓存与检测客户端语言
+              一键更新最新英雄与海克斯统计数据、清理本地识别缓存与检测客户端语言
             </div>
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <span className={`tag-badge ${assetStatus?.readyForOffline === false ? "warn" : "success"}`}>
+              数据 Patch {db.patch}
+            </span>
             {assetStatus && (
-              <>
-                <span className={`tag-badge ${assetStatus.readyForOffline ? "success" : "warn"}`}>
-                  数据 {assetStatus.presentDataFiles}/{assetStatus.expectedDataFiles}
-                </span>
-                <span className={`tag-badge ${assetStatus.readyForOcr ? "success" : "warn"}`}>
-                  ONNX 模型 {assetStatus.presentModelFiles}/{assetStatus.expectedModelFiles}
-                </span>
-              </>
+              <span className={`tag-badge ${assetStatus.readyForOcr ? "success" : "warn"}`}>
+                {assetStatus.readyForOcr ? "识别组件就绪" : "识别组件待补齐"}
+              </span>
             )}
             {localeText && <span className="tag-badge">语言：{localeText}</span>}
           </div>
         </div>
 
         <div className="settings-section" style={{ marginTop: 8 }}>
-          <label className="setting-row">
-            <span>远程数据与模型源 URL（留空使用内置/环境变量源）</span>
-            <input
-              className="hex-input"
-              style={{ minWidth: 320 }}
-              type="text"
-              placeholder="https://your-mirror.example.com/hexbox-assets"
-              value={settings.data_sync_url || ""}
-              onChange={(e) => onUpdateSettings({ data_sync_url: e.target.value })}
-            />
-          </label>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 4 }}>
             <button
               className="hex-btn primary sm"
               onClick={handleSyncAssets}
               disabled={syncing}
             >
-              <CloudDownload size={14} /> {syncing ? "正在同步..." : "同步远程数据与模型"}
+              <CloudDownload size={14} /> {syncing ? "正在更新..." : "检查并更新数据"}
             </button>
             <button
               className="hex-btn ghost sm"
@@ -430,22 +562,78 @@ export const SettingsHubView: React.FC<SettingsHubViewProps> = ({
               <Globe size={14} /> 检测客户端语言
             </button>
           </div>
-          {assetStatus &&
-            (assetStatus.missingDataFiles.length > 0 ||
-              assetStatus.missingModelFiles.length > 0) && (
-              <div className="card-sub" style={{ marginTop: 10, color: "#f59e0b" }}>
-                缺失文件：
-                {[...assetStatus.missingDataFiles, ...assetStatus.missingModelFiles]
-                  .slice(0, 8)
-                  .join("、")}
-                {assetStatus.missingDataFiles.length + assetStatus.missingModelFiles.length > 8
-                  ? " 等"
-                  : ""}
-              </div>
-            )}
           {maintenanceMsg && (
             <div className="card-sub" style={{ marginTop: 10 }}>
               {maintenanceMsg}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="panel-card">
+        <div className="card-header">
+          <div>
+            <h3>
+              <RefreshCw size={17} className="gold-text" /> 应用更新
+            </h3>
+            <div className="card-sub">
+              检查并安装客户端新版本，安装包经签名校验后自动更新并重启
+            </div>
+          </div>
+          {updateInfo && (
+            <span className={`tag-badge ${updateInfo.available ? "warn" : "success"}`}>
+              {updateInfo.available ? `可更新到 ${updateInfo.version}` : `当前 ${updateInfo.currentVersion}`}
+            </span>
+          )}
+        </div>
+        <div style={{ padding: "0 4px" }}>
+          <label className="setting-row">
+            <span>点击主窗口 × 时</span>
+            <select
+              className="hex-select sm"
+              value={settings.close_button_action || "ask"}
+              onChange={(e) => onUpdateSettings({ close_button_action: e.target.value })}
+            >
+              <option value="ask">每次询问</option>
+              <option value="tray">最小化到托盘</option>
+              <option value="exit">直接退出</option>
+            </select>
+          </label>
+          <label className="setting-row">
+            <span>启动时自动检查更新</span>
+            <input
+              type="checkbox"
+              checked={settings.auto_check_update}
+              onChange={(e) => onUpdateSettings({ auto_check_update: e.target.checked })}
+            />
+          </label>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+            <button
+              className="hex-btn ghost sm"
+              onClick={handleCheckUpdate}
+              disabled={updateBusy !== ""}
+            >
+              <RefreshCw size={14} /> {updateBusy === "checking" ? "检查中..." : "检查更新"}
+            </button>
+            {updateInfo?.available && (
+              <button
+                className="hex-btn primary sm"
+                onClick={handleInstallUpdate}
+                disabled={updateBusy !== ""}
+              >
+                <CloudDownload size={14} />{" "}
+                {updateBusy === "installing" ? "正在更新..." : `下载并安装 ${updateInfo.version}`}
+              </button>
+            )}
+          </div>
+          {updateInfo?.available && updateInfo.notes && (
+            <div className="card-sub" style={{ marginTop: 10, whiteSpace: "pre-wrap" }}>
+              {updateInfo.notes}
+            </div>
+          )}
+          {updateMsg && (
+            <div className="card-sub" style={{ marginTop: 10 }}>
+              {updateMsg}
             </div>
           )}
         </div>

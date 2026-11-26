@@ -9,9 +9,14 @@ use anyhow::{anyhow, Result};
 use base64::Engine;
 use serde_json::{json, Value};
 use shared_types::{
-    ChampSelectSnapshot, LcuStatus, LiveGameSnapshot, LivePlayerScore, MatchHistoryEntry,
-    RunePagePlan,
+    ChampSelectSnapshot, LcuStatus, LeagueWindowMode, LiveGameSnapshot, LivePlayerScore,
+    MatchHistoryEntry, RunePagePlan,
 };
+
+/// `General.WindowMode` values in League's game settings.
+pub const WINDOW_MODE_FULLSCREEN: u8 = 0;
+pub const WINDOW_MODE_WINDOWED: u8 = 1;
+pub const WINDOW_MODE_BORDERLESS: u8 = 2;
 
 #[derive(Debug, Clone)]
 pub struct LockfileCredentials {
@@ -533,6 +538,32 @@ impl LcuClient {
         Ok(())
     }
 
+    /// Window mode from the client's stored game settings; `None` when the
+    /// client has not loaded them yet.
+    pub async fn fetch_game_window_mode(&self, creds: &LockfileCredentials) -> Result<Option<u8>> {
+        let settings = self
+            .get_json(creds, "/lol-game-settings/v1/game-settings")
+            .await?;
+        Ok(parse_window_mode(&settings))
+    }
+
+    /// Change the game's window mode. Takes effect the next time the game
+    /// starts; the client writes it to `game.cfg`.
+    pub async fn set_game_window_mode(&self, creds: &LockfileCredentials, mode: u8) -> Result<()> {
+        self.patch_json(
+            creds,
+            "/lol-game-settings/v1/game-settings",
+            &json!({ "General": { "WindowMode": mode } }),
+        )
+        .await?;
+        // Ask the client to persist immediately; older clients lack this
+        // endpoint and save on their own, so a failure here is not fatal.
+        let _ = self
+            .post_json(creds, "/lol-game-settings/v1/save", &json!({}))
+            .await;
+        Ok(())
+    }
+
     /// Fetch current gameflow session (used to discover PUUIDs of the 10 players in lobby/game).
     pub async fn fetch_gameflow_session(&self, creds: &LockfileCredentials) -> Result<Value> {
         self.get_json(creds, "/lol-gameflow/v1/session").await
@@ -551,6 +582,37 @@ fn urlencoding_component(input: &str) -> String {
         }
     }
     out
+}
+
+pub fn parse_window_mode(game_settings: &Value) -> Option<u8> {
+    game_settings
+        .get("General")?
+        .get("WindowMode")?
+        .as_u64()
+        .and_then(|v| u8::try_from(v).ok())
+}
+
+pub fn window_mode_label(mode: Option<u8>) -> &'static str {
+    match mode {
+        Some(WINDOW_MODE_FULLSCREEN) => "全屏",
+        Some(WINDOW_MODE_WINDOWED) => "窗口",
+        Some(WINDOW_MODE_BORDERLESS) => "无边框",
+        Some(_) => "未知",
+        None => "未读取到",
+    }
+}
+
+pub fn window_mode_status(connected: bool, mode: Option<u8>) -> LeagueWindowMode {
+    LeagueWindowMode {
+        connected,
+        mode,
+        label: if connected {
+            window_mode_label(mode).to_string()
+        } else {
+            "客户端未连接".to_string()
+        },
+        is_borderless: mode == Some(WINDOW_MODE_BORDERLESS),
+    }
 }
 
 pub fn parse_local_summoner_spells(session: &Value) -> (Option<u32>, Option<u32>, Option<u32>) {

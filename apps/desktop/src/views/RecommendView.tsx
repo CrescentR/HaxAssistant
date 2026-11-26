@@ -69,7 +69,7 @@ export const RecommendView: React.FC<RecommendViewProps> = ({
                 src={getChampionIconUrl(heroObj.id)}
                 alt={heroObj.hero}
                 className="hero-avatar-lg"
-                onError={(e) => ((e.target as HTMLImageElement).src = "/hexbox-logo.png")}
+                onError={(e) => ((e.target as HTMLImageElement).src = "/app-logo.png")}
               />
               <div>
                 <h4>
@@ -110,7 +110,7 @@ export const RecommendView: React.FC<RecommendViewProps> = ({
                       <img
                         src={getItemIconUrl(it.id)}
                         alt={it.name}
-                        onError={(e) => ((e.target as HTMLImageElement).src = "/hexbox-logo.png")}
+                        onError={(e) => ((e.target as HTMLImageElement).src = "/app-logo.png")}
                       />
                       <span>{it.name}</span>
                     </div>
@@ -121,7 +121,7 @@ export const RecommendView: React.FC<RecommendViewProps> = ({
                       <img
                         src={getItemIconUrl(it.id)}
                         alt={it.name}
-                        onError={(e) => ((e.target as HTMLImageElement).src = "/hexbox-logo.png")}
+                        onError={(e) => ((e.target as HTMLImageElement).src = "/app-logo.png")}
                       />
                       <span>{it.name}</span>
                     </div>
@@ -208,7 +208,7 @@ export const RecommendView: React.FC<RecommendViewProps> = ({
                             <img
                               src={getItemIconUrl(it.item_id)}
                               alt={it.item_name}
-                              onError={(e) => ((e.target as HTMLImageElement).src = "/hexbox-logo.png")}
+                              onError={(e) => ((e.target as HTMLImageElement).src = "/app-logo.png")}
                             />
                             <span>{it.item_name}</span>
                           </div>

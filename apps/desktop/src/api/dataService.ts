@@ -529,6 +529,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   allow_non_lol_foreground: false,
   overlay_opacity: 95,
   overlay_zoom: 100,
+  close_button_action: "ask",
+  auto_check_update: true,
+  auto_fix_borderless: false,
 };
 
 export function loadSettings(): AppSettings {

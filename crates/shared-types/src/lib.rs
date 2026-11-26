@@ -37,10 +37,28 @@ pub struct AppSettings {
     pub allow_non_lol_foreground: bool,
     pub overlay_opacity: u8,
     pub overlay_zoom: u16,
+    /// What the main window's × does: `ask`, `tray` (keep running in the
+    /// system tray) or `exit`.
+    #[serde(default = "default_close_button_action")]
+    pub close_button_action: String,
+    #[serde(default = "default_true")]
+    pub auto_check_update: bool,
+    /// Switch League from exclusive fullscreen to borderless when champ
+    /// select starts, so overlays can be drawn over the game.
+    #[serde(default)]
+    pub auto_fix_borderless: bool,
 }
 
 fn default_flash_slot() -> String {
     "F".to_string()
+}
+
+fn default_close_button_action() -> String {
+    "ask".to_string()
+}
+
+fn default_true() -> bool {
+    true
 }
 
 fn default_augment_value_mode() -> String {
@@ -74,6 +92,9 @@ impl Default for AppSettings {
             allow_non_lol_foreground: false,
             overlay_opacity: 95,
             overlay_zoom: 100,
+            close_button_action: default_close_button_action(),
+            auto_check_update: true,
+            auto_fix_borderless: false,
         }
     }
 }
@@ -684,6 +705,37 @@ pub struct AssetSyncResult {
     pub skipped_files: usize,
     pub failed_files: Vec<String>,
     pub status: AssetSyncStatus,
+}
+
+/// League's in-game window mode as stored in the client's game settings
+/// (`General.WindowMode`: 0 fullscreen, 1 windowed, 2 borderless).
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LeagueWindowMode {
+    pub connected: bool,
+    pub mode: Option<u8>,
+    pub label: String,
+    pub is_borderless: bool,
+}
+
+/// Result of asking the update server whether a newer HexBox exists.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AppUpdateInfo {
+    pub available: bool,
+    pub current_version: String,
+    pub version: Option<String>,
+    pub notes: Option<String>,
+    pub date: Option<String>,
+}
+
+/// Download progress emitted as `hexbox://update-progress` while installing.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AppUpdateProgress {
+    pub downloaded: u64,
+    pub total: Option<u64>,
+    pub finished: bool,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

@@ -18,7 +18,8 @@ use serde_json::{json, Value};
 use shared_types::{
     AppSettings, ArurfRecommendation, AssetSyncResult, AssetSyncStatus, AugmentOfferStatsReport,
     AugmentRecommendationCard, BenchGrabStatus, EnemyCounterAnalysis, GamePlayerIntel,
-    IntelCacheStatus, ItemPlan, ItemSetSyncResult, LcuStatus, LineupEvaluation, LiveGameSnapshot,
+    IntelCacheStatus, ItemPlan, ItemSetSyncResult, LcuStatus, LeagueWindowMode, LineupEvaluation,
+    LiveGameSnapshot,
     MatchHistoryEntry, MatchHistoryResponse, OcrCacheCleanupReport, OverlayStatePayload,
     PlayerEncounterRecord, PlayerEncounterSummary, PlayerLibraryBundle, PlayerMarker, PlayerProfile,
     PlayerSearchResult, PostgameReview, RunePagePlan, RuntimeSummary, SummonerSpellSnapshot,
@@ -227,7 +228,34 @@ impl HexBoxCore {
             .map(str::trim)
             .filter(|s| !s.is_empty())
             .map(ToString::to_string)
-            .unwrap_or_else(|| self.get_settings().data_sync_url);
+            .or_else(|| {
+                let s = self.get_settings().data_sync_url;
+                let trimmed = s.trim();
+                if trimmed.is_empty() {
+                    None
+                } else {
+                    Some(trimmed.to_string())
+                }
+            })
+            .or_else(|| {
+                std::env::var("HAXASSISTANT_DATA_SYNC_URL")
+                    .ok()
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty())
+            })
+            .or_else(|| {
+                option_env!("HAXASSISTANT_DATA_SYNC_URL")
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                    .map(ToString::to_string)
+            })
+            .unwrap_or_else(|| {
+                if cfg!(debug_assertions) {
+                    "http://127.0.0.1:8787".to_string()
+                } else {
+                    String::new()
+                }
+            });
         let result =
             data_updater::sync_remote_assets(&url, &self.data_dir(), &self.model_dir, include_models)
                 .await?;
@@ -440,6 +468,34 @@ impl HexBoxCore {
         Ok(self.get_summoner_spell_snapshot().await)
     }
 
+    // -----------------------------------------------------------------------
+    // Game window mode (borderless fix)
+    // -----------------------------------------------------------------------
+
+    /// League's stored window mode. Overlays can only be drawn over the game
+    /// in windowed or borderless mode, not exclusive fullscreen.
+    pub async fn get_game_window_mode(&self) -> LeagueWindowMode {
+        let Some(creds) = discover_lockfile() else {
+            return lcu_client::window_mode_status(false, None);
+        };
+        let mode = self
+            .lcu
+            .fetch_game_window_mode(&creds)
+            .await
+            .ok()
+            .flatten();
+        lcu_client::window_mode_status(true, mode)
+    }
+
+    /// Switch the game to borderless. Applies from the next game launch.
+    pub async fn fix_game_borderless(&self) -> Result<LeagueWindowMode> {
+        let creds = discover_lockfile().ok_or_else(|| anyhow!("未检测到运行中的英雄联盟客户端"))?;
+        self.lcu
+            .set_game_window_mode(&creds, lcu_client::WINDOW_MODE_BORDERLESS)
+            .await?;
+        Ok(self.get_game_window_mode().await)
+    }
+
     pub async fn sync_item_set_to_client(
         &self,
         hero_name: Option<&str>,
@@ -470,7 +526,7 @@ impl HexBoxCore {
                 .map(|it| json!({ "id": it.id, "count": 1 }))
                 .collect();
             total_items += items.len();
-            blocks.push(json!({ "type": "出门装 · HexBox", "items": items }));
+            blocks.push(json!({ "type": "出门装 · HaxAssistant", "items": items }));
         }
         if !build.core_items.is_empty() {
             let items: Vec<Value> = build
@@ -496,7 +552,7 @@ impl HexBoxCore {
             blocks.push(json!({ "type": "针对/防装推荐", "items": situational }));
         }
 
-        let title = format!("HexBox · {target_hero} 大乱斗出装");
+        let title = format!("HaxAssistant · {target_hero} 大乱斗出装");
         let Some(creds) = discover_lockfile() else {
             return Ok(ItemSetSyncResult {
                 hero_name: target_hero.to_string(),
@@ -1167,6 +1223,18 @@ impl HexBoxCore {
                         }
                     }
                 } else if status.phase == "ChampSelect" {
+                    // Entering champ select: make sure the coming game starts
+                    // borderless so overlays stay visible over it.
+                    if settings.auto_fix_borderless && prev_phase != "ChampSelect" {
+                        if let Ok(Some(mode)) = self.lcu.fetch_game_window_mode(&creds).await {
+                            if mode != lcu_client::WINDOW_MODE_BORDERLESS {
+                                let _ = self
+                                    .lcu
+                                    .set_game_window_mode(&creds, lcu_client::WINDOW_MODE_BORDERLESS)
+                                    .await;
+                            }
+                        }
+                    }
                     // Determine the queue once per champ-select so mode-specific
                     // automation (ARAM spell set) doesn't fire in other queues.
                     let cached_is_aram = self

@@ -2,6 +2,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
   AppSettings,
+  AppUpdateInfo,
+  AppUpdateProgress,
   ArurfRecommendation,
   AssetSyncResult,
   AssetSyncStatus,
@@ -12,6 +14,7 @@ import type {
   ItemPlan,
   ItemSetSyncResult,
   LcuStatus,
+  LeagueWindowMode,
   MatchHistoryEntry,
   MatchHistoryResponse,
   OcrCacheCleanupReport,
@@ -164,11 +167,64 @@ export async function tauriStartOverlayDrag(): Promise<void> {
   await invoke<void>("start_overlay_drag");
 }
 
+/** Ask the release server whether a newer HexBox exists. */
+export async function tauriCheckAppUpdate(): Promise<AppUpdateInfo | null> {
+  if (!isTauriRuntime()) return null;
+  return invoke<AppUpdateInfo>("check_app_update");
+}
+
+/** Download, verify and install the update; the app restarts when done. */
+export async function tauriInstallAppUpdate(): Promise<void> {
+  if (!isTauriRuntime()) return;
+  await invoke<void>("install_app_update");
+}
+
+/** Fired when the main window's × is clicked and the close action is "ask". */
+/** Read League's in-game window mode (fullscreen / windowed / borderless). */
+export async function tauriGetGameWindowMode(): Promise<LeagueWindowMode | null> {
+  if (!isTauriRuntime()) return null;
+  return invoke<LeagueWindowMode>("get_game_window_mode");
+}
+
+/** Switch League to borderless so overlays stay visible. Applies from the next game launch. */
+export async function tauriFixGameBorderless(): Promise<LeagueWindowMode | null> {
+  if (!isTauriRuntime()) return null;
+  return invoke<LeagueWindowMode>("fix_game_borderless");
+}
+
+export async function subscribeCloseRequested(handler: () => void): Promise<UnlistenFn> {
+  if (!isTauriRuntime()) return () => {};
+  return listen<null>("haxassistant://close-requested", () => handler());
+}
+
+/** Answer the close prompt: keep running in the tray, or exit. */
+export async function tauriHandleMainClose(
+  action: "tray" | "exit",
+  remember: boolean
+): Promise<void> {
+  if (!isTauriRuntime()) return;
+  await invoke<void>("handle_main_close", { action, remember });
+}
+
+export async function subscribeUpdateAvailable(
+  handler: (info: AppUpdateInfo) => void
+): Promise<UnlistenFn> {
+  if (!isTauriRuntime()) return () => {};
+  return listen<AppUpdateInfo>("haxassistant://update-available", (event) => handler(event.payload));
+}
+
+export async function subscribeUpdateProgress(
+  handler: (progress: AppUpdateProgress) => void
+): Promise<UnlistenFn> {
+  if (!isTauriRuntime()) return () => {};
+  return listen<AppUpdateProgress>("haxassistant://update-progress", (event) => handler(event.payload));
+}
+
 export async function subscribeLcuStatus(
   handler: (status: LcuStatus) => void
 ): Promise<UnlistenFn> {
   if (!isTauriRuntime()) return () => {};
-  return listen<LcuStatus>("hexbox://lcu-status", (event) => {
+  return listen<LcuStatus>("haxassistant://lcu-status", (event) => {
     handler(event.payload);
   });
 }
@@ -177,7 +233,7 @@ export async function subscribeOverlayState(
   handler: (payload: OverlayStatePayload) => void
 ): Promise<UnlistenFn> {
   if (!isTauriRuntime()) return () => {};
-  return listen<OverlayStatePayload>("hexbox://overlay-state", (event) => {
+  return listen<OverlayStatePayload>("haxassistant://overlay-state", (event) => {
     handler(event.payload);
   });
 }
@@ -186,7 +242,7 @@ export async function subscribeSettingsUpdated(
   handler: (settings: AppSettings) => void
 ): Promise<UnlistenFn> {
   if (!isTauriRuntime()) return () => {};
-  return listen<AppSettings>("hexbox://settings-updated", (event) => {
+  return listen<AppSettings>("haxassistant://settings-updated", (event) => {
     handler(event.payload);
   });
 }

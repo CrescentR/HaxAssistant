@@ -80,7 +80,7 @@ pub fn build_arurf_recommendation(
             "射手 · 高攻速暴击".to_string(),
             SPELL_GHOST,
             RunePagePlan {
-                name: format!("HexBox 无限火力 · {display_name}"),
+                name: format!("HaxAssistant 无限火力 · {display_name}"),
                 primary_style_id: 8000, // Precision
                 sub_style_id: 8100,     // Domination
                 selected_perk_ids: vec![8008, 9111, 9104, 8014, 8139, 8135, 5005, 5008, 5001],
@@ -98,7 +98,7 @@ pub fn build_arurf_recommendation(
             "法师 · 爆发拉扯".to_string(),
             SPELL_BARRIER,
             RunePagePlan {
-                name: format!("HexBox 无限火力 · {display_name}"),
+                name: format!("HaxAssistant 无限火力 · {display_name}"),
                 primary_style_id: 8100, // Domination
                 sub_style_id: 8200,     // Sorcery
                 selected_perk_ids: vec![8128, 8126, 8138, 8106, 8210, 8236, 5008, 5008, 5001],
@@ -116,7 +116,7 @@ pub fn build_arurf_recommendation(
             "坦克 · 无限控制".to_string(),
             SPELL_GHOST,
             RunePagePlan {
-                name: format!("HexBox 无限火力 · {display_name}"),
+                name: format!("HaxAssistant 无限火力 · {display_name}"),
                 primary_style_id: 8400, // Resolve
                 sub_style_id: 8000,     // Precision
                 selected_perk_ids: vec![8437, 8446, 8429, 8451, 9111, 9105, 5008, 5001, 5001],
@@ -134,7 +134,7 @@ pub fn build_arurf_recommendation(
             "辅助 · 护盾增益".to_string(),
             SPELL_EXHAUST,
             RunePagePlan {
-                name: format!("HexBox 无限火力 · {display_name}"),
+                name: format!("HaxAssistant 无限火力 · {display_name}"),
                 primary_style_id: 8200, // Sorcery
                 sub_style_id: 8400,     // Resolve
                 selected_perk_ids: vec![8214, 8224, 8210, 8236, 8473, 8453, 5008, 5008, 5001],
@@ -152,7 +152,7 @@ pub fn build_arurf_recommendation(
             "战士/刺客 · 持续进场".to_string(),
             SPELL_IGNITE,
             RunePagePlan {
-                name: format!("HexBox 无限火力 · {display_name}"),
+                name: format!("HaxAssistant 无限火力 · {display_name}"),
                 primary_style_id: 8000, // Precision
                 sub_style_id: 8400,     // Resolve
                 selected_perk_ids: vec![8010, 9111, 9105, 8299, 8473, 8451, 5005, 5008, 5001],

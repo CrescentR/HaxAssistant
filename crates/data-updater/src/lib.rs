@@ -208,10 +208,10 @@ fn file_matches_hash(path: &Path, expected_hash: Option<&str>) -> bool {
 }
 
 async fn fetch_bytes(client: &reqwest::Client, url: &str) -> Result<Vec<u8>> {
-    let resp = client.get(url).send().await?;
+    let resp = client.get(url).send().await.map_err(|_| anyhow!("网络连接异常"))?;
     let status = resp.status();
     if !status.is_success() {
-        return Err(anyhow!("HTTP {status} for {url}"));
+        return Err(anyhow!("数据服务响应异常 (HTTP {status})"));
     }
     Ok(resp.bytes().await?.to_vec())
 }
@@ -229,9 +229,7 @@ pub async fn sync_remote_assets(
 ) -> Result<AssetSyncResult> {
     let trimmed = base_url.trim().trim_end_matches('/');
     if trimmed.is_empty() {
-        return Err(anyhow!(
-            "未配置远程数据同步地址，请先在设置中填写数据源 URL（例如 GitHub Release 或静态镜像根路径）"
-        ));
+        return Err(anyhow!("暂未配置数据更新服务，请稍后重试"));
     }
 
     fs::create_dir_all(data_dir)?;
@@ -346,7 +344,7 @@ pub async fn sync_remote_assets(
 
     let status = inspect_asset_status(data_dir, model_dir);
     Ok(AssetSyncResult {
-        source_url: trimmed.to_string(),
+        source_url: String::new(),
         patch,
         report_date,
         downloaded_data_files,

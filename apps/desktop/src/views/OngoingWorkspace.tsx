@@ -432,11 +432,11 @@ export const OngoingWorkspace: React.FC<Props> = ({
           <span className="pulse-dot online" />
           <div>
             <div className="status-title">
-              海克斯大乱斗 (Queue 2400) · 艾欧尼亚 (HN1) ·{" "}
-              <span className="gold-text">Hex Max 全功能已解锁</span>
+              海克斯大乱斗 ·{" "}
+              <span className="gold-text">HaxAssistant 海克斯助手</span>
             </div>
             <div className="status-sub">
-              数据版本 Patch {db.patch} ({db.reportDate}) · {ocrStatus} · 今日推荐额度：无限
+              当前版本 Patch {db.patch} ({db.reportDate}) · {ocrStatus}
             </div>
           </div>
         </div>
@@ -573,7 +573,7 @@ export const OngoingWorkspace: React.FC<Props> = ({
                       src={getChampionIconUrl(b.heroId)}
                       alt={b.heroName}
                       className="hero-avatar-md"
-                      onError={(e) => ((e.target as HTMLImageElement).src = "/hexbox-logo.png")}
+                      onError={(e) => ((e.target as HTMLImageElement).src = "/app-logo.png")}
                     />
                     <div className="bench-info">
                       <div className="bench-name-row">
@@ -632,7 +632,7 @@ export const OngoingWorkspace: React.FC<Props> = ({
                     src={getChampionIconUrl(heroObj.id)}
                     alt={heroObj.hero}
                     className="hero-avatar-lg"
-                    onError={(e) => ((e.target as HTMLImageElement).src = "/hexbox-logo.png")}
+                    onError={(e) => ((e.target as HTMLImageElement).src = "/app-logo.png")}
                   />
                   <div>
                     <h4>
@@ -667,7 +667,7 @@ export const OngoingWorkspace: React.FC<Props> = ({
                           <img
                             src={getItemIconUrl(it.id)}
                             alt={it.name}
-                            onError={(e) => ((e.target as HTMLImageElement).src = "/hexbox-logo.png")}
+                            onError={(e) => ((e.target as HTMLImageElement).src = "/app-logo.png")}
                           />
                           <span>{it.name}</span>
                         </div>
@@ -678,7 +678,7 @@ export const OngoingWorkspace: React.FC<Props> = ({
                           <img
                             src={getItemIconUrl(it.id)}
                             alt={it.name}
-                            onError={(e) => ((e.target as HTMLImageElement).src = "/hexbox-logo.png")}
+                            onError={(e) => ((e.target as HTMLImageElement).src = "/app-logo.png")}
                           />
                           <span>{it.name}</span>
                         </div>
@@ -922,7 +922,7 @@ export const OngoingWorkspace: React.FC<Props> = ({
                             <img
                               src={getItemIconUrl(it.item_id)}
                               alt={it.item_name}
-                              onError={(e) => ((e.target as HTMLImageElement).src = "/hexbox-logo.png")}
+                              onError={(e) => ((e.target as HTMLImageElement).src = "/app-logo.png")}
                             />
                             <span>
                               {it.item_name} {(it.win_rate * 100).toFixed(1)}%
@@ -1103,7 +1103,7 @@ export const OngoingWorkspace: React.FC<Props> = ({
                                 src={getChampionIconUrl(ch?.id || "22")}
                                 alt={p.championName}
                                 className="hero-avatar-sm"
-                                onError={(e) => ((e.target as HTMLImageElement).src = "/hexbox-logo.png")}
+                                onError={(e) => ((e.target as HTMLImageElement).src = "/app-logo.png")}
                               />
                               <div className="roster-p-main">
                                 <div className="roster-p-name">
@@ -1248,7 +1248,7 @@ export const OngoingWorkspace: React.FC<Props> = ({
             <h3>
               <Award size={17} className="gold-text" /> 赛后海克斯三选一决策复盘 & 同英雄分位数对比
             </h3>
-            <span className="tag-badge success">Ultra 赛后复盘已解锁</span>
+            <span className="tag-badge success">赛后复盘</span>
           </div>
           <div className="postgame-rounds-list">
             {[

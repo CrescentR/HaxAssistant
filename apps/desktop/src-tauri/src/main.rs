@@ -4,6 +4,7 @@
 //! Bridges `app-core` (`HexBoxCore`), `reco-engine`, `lcu-client`, and persistent `ocr-sidecar`
 //! to the React frontend and overlay windows.
 
+mod main_window;
 mod overlay_layout;
 
 use std::path::PathBuf;
@@ -13,13 +14,15 @@ use std::time::Duration;
 use app_core::HexBoxCore;
 use serde_json::Value;
 use shared_types::{
-    AppSettings, ArurfRecommendation, AssetSyncResult, AssetSyncStatus, AugmentOfferStatsReport,
+    AppSettings, AppUpdateInfo, AppUpdateProgress, ArurfRecommendation, AssetSyncResult,
+    AssetSyncStatus, AugmentOfferStatsReport,
     AugmentRecommendationCard, BenchGrabStatus, EnemyCounterAnalysis, GamePlayerIntel,
-    IntelCacheStatus, ItemPlan, ItemSetSyncResult, LcuStatus, LineupEvaluation, MatchHistoryEntry,
+    IntelCacheStatus, ItemPlan, ItemSetSyncResult, LcuStatus, LeagueWindowMode, LineupEvaluation, MatchHistoryEntry,
     MatchHistoryResponse, OcrCacheCleanupReport, OverlayStatePayload, PlayerEncounterRecord,
     PlayerEncounterSummary, PlayerLibraryBundle, PlayerMarker, PlayerProfile, PlayerSearchResult,
     PostgameReview, RunePagePlan, RuntimeSummary, SummonerSpellSnapshot,
 };
+use main_window::MainWindowStore;
 use overlay_layout::{OverlayLayoutStore, SavedPosition};
 use tauri::{AppHandle, Emitter, Manager, State, WebviewWindow, WindowEvent};
 use tokio::sync::Notify;
@@ -28,6 +31,57 @@ use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 struct AppState {
     core: Arc<HexBoxCore>,
     overlay_layout: Arc<OverlayLayoutStore>,
+    main_window: Arc<MainWindowStore>,
+}
+
+/// Save window layouts and quit.
+pub(crate) fn exit_app(app: &AppHandle) {
+    if let Some(state) = app.try_state::<AppState>() {
+        state.overlay_layout.flush();
+        if let Some(win) = app.get_webview_window(main_window::MAIN_LABEL) {
+            state.main_window.capture(&win);
+        }
+        state.main_window.flush();
+    }
+    app.exit(0);
+}
+
+/// Carry out what the main window's × should do.
+fn perform_close_action(app: &AppHandle, action: &str) {
+    match main_window::close_action(action) {
+        main_window::CLOSE_TRAY => main_window::hide_to_tray(app),
+        main_window::CLOSE_EXIT => exit_app(app),
+        _ => {
+            // Let the UI ask; it answers through `handle_main_close`.
+            main_window::show_main(app);
+            let _ = app.emit("haxassistant://close-requested", ());
+        }
+    }
+}
+
+/// Answer to the close prompt: `tray` or `exit`; `remember` stores the choice.
+#[tauri::command]
+fn handle_main_close(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    action: String,
+    remember: bool,
+) -> Result<(), String> {
+    let action = main_window::close_action(&action);
+    if action == main_window::CLOSE_ASK {
+        return Err("action must be tray or exit".to_string());
+    }
+    if remember {
+        let mut settings = state.core.get_settings();
+        settings.close_button_action = action.to_string();
+        let saved = state
+            .core
+            .update_settings(settings)
+            .map_err(|e| e.to_string())?;
+        let _ = app.emit("haxassistant://settings-updated", &saved);
+    }
+    perform_close_action(&app, action);
+    Ok(())
 }
 
 fn resolve_app_root(app: &AppHandle) -> PathBuf {
@@ -120,7 +174,7 @@ fn update_settings(
         .map_err(|e| e.to_string())?;
     register_hotkeys(&app, state.core.clone(), &saved);
     overlay_layout::apply_zoom(&app, saved.overlay_zoom);
-    let _ = app.emit("hexbox://settings-updated", &saved);
+    let _ = app.emit("haxassistant://settings-updated", &saved);
     Ok(saved)
 }
 
@@ -136,7 +190,7 @@ fn save_overlay_zoom(
         .update_settings(settings)
         .map_err(|e| e.to_string())?;
     overlay_layout::apply_zoom(app, saved.overlay_zoom);
-    let _ = app.emit("hexbox://settings-updated", &saved);
+    let _ = app.emit("haxassistant://settings-updated", &saved);
     Ok(saved)
 }
 
@@ -184,7 +238,7 @@ fn set_overlay_state(
 ) -> OverlayStatePayload {
     let (saved, changed) = state.core.set_overlay_state_if_changed(payload);
     if changed {
-        let _ = app.emit("hexbox://overlay-state", &saved);
+        let _ = app.emit("haxassistant://overlay-state", &saved);
     }
     saved
 }
@@ -300,7 +354,7 @@ async fn run_ocr_preset(
         .map_err(|e| e.to_string())?
         .map_err(|e| e.to_string())?;
     let overlay_state = state.core.get_overlay_state();
-    let _ = app.emit("hexbox://overlay-state", &overlay_state);
+    let _ = app.emit("haxassistant://overlay-state", &overlay_state);
     Ok(res)
 }
 
@@ -319,7 +373,7 @@ async fn ocr_watch_tick(
             .map_err(|e| e.to_string())?
             .map_err(|e| e.to_string())?;
     let overlay_state = state.core.get_overlay_state();
-    let _ = app.emit("hexbox://overlay-state", &overlay_state);
+    let _ = app.emit("haxassistant://overlay-state", &overlay_state);
     Ok(res)
 }
 
@@ -511,6 +565,20 @@ async fn get_summoner_spell_snapshot(
 }
 
 #[tauri::command]
+async fn get_game_window_mode(state: State<'_, AppState>) -> Result<LeagueWindowMode, String> {
+    Ok(state.core.get_game_window_mode().await)
+}
+
+#[tauri::command]
+async fn fix_game_borderless(state: State<'_, AppState>) -> Result<LeagueWindowMode, String> {
+    state
+        .core
+        .fix_game_borderless()
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 async fn apply_summoner_spells(
     state: State<'_, AppState>,
     spell1_id: Option<u32>,
@@ -562,7 +630,7 @@ fn set_manual_augment_selection(
     confirmed_augments: Vec<String>,
 ) -> OverlayStatePayload {
     let saved = state.core.set_manual_augment_selection(confirmed_augments);
-    let _ = app.emit("hexbox://overlay-state", &saved);
+    let _ = app.emit("haxassistant://overlay-state", &saved);
     saved
 }
 
@@ -577,7 +645,7 @@ fn set_manual_augment_override(
         .core
         .set_manual_augment_override(slot, augment_name)
         .map_err(|e| e.to_string())?;
-    let _ = app.emit("hexbox://overlay-state", &saved);
+    let _ = app.emit("haxassistant://overlay-state", &saved);
     Ok(saved)
 }
 
@@ -675,8 +743,8 @@ fn spawn_background_lcu_poller(app: AppHandle, core: Arc<HexBoxCore>, wake: Arc<
             }
             let outcome = core.poll_lcu_tick().await;
             if outcome.changed {
-                let _ = app.emit("hexbox://lcu-status", &outcome.status);
-                let _ = app.emit("hexbox://overlay-state", &outcome.overlay_state);
+                let _ = app.emit("haxassistant://lcu-status", &outcome.status);
+                let _ = app.emit("haxassistant://overlay-state", &outcome.overlay_state);
 
                 let settings = core.get_settings();
                 if outcome.status.connected {
@@ -725,7 +793,7 @@ fn register_hotkeys(app: &AppHandle, core: Arc<HexBoxCore>, settings: &AppSettin
                         core_ocr.run_ocr_preset(&preset, None)
                     })
                     .await;
-                    let _ = app_bg.emit("hexbox://overlay-state", core_bg.get_overlay_state());
+                    let _ = app_bg.emit("haxassistant://overlay-state", core_bg.get_overlay_state());
                 });
             }
         }) {
@@ -808,7 +876,7 @@ fn spawn_background_auto_ocr_watcher(app: AppHandle, core: Arc<HexBoxCore>) {
 
                     if is_stable && sig.len() == 3 && sig != last_emitted_sig {
                         last_emitted_sig = sig;
-                        let _ = app.emit("hexbox://overlay-state", core.get_overlay_state());
+                        let _ = app.emit("haxassistant://overlay-state", core.get_overlay_state());
                         if settings.auto_show_overlay {
                             set_overlay_visible(&app, "augment", true);
                         }
@@ -824,16 +892,101 @@ fn spawn_background_auto_ocr_watcher(app: AppHandle, core: Arc<HexBoxCore>) {
     });
 }
 
+async fn query_app_update(app: &AppHandle) -> Result<Option<tauri_plugin_updater::Update>, String> {
+    use tauri_plugin_updater::UpdaterExt;
+    let updater = app.updater().map_err(|e| format!("更新组件不可用：{e}"))?;
+    updater
+        .check()
+        .await
+        .map_err(|e| format!("检查更新失败：{e}"))
+}
+
+fn update_info(app: &AppHandle, update: Option<&tauri_plugin_updater::Update>) -> AppUpdateInfo {
+    AppUpdateInfo {
+        available: update.is_some(),
+        current_version: app.package_info().version.to_string(),
+        version: update.map(|u| u.version.clone()),
+        notes: update.and_then(|u| u.body.clone()),
+        date: update.and_then(|u| u.date.map(|d| d.to_string())),
+    }
+}
+
+#[tauri::command]
+async fn check_app_update(app: AppHandle) -> Result<AppUpdateInfo, String> {
+    let update = query_app_update(&app).await?;
+    Ok(update_info(&app, update.as_ref()))
+}
+
+/// Download, verify (minisign) and install the latest release, then restart.
+/// Progress is emitted as `haxassistant://update-progress`.
+#[tauri::command]
+async fn install_app_update(app: AppHandle) -> Result<(), String> {
+    let Some(update) = query_app_update(&app).await? else {
+        return Err("已经是最新版本".to_string());
+    };
+    if let Some(state) = app.try_state::<AppState>() {
+        state.overlay_layout.flush();
+    }
+    let progress_app = app.clone();
+    let finish_app = app.clone();
+    let mut downloaded: u64 = 0;
+    update
+        .download_and_install(
+            move |chunk, total| {
+                downloaded += chunk as u64;
+                let _ = progress_app.emit(
+                    "haxassistant://update-progress",
+                    AppUpdateProgress {
+                        downloaded,
+                        total,
+                        finished: false,
+                    },
+                );
+            },
+            move || {
+                let _ = finish_app.emit(
+                    "haxassistant://update-progress",
+                    AppUpdateProgress {
+                        downloaded: 0,
+                        total: None,
+                        finished: true,
+                    },
+                );
+            },
+        )
+        .await
+        .map_err(|e| format!("安装更新失败：{e}"))?;
+    app.restart();
+}
+
+/// Check once shortly after start (release builds only) and tell the UI.
+fn spawn_startup_update_check(app: AppHandle, core: Arc<HexBoxCore>) {
+    if cfg!(debug_assertions) || !core.get_settings().auto_check_update {
+        return;
+    }
+    tauri::async_runtime::spawn(async move {
+        tokio::time::sleep(Duration::from_secs(8)).await;
+        match query_app_update(&app).await {
+            Ok(Some(update)) => {
+                let _ = app.emit("haxassistant://update-available", update_info(&app, Some(&update)));
+            }
+            Ok(None) => {}
+            Err(err) => eprintln!("{err}"),
+        }
+    });
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             let root = resolve_app_root(app.handle());
             let core =
                 Arc::new(HexBoxCore::initialize(&root).expect("Failed to initialize HexBoxCore"));
             let summary = core.runtime_summary();
             println!(
-                "HexBox Desktop Host Ready (Patch {}, {} heroes, {} augments, {} mechanic links)",
+                "HaxAssistant Desktop Host Ready (Patch {}, {} heroes, {} augments, {} mechanic links)",
                 summary.patch,
                 summary.hero_count,
                 summary.augment_count,
@@ -844,24 +997,43 @@ fn main() {
             spawn_background_lcu_poller(app.handle().clone(), core.clone(), lcu_wake.clone());
             spawn_lcu_event_listener(lcu_wake);
             spawn_background_auto_ocr_watcher(app.handle().clone(), core.clone());
+            spawn_startup_update_check(app.handle().clone(), core.clone());
             let layout = Arc::new(OverlayLayoutStore::load(&core.data_dir()));
             overlay_layout::apply_zoom(app.handle(), core.get_settings().overlay_zoom);
             overlay_layout::restore_positions(app.handle(), &layout);
+            let main_store = Arc::new(MainWindowStore::load(&core.data_dir()));
+            main_window::restore(app.handle(), &main_store);
+            if let Err(err) = main_window::build_tray(app.handle()) {
+                eprintln!("Failed to create tray icon: {err}");
+            }
             let layout_flush = layout.clone();
+            let main_flush = main_store.clone();
             tauri::async_runtime::spawn(async move {
                 let mut interval = tokio::time::interval(Duration::from_secs(1));
                 loop {
                     interval.tick().await;
                     layout_flush.flush();
+                    main_flush.flush();
                 }
             });
             app.manage(AppState {
                 core,
                 overlay_layout: layout,
+                main_window: main_store,
             });
             Ok(())
         })
         .on_window_event(|window, event| match event {
+            WindowEvent::Moved(_) | WindowEvent::Resized(_)
+                if window.label() == main_window::MAIN_LABEL =>
+            {
+                if let (Some(state), Some(win)) = (
+                    window.try_state::<AppState>(),
+                    window.app_handle().get_webview_window(main_window::MAIN_LABEL),
+                ) {
+                    state.main_window.capture(&win);
+                }
+            }
             WindowEvent::Moved(pos) => {
                 // Windows reports (-32000, -32000) for minimised windows; never save that.
                 let parked = pos.x <= -30000 || pos.y <= -30000;
@@ -873,11 +1045,14 @@ fn main() {
                     }
                 }
             }
-            WindowEvent::CloseRequested { .. } if window.label() == "main" => {
-                if let Some(state) = window.try_state::<AppState>() {
-                    state.overlay_layout.flush();
-                }
-                window.app_handle().exit(0);
+            WindowEvent::CloseRequested { api, .. } if window.label() == main_window::MAIN_LABEL => {
+                api.prevent_close();
+                let app = window.app_handle();
+                let action = app
+                    .try_state::<AppState>()
+                    .map(|s| s.core.get_settings().close_button_action)
+                    .unwrap_or_default();
+                perform_close_action(app, &action);
             }
             _ => {}
         })
@@ -936,6 +1111,11 @@ fn main() {
             grab_bench_champion,
             cancel_bench_grab,
             get_bench_grab_status,
+            check_app_update,
+            install_app_update,
+            handle_main_close,
+            get_game_window_mode,
+            fix_game_borderless,
         ])
         .run(tauri::generate_context!())
         .expect("error while running HexBox Tauri application");

@@ -54,7 +54,7 @@ const DDRAGON_BASE = `https://ddragon.leagueoflegends.com/cdn/${DDRAGON_VERSION}
 export function getChampionIconUrl(heroId: string | number): string {
   const idStr = String(heroId || "").trim();
   if (!idStr || !/^\d+$/.test(idStr)) {
-    return "/hexbox-logo.png";
+    return "/app-logo.png";
   }
   return `${CDRAGON_BASE}/v1/champion-icons/${idStr}.png`;
 }
@@ -62,7 +62,7 @@ export function getChampionIconUrl(heroId: string | number): string {
 export function getItemIconUrl(itemId: string | number): string {
   const idStr = String(itemId || "").trim();
   if (!idStr || !/^\d+$/.test(idStr)) {
-    return "/hexbox-logo.png";
+    return "/app-logo.png";
   }
   return `${DDRAGON_BASE}/img/item/${idStr}.png`;
 }

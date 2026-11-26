@@ -59,12 +59,12 @@ export const HexdataDataView: React.FC<Props> = ({ db, onSelectHero }) => {
         <div className="card-header">
           <div>
             <h3>
-              <BarChart3 size={18} className="gold-text" /> Hexdata 海克斯大乱斗全量数据库 (Patch{" "}
-              {db.patch} · 1,081万+ 对局样本 · 解除 42 行限制)
+              <BarChart3 size={18} className="gold-text" /> 海克斯大乱斗全量数据库 (Patch {db.patch})
             </h3>
             <div className="card-sub">
-              完整收录 {db.champions.length} 位英雄、{db.augments.length}{" "}
-              个强化符文、33 组隐藏机制联动与 4 大类废卡冲突规则
+              完整收录 {db.champions.length} 位英雄、{db.augments.length} 个强化符文、
+              {db.mechanicPairs.links.length} 组机制联动与 {db.mechanicPairs.conflicts.length}{" "}
+              类互斥冲突规则
             </div>
           </div>
 
@@ -190,7 +190,7 @@ export const HexdataDataView: React.FC<Props> = ({ db, onSelectHero }) => {
                           src={getChampionIconUrl(h.id)}
                           alt={h.hero}
                           className="hero-avatar-sm"
-                          onError={(e) => ((e.target as HTMLImageElement).src = "/hexbox-logo.png")}
+                          onError={(e) => ((e.target as HTMLImageElement).src = "/app-logo.png")}
                         />
                         <strong>{h.hero}</strong>
                       </div>
@@ -310,11 +310,12 @@ export const HexdataDataView: React.FC<Props> = ({ db, onSelectHero }) => {
           <div className="panel-card">
             <div className="card-header">
               <h3>
-                <Flame size={16} className="gold-text" /> 33 组强机制联动组合 (提取自二进制内嵌{" "}
-                <code>augment_mechanic_pairs_v1.json</code>)
+                <Flame size={16} className="gold-text" /> {db.mechanicPairs.links.length} 组强机制联动组合
               </h3>
             </div>
-            <p className="card-desc">{db.mechanicPairs.note}</p>
+            <p className="card-desc">
+              收录实战中触发强协同效果的海克斯机制联动与互斥规则，选卡推荐将自动纳入联动加权与冲突预警。
+            </p>
             <div className="table-scroll-lg">
               <table className="hex-table">
                 <thead>
@@ -381,7 +382,7 @@ export const HexdataDataView: React.FC<Props> = ({ db, onSelectHero }) => {
         <div className="panel-card">
           <div className="card-header">
             <h3>
-              <Percent size={16} className="gold-text" /> 各回合阶段海克斯品阶刷新概率分布 (基于 1.04 亿次选卡记录)
+              <Percent size={16} className="gold-text" /> 各回合阶段海克斯品阶刷新概率分布
             </h3>
           </div>
           <div className="rarity-stages-grid">
