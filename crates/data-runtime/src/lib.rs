@@ -164,9 +164,16 @@ impl Dataset {
     }
 
     pub fn find_champion(&self, name_or_id: &str) -> Option<&ChampionSummary> {
-        self.champions
-            .iter()
-            .find(|c| c.hero == name_or_id || c.id == name_or_id)
+        let needle = name_or_id.trim();
+        self.champions.iter().find(|c| {
+            c.hero == needle
+                || c.id == needle
+                || c.full_name.as_deref() == Some(needle)
+                || c.search_terms
+                    .as_ref()
+                    .map(|terms| terms.iter().any(|t| t == needle))
+                    .unwrap_or(false)
+        })
     }
 }
 

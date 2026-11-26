@@ -1,5 +1,10 @@
+pub mod discovery;
 pub mod sgp;
 pub mod websocket;
+
+pub use discovery::{
+    candidate_lockfile_paths, discover_lockfile, invalidate_discovery_cache, parse_ux_cmdline,
+};
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -53,54 +58,6 @@ impl LockfileCredentials {
         let encoded = base64::engine::general_purpose::STANDARD.encode(raw);
         format!("Basic {encoded}")
     }
-}
-
-pub fn candidate_lockfile_paths() -> Vec<PathBuf> {
-    let mut paths = Vec::new();
-    if let Ok(env_path) = std::env::var("HEXBOX_LCU_LOCKFILE") {
-        paths.push(PathBuf::from(env_path));
-    }
-
-    #[cfg(target_os = "macos")]
-    {
-        paths.push(PathBuf::from(
-            "/Applications/League of Legends.app/Contents/LoL/lockfile",
-        ));
-        if let Ok(home) = std::env::var("HOME") {
-            paths.push(
-                PathBuf::from(home)
-                    .join("Applications/League of Legends.app/Contents/LoL/lockfile"),
-            );
-        }
-    }
-
-    #[cfg(target_os = "windows")]
-    {
-        for drive in ["C", "D", "E", "F"] {
-            paths.push(PathBuf::from(format!(
-                "{drive}:\\Riot Games\\League of Legends\\lockfile"
-            )));
-            paths.push(PathBuf::from(format!(
-                "{drive}:\\WeGameApps\\英雄联盟\\LeagueClient\\lockfile"
-            )));
-            paths.push(PathBuf::from(format!(
-                "{drive}:\\Program Files\\腾讯游戏\\英雄联盟\\LeagueClient\\lockfile"
-            )));
-        }
-    }
-
-    paths
-}
-
-pub fn discover_lockfile() -> Option<LockfileCredentials> {
-    for path in candidate_lockfile_paths() {
-        if let Ok(content) = fs::read_to_string(&path) {
-            if let Ok(creds) = LockfileCredentials::parse(&content, path) {
-                return Some(creds);
-            }
-        }
-    }
-    None
 }
 
 #[derive(Debug, Clone)]
@@ -178,11 +135,25 @@ impl LcuClient {
             };
         };
 
-        let phase = self
+        let Ok(phase_val) = self
             .get_json(&creds, "/lol-gameflow/v1/gameflow-phase")
             .await
-            .ok()
-            .and_then(|v| v.as_str().map(ToString::to_string))
+        else {
+            // The discovered port is not reachable (client closed or restarted).
+            invalidate_discovery_cache();
+            return LcuStatus {
+                connected: false,
+                phase: "Disconnected".to_string(),
+                port: None,
+                summoner_name: None,
+                lockfile_path: None,
+                locale: None,
+            };
+        };
+
+        let phase = phase_val
+            .as_str()
+            .map(ToString::to_string)
             .unwrap_or_else(|| "None".to_string());
 
         let summoner_name = self

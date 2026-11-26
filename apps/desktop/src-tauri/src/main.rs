@@ -725,7 +725,8 @@ fn spawn_lcu_event_listener(wake: Arc<Notify>) {
                 if let Err(err) = result {
                     eprintln!("[lcu-ws] {err}");
                 }
-                // Socket closed: the client exited or restarted. Refresh now.
+                // Socket closed: the client exited or restarted. Invalidate cache and refresh now.
+                lcu_client::invalidate_discovery_cache();
                 wake.notify_one();
             }
             tokio::time::sleep(Duration::from_secs(3)).await;
