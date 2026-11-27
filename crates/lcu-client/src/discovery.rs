@@ -119,12 +119,20 @@ pub fn discover_lockfile() -> Option<LockfileCredentials> {
     if let Some(creds) = read_explicit_env_lockfile() {
         return Some(creds);
     }
+    scan_running_client().creds
+}
 
+/// Whether the OS sees League's client UI, even when it cannot be authenticated.
+pub fn is_league_client_running() -> bool {
+    scan_running_client().ux_pid.is_some()
+}
+
+fn scan_running_client() -> CachedDiscovery {
     let now = Instant::now();
     if let Ok(guard) = cache_slot().lock() {
         if let Some(cached) = guard.as_ref() {
             if now.duration_since(cached.checked_at) < CACHE_TTL {
-                return cached.creds.clone();
+                return cached.clone();
             }
         }
     }
@@ -136,15 +144,15 @@ pub fn discover_lockfile() -> Option<LockfileCredentials> {
 
     let (ux_pid, creds) = discover_from_running_process(prev_cached.as_ref());
 
+    let discovered = CachedDiscovery {
+        checked_at: Instant::now(),
+        ux_pid,
+        creds,
+    };
     if let Ok(mut guard) = cache_slot().lock() {
-        *guard = Some(CachedDiscovery {
-            checked_at: Instant::now(),
-            ux_pid,
-            creds: creds.clone(),
-        });
+        *guard = Some(discovered.clone());
     }
-
-    creds
+    discovered
 }
 
 /// Extract a `--key=value` flag from a process command line, handling both

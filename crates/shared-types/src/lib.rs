@@ -356,6 +356,8 @@ pub struct LineupEvaluation {
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct LcuStatus {
+    #[serde(default)]
+    pub client_running: bool,
     pub connected: bool,
     pub phase: String,
     pub port: Option<u16>,
@@ -448,6 +450,7 @@ impl Default for OverlayStatePayload {
             owned_item_ids: Vec::new(),
             is_dead: false,
             lcu: LcuStatus {
+                client_running: false,
                 connected: false,
                 phase: "Disconnected".to_string(),
                 port: None,

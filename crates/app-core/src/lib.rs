@@ -920,6 +920,15 @@ impl HexBoxCore {
         };
 
         let Some(creds) = discover_lockfile() else {
+            if lcu_client::is_league_client_running() {
+                return response(
+                    "error",
+                    None,
+                    None,
+                    Vec::new(),
+                    Some("已检测到英雄联盟客户端，但无法读取客户端连接信息。请登录后刷新，并确认客户端与助手以相同权限启动。".to_string()),
+                );
+            }
             return response("offline", None, None, Vec::new(), None);
         };
 

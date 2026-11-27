@@ -3,7 +3,8 @@ pub mod sgp;
 pub mod websocket;
 
 pub use discovery::{
-    candidate_lockfile_paths, discover_lockfile, invalidate_discovery_cache, parse_ux_cmdline,
+    candidate_lockfile_paths, discover_lockfile, invalidate_discovery_cache,
+    is_league_client_running, parse_ux_cmdline,
 };
 
 use std::fs;
@@ -126,6 +127,7 @@ impl LcuClient {
     pub async fn probe_status(&self) -> LcuStatus {
         let Some(creds) = discover_lockfile() else {
             return LcuStatus {
+                client_running: is_league_client_running(),
                 connected: false,
                 phase: "Disconnected".to_string(),
                 port: None,
@@ -140,8 +142,10 @@ impl LcuClient {
             .await
         else {
             // The discovered port is not reachable (client closed or restarted).
+            let client_running = is_league_client_running();
             invalidate_discovery_cache();
             return LcuStatus {
+                client_running,
                 connected: false,
                 phase: "Disconnected".to_string(),
                 port: None,
@@ -170,6 +174,7 @@ impl LcuClient {
         let locale = self.fetch_client_locale(&creds).await;
 
         LcuStatus {
+            client_running: true,
             connected: true,
             phase,
             port: Some(creds.port),

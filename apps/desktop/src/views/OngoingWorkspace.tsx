@@ -160,7 +160,8 @@ export const OngoingWorkspace: React.FC<Props> = ({
       setOcrStatus(formatOcrStatus(liveOverlayState.ocrStatus, liveOverlayState.ocrMs));
     } else {
       setOcrStatus(liveOverlayState.liveGameReady ? "实时 OCR 等待三选一界面" :
-        liveOverlayState.lcu.connected ? "客户端已连接 · 等待进入对局" : "等待英雄联盟客户端");
+        liveOverlayState.lcu.connected ? "客户端已连接 · 等待进入对局" :
+        liveOverlayState.lcu.client_running ? "已检测到英雄联盟 · 等待客户端连接" : "等待英雄联盟客户端");
     }
   }, [liveOverlayState]);
 

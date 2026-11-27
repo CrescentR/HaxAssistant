@@ -209,6 +209,7 @@ export interface PlayerMarker {
 }
 
 export interface LcuStatus {
+  client_running: boolean;
   connected: boolean;
   phase: string;
   port: number | null;

@@ -58,6 +58,7 @@ const App: React.FC = () => {
   const [settings, setSettings] = useState<AppSettings>(() => loadSettings());
   const [overlayPreview, setOverlayPreview] = useState<OverlayKind | null>(null);
   const [lcuStatus, setLcuStatus] = useState<LcuStatus>({
+    client_running: false,
     connected: false,
     phase: "Disconnected",
     port: null,
@@ -237,7 +238,7 @@ const App: React.FC = () => {
               {isTauriRuntime()
                 ? lcuStatus.connected
                   ? `LCU: ${lcuStatus.phase}`
-                  : "LCU 未连接"
+                  : lcuStatus.client_running ? "已检测到客户端 · LCU 未连接" : "LCU 未连接"
                 : "Web 预览"}
             </span>
           </div>
