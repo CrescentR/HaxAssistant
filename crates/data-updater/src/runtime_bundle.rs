@@ -1,14 +1,15 @@
 //! Whole-bundle data updates, modelled on HexBox 1.1.0's `data-updater`.
 //!
 //! 1. Fetch a small meta document (`/api/hexdata/meta`) and compare its
-//!    `corePayloadHash` with the local `manifest.json`. Equal → nothing to do.
+//!    `corePayloadHash` with the local `manifest.json`. A matching complete
+//!    snapshot is already current.
 //! 2. Otherwise download one `tar.gz` runtime bundle, check its size and
 //!    SHA-256 against the meta, and unpack it into a staging directory.
 //! 3. Validate the staged files (manifest hashes, core hash, required data).
 //! 4. Move the bundle's files into the data directory, manifest last, keeping
 //!    the replaced files in `.backup/` and restoring them if a move fails.
-//!    Files that are not part of the bundle (user settings, player markers,
-//!    window layouts) are never touched.
+//!    Retire omitted snapshot files while preserving private user state and
+//!    unlisted bundled defaults.
 
 use std::collections::HashSet;
 use std::fs::{self, File, OpenOptions};
@@ -48,6 +49,8 @@ const UNPACKED_LIMIT_BYTES: u64 = 256 * 1024 * 1024;
 const STAGING_PREFIX: &str = ".staging-";
 const BACKUP_DIR: &str = ".backup";
 const PENDING_FILE: &str = ".runtime-update-pending.json";
+const OCR_PRESET_FILE: &str = "augment_presets.json";
+const DERIVED_POSTMATCH_FILE: &str = "postmatch.json";
 
 fn default_true() -> bool {
     true
@@ -161,14 +164,8 @@ fn is_complete_snapshot(data_dir: &Path) -> bool {
     };
     let files = extract_manifest_files(&manifest);
     let hashes = extract_manifest_hashes(&manifest);
-    let listed = |name: &str| files.iter().any(|file| file == name);
-    let augment_file = ["augments_full.json", "augments.json"]
-        .into_iter()
-        .find(|file| listed(file));
-    listed("champions.json")
-        && validate_rows::<ChampionSummary>(&data_dir.join("champions.json")).is_ok()
-        && augment_file
-            .is_some_and(|name| validate_rows::<AugmentCatalogEntry>(&data_dir.join(name)).is_ok())
+    !has_unlisted_postmatch(data_dir, &files)
+        && validate_required_files(data_dir, &files).is_ok()
         && files.iter().all(|name| {
             name == "manifest.json"
                 || is_user_private_file(name)
@@ -220,12 +217,78 @@ fn unpack_bundle(bytes: &[u8], staging: &Path) -> Result<()> {
     Ok(())
 }
 
-fn validate_rows<T: DeserializeOwned>(path: &Path) -> Result<()> {
+fn read_nonempty_rows<T: DeserializeOwned>(path: &Path) -> Result<Vec<T>> {
     let name = path.file_name().unwrap_or_default().to_string_lossy();
-    let rows: Vec<T> = serde_json::from_slice(&fs::read(path)?)
-        .with_context(|| format!("数据包 {name} 格式无效"))?;
+    let bytes = fs::read(path).with_context(|| format!("无法读取数据包文件 {name}"))?;
+    let rows: Vec<T> =
+        serde_json::from_slice(&bytes).with_context(|| format!("数据包 {name} 格式无效"))?;
     if rows.is_empty() {
         return Err(anyhow!("数据包 {name} 为空"));
+    }
+    Ok(rows)
+}
+
+#[derive(Deserialize)]
+struct OcrPreset {
+    key: String,
+    width: u32,
+    height: u32,
+    #[serde(default = "default_preset_scale")]
+    scale: u32,
+    anchor_rect: OcrRect,
+    augment_rects: [OcrRect; 3],
+}
+
+fn default_preset_scale() -> u32 {
+    100
+}
+
+#[derive(Deserialize)]
+struct OcrRect {
+    x: u32,
+    y: u32,
+    width: u32,
+    height: u32,
+}
+
+impl OcrRect {
+    fn fits(&self, width: u32, height: u32) -> bool {
+        self.width > 0
+            && self.height > 0
+            && self.width <= width.saturating_sub(self.x)
+            && self.height <= height.saturating_sub(self.y)
+    }
+}
+
+fn validate_required_files(data_dir: &Path, files: &[String]) -> Result<()> {
+    let listed = |name: &str| files.iter().any(|file| file == name);
+    for name in ["champions.json", OCR_PRESET_FILE] {
+        if !listed(name) {
+            return Err(anyhow!("数据包 manifest.json 未列出 {name}"));
+        }
+    }
+    let augment_file = ["augments_full.json", "augments.json"]
+        .into_iter()
+        .find(|name| listed(name))
+        .context("数据包 manifest.json 未列出海克斯列表")?;
+    read_nonempty_rows::<ChampionSummary>(&data_dir.join("champions.json"))?;
+    read_nonempty_rows::<AugmentCatalogEntry>(&data_dir.join(augment_file))?;
+
+    // Match the OCR sidecar's preset format, including its default scale.
+    let presets = read_nonempty_rows::<OcrPreset>(&data_dir.join(OCR_PRESET_FILE))?;
+    let mut keys = HashSet::new();
+    for preset in &presets {
+        if preset.key.trim().is_empty()
+            || !keys.insert(&preset.key)
+            || preset.scale == 0
+            || !preset.anchor_rect.fits(preset.width, preset.height)
+            || !preset
+                .augment_rects
+                .iter()
+                .all(|rect| rect.fits(preset.width, preset.height))
+        {
+            return Err(anyhow!("数据包 {OCR_PRESET_FILE} 中的 OCR 预设无效"));
+        }
     }
     Ok(())
 }
@@ -280,16 +343,7 @@ fn validate_staged(staging: &Path, meta: &RemoteMeta) -> Result<Vec<String>> {
         install.push(name.clone());
     }
 
-    let listed = |file: &str| install.iter().any(|name| name == file);
-    if !listed("champions.json") {
-        return Err(anyhow!("数据包 manifest.json 未列出 champions.json"));
-    }
-    let augment_file = ["augments_full.json", "augments.json"]
-        .into_iter()
-        .find(|file| listed(file))
-        .context("数据包 manifest.json 未列出海克斯列表")?;
-    validate_rows::<ChampionSummary>(&staging.join("champions.json"))?;
-    validate_rows::<AugmentCatalogEntry>(&staging.join(augment_file))?;
+    validate_required_files(staging, &install)?;
 
     install.push("manifest.json".to_string());
     Ok(install)
@@ -361,12 +415,27 @@ pub fn recover_runtime_update(data_dir: &Path) -> Result<()> {
     recover_pending(data_dir)
 }
 
+fn has_unlisted_postmatch(data_dir: &Path, files: &[String]) -> bool {
+    !files
+        .iter()
+        .any(|name| name.eq_ignore_ascii_case(DERIVED_POSTMATCH_FILE))
+        && data_dir.join(DERIVED_POSTMATCH_FILE).exists()
+}
+
 fn obsolete_files(data_dir: &Path, install: &[String]) -> Vec<String> {
     let manifest: serde_json::Value = fs::read(data_dir.join("manifest.json"))
         .ok()
         .and_then(|bytes| serde_json::from_slice(&bytes).ok())
         .unwrap_or_default();
-    extract_manifest_files(&manifest)
+    // The manifest producer hashes the listed snapshot files. Installer-only
+    // defaults such as the curated mechanic pairs are preserved when unlisted.
+    // Older installers also ship unlisted postmatch stats generated from the
+    // old patch's data. Retire those when the incoming snapshot omits them.
+    let mut files = extract_manifest_files(&manifest);
+    if has_unlisted_postmatch(data_dir, &files) {
+        files.push(DERIVED_POSTMATCH_FILE.to_string());
+    }
+    files
         .into_iter()
         .filter(|name| {
             is_runtime_file_name(name)
@@ -636,23 +705,40 @@ mod tests {
         builder.into_inner().unwrap().finish().unwrap()
     }
 
-    fn payload(core: &str, champs: &[u8]) -> (Vec<u8>, Vec<u8>) {
-        let augs = br#"[{"augment_id":1,"augment_name":"Test augment"}]"#.to_vec();
+    const PRESETS: &[u8] = br#"[
+        {"key":"1920x1080@100","width":1920,"height":1080,
+         "anchor_rect":{"x":720,"y":412,"width":480,"height":90},
+         "augment_rects":[{"x":462,"y":433,"width":260,"height":47},
+                         {"x":830,"y":433,"width":260,"height":47},
+                         {"x":1199,"y":433,"width":260,"height":47}]}
+    ]"#;
+    const CHAMPIONS: &[u8] = br#"[{"id":"22","hero":"Test champion"}]"#;
+
+    fn payload(core: &str, champs: &[u8], extra_files: &[(&str, &[u8])]) -> (Vec<u8>, Vec<u8>) {
+        let mut files = vec![
+            ("champions.json", champs.to_vec()),
+            (
+                "augments_full.json",
+                br#"[{"augment_id":1,"augment_name":"Test augment"}]"#.to_vec(),
+            ),
+        ];
+        files.extend(
+            extra_files
+                .iter()
+                .map(|(name, bytes)| (*name, bytes.to_vec())),
+        );
         let manifest = serde_json::json!({
             "version": "16.23",
             "report_date": "2026-11-26",
             "desktop_data_schema_version": "2",
             "core_payload_hash": core,
-            "files": ["champions.json", "augments_full.json"],
-            "hashes": { "champions.json": sha256_hex(champs), "augments_full.json": sha256_hex(&augs) },
+            "files": files.iter().map(|(name, _)| name).collect::<Vec<_>>(),
+            "file_hashes": files.iter().map(|(name, bytes)| (*name, sha256_hex(bytes))).collect::<HashMap<_, _>>(),
         })
         .to_string()
         .into_bytes();
-        let bundle = build_bundle(&[
-            ("manifest.json", manifest.clone()),
-            ("champions.json", champs.to_vec()),
-            ("augments_full.json", augs),
-        ]);
+        files.push(("manifest.json", manifest.clone()));
+        let bundle = build_bundle(&files);
         (bundle, manifest)
     }
 
@@ -717,7 +803,7 @@ mod tests {
     async fn applies_bundle_keeps_user_files_and_skips_when_current() {
         let core = "a".repeat(64);
         let champs = r#"[{"id":"22","hero":"寒冰射手"}]"#.as_bytes().to_vec();
-        let (bundle, _) = payload(&core, &champs);
+        let (bundle, _) = payload(&core, &champs, &[(OCR_PRESET_FILE, PRESETS)]);
         let routes: Routes = Arc::new(Mutex::new(HashMap::from([
             (META_PATH.to_string(), meta_json(&core, &bundle, true)),
             (BUNDLE_PATH.to_string(), bundle),
@@ -768,15 +854,18 @@ mod tests {
         assert_eq!(again.status, "already_latest");
 
         fs::remove_file(data_dir.join("champions.json")).unwrap();
+        fs::remove_file(data_dir.join(OCR_PRESET_FILE)).unwrap();
         let deferred = run_runtime_update_if(&base, &data_dir, true, || false)
             .await
             .unwrap();
         assert_eq!(deferred.status, "available");
         assert!(!data_dir.join("champions.json").exists());
+        assert!(!data_dir.join(OCR_PRESET_FILE).exists());
 
         let repaired = run_runtime_update(&base, &data_dir, true).await.unwrap();
         assert_eq!(repaired.status, "updated");
         assert_eq!(fs::read(data_dir.join("champions.json")).unwrap(), champs);
+        assert_eq!(fs::read(data_dir.join(OCR_PRESET_FILE)).unwrap(), PRESETS);
 
         routes.lock().unwrap().insert(
             META_PATH.to_string(),
@@ -787,6 +876,94 @@ mod tests {
 
         server.abort();
         let _ = fs::remove_dir_all(&data_dir);
+    }
+
+    #[tokio::test]
+    async fn rejects_missing_or_invalid_ocr_presets_before_install() {
+        let data_dir = temp_data_dir("invalid_presets");
+        let (_, previous_manifest) =
+            payload(&"b".repeat(64), CHAMPIONS, &[(OCR_PRESET_FILE, PRESETS)]);
+        fs::write(data_dir.join("manifest.json"), &previous_manifest).unwrap();
+        fs::write(data_dir.join("champions.json"), CHAMPIONS).unwrap();
+        fs::write(data_dir.join(OCR_PRESET_FILE), PRESETS).unwrap();
+
+        let core = "a".repeat(64);
+        let routes = Arc::new(Mutex::new(HashMap::new()));
+        let (base, server) = serve(routes.clone()).await;
+        let mut invalid_rect: serde_json::Value = serde_json::from_slice(PRESETS).unwrap();
+        invalid_rect[0]["anchor_rect"]["x"] = serde_json::json!(1910);
+        let invalid_rect = serde_json::to_vec(&invalid_rect).unwrap();
+        for presets in [None, Some(b"[]".as_slice()), Some(invalid_rect.as_slice())] {
+            let extra = presets.map(|bytes| [(OCR_PRESET_FILE, bytes)]);
+            let (bundle, _) = payload(
+                &core,
+                CHAMPIONS,
+                extra.as_ref().map_or(&[], |f| f.as_slice()),
+            );
+            *routes.lock().unwrap() = HashMap::from([
+                (META_PATH.to_string(), meta_json(&core, &bundle, true)),
+                (BUNDLE_PATH.to_string(), bundle),
+            ]);
+
+            let err = run_runtime_update(&base, &data_dir, true)
+                .await
+                .unwrap_err();
+            assert!(err.to_string().contains(OCR_PRESET_FILE), "{err:#}");
+            assert_eq!(
+                fs::read(data_dir.join("manifest.json")).unwrap(),
+                previous_manifest
+            );
+            assert_eq!(fs::read(data_dir.join(OCR_PRESET_FILE)).unwrap(), PRESETS);
+            assert_eq!(
+                fs::read(data_dir.join("champions.json")).unwrap(),
+                CHAMPIONS
+            );
+            assert!(!data_dir.join(BACKUP_DIR).exists());
+        }
+
+        server.abort();
+        fs::remove_dir_all(&data_dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn retires_omitted_snapshot_files_and_keeps_unlisted_defaults() {
+        let data_dir = temp_data_dir("retired_files");
+        let previous_files = [
+            (OCR_PRESET_FILE, PRESETS),
+            ("hero_augment_stats.json", b"{}"),
+        ];
+        let (_, previous_manifest) = payload(&"b".repeat(64), CHAMPIONS, &previous_files);
+        fs::write(data_dir.join("manifest.json"), previous_manifest).unwrap();
+        fs::write(data_dir.join(OCR_PRESET_FILE), PRESETS).unwrap();
+        fs::write(data_dir.join("hero_augment_stats.json"), b"{}").unwrap();
+        let postmatch = data_dir.join(DERIVED_POSTMATCH_FILE);
+        fs::write(&postmatch, b"{\"22\":{}}").unwrap();
+        let mechanics = data_dir.join("augment_mechanic_pairs_v1.json");
+        fs::write(&mechanics, b"{\"links\":[]}").unwrap();
+
+        let core = "a".repeat(64);
+        let (bundle, _) = payload(&core, CHAMPIONS, &[(OCR_PRESET_FILE, PRESETS)]);
+        let (base, server) = serve(Arc::new(Mutex::new(HashMap::from([
+            (META_PATH.to_string(), meta_json(&core, &bundle, true)),
+            (BUNDLE_PATH.to_string(), bundle),
+        ]))))
+        .await;
+
+        let outcome = run_runtime_update(&base, &data_dir, true).await.unwrap();
+        assert_eq!(outcome.status, "updated");
+        assert!(!postmatch.exists());
+        assert!(!data_dir.join("hero_augment_stats.json").exists());
+        assert_eq!(fs::read(&mechanics).unwrap(), b"{\"links\":[]}");
+        assert_eq!(fs::read(data_dir.join(OCR_PRESET_FILE)).unwrap(), PRESETS);
+
+        // Repair a matching snapshot left with stale stats by an older updater.
+        fs::write(&postmatch, b"{\"22\":{}}").unwrap();
+        let repaired = run_runtime_update(&base, &data_dir, true).await.unwrap();
+        assert_eq!(repaired.status, "updated");
+        assert!(!postmatch.exists());
+
+        server.abort();
+        fs::remove_dir_all(&data_dir).unwrap();
     }
 
     #[test]
@@ -836,7 +1013,7 @@ mod tests {
     #[tokio::test]
     async fn rejects_tampered_bundle_and_keeps_old_data() {
         let core = "c".repeat(64);
-        let (bundle, _) = payload(&core, br#"[{"id":"1","hero":"Test champion"}]"#);
+        let (bundle, _) = payload(&core, CHAMPIONS, &[(OCR_PRESET_FILE, PRESETS)]);
         let mut tampered = bundle.clone();
         let last = tampered.len() - 1;
         tampered[last] ^= 0xff;
@@ -858,7 +1035,7 @@ mod tests {
         );
 
         // Bundle hash fine, but its manifest disagrees with the meta's core hash.
-        let (other, _) = payload(&"d".repeat(64), br#"[{"id":"1","hero":"Test champion"}]"#);
+        let (other, _) = payload(&"d".repeat(64), CHAMPIONS, &[(OCR_PRESET_FILE, PRESETS)]);
         routes
             .lock()
             .unwrap()
@@ -884,28 +1061,14 @@ mod tests {
     async fn never_overwrites_user_private_files_even_if_listed_in_bundle() {
         let core = "e".repeat(64);
         let champs = r#"[{"id":"22","hero":"寒冰射手"}]"#.as_bytes().to_vec();
-        let augs = br#"[{"augment_id":1,"augment_name":"Test augment"}]"#.to_vec();
-        let remote_stats = br#"{"total_offers":999}"#.to_vec();
-        let manifest = serde_json::json!({
-            "version": "16.24",
-            "report_date": "2026-11-27",
-            "desktop_data_schema_version": "2",
-            "core_payload_hash": core,
-            "files": ["champions.json", "augments_full.json", "augment_offer_stats.json"],
-            "hashes": {
-                "champions.json": sha256_hex(&champs),
-                "augments_full.json": sha256_hex(&augs),
-                "augment_offer_stats.json": sha256_hex(&remote_stats)
-            }
-        })
-        .to_string()
-        .into_bytes();
-        let bundle = build_bundle(&[
-            ("manifest.json", manifest),
-            ("champions.json", champs.clone()),
-            ("augments_full.json", augs),
-            ("augment_offer_stats.json", remote_stats),
-        ]);
+        let (bundle, _) = payload(
+            &core,
+            &champs,
+            &[
+                (OCR_PRESET_FILE, PRESETS),
+                ("augment_offer_stats.json", br#"{"total_offers":999}"#),
+            ],
+        );
         let routes: Routes = Arc::new(Mutex::new(HashMap::from([
             (META_PATH.to_string(), meta_json(&core, &bundle, true)),
             (BUNDLE_PATH.to_string(), bundle),
