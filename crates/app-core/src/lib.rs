@@ -400,14 +400,17 @@ impl HexBoxCore {
                 if !self.is_safe_to_swap_data() {
                     return Err(anyhow!("对局进行中，请在对局结束后更新数据"));
                 }
-                let mut result = data_updater::sync_remote_assets(
+                let mut result = data_updater::sync_remote_assets_if(
                     &url,
                     &self.data_dir(),
                     &self.model_dir,
                     include_models,
+                    || self.is_safe_to_swap_data(),
                 )
                 .await?;
-                self.reload_dataset()?;
+                if !result.downloaded_data_files.is_empty() {
+                    self.reload_dataset()?;
+                }
                 result.source_url.clear();
                 Ok(result)
             }

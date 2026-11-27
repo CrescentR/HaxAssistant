@@ -1,8 +1,8 @@
 pub mod runtime_bundle;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use anyhow::{anyhow, Result};
@@ -10,7 +10,10 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use shared_types::{AssetSyncResult, AssetSyncStatus};
 
-pub use runtime_bundle::{local_core_payload_hash, recover_runtime_update, run_runtime_update, run_runtime_update_if, seed_bundled_data, MetaEndpointNotFound};
+pub use runtime_bundle::{
+    local_core_payload_hash, recover_runtime_update, run_runtime_update, run_runtime_update_if,
+    seed_bundled_data, MetaEndpointNotFound,
+};
 
 /// Local user-state files stored in `data/` that remote updates must never overwrite.
 pub const USER_PRIVATE_FILES: &[&str] = &[
@@ -23,7 +26,9 @@ pub const USER_PRIVATE_FILES: &[&str] = &[
 ];
 
 pub fn is_user_private_file(name: &str) -> bool {
-    USER_PRIVATE_FILES.iter().any(|file| file.eq_ignore_ascii_case(name))
+    USER_PRIVATE_FILES
+        .iter()
+        .any(|file| file.eq_ignore_ascii_case(name))
 }
 
 /// Required model artifacts for full Chinese + neural card detection OCR.
@@ -172,8 +177,9 @@ pub fn inspect_asset_status(data_dir: &Path, model_dir: &Path) -> AssetSyncStatu
         }
     }
 
-    let ready_for_offline =
-        expected_data_files > 0 && missing_data_files.is_empty() && data_dir.join("champions.json").is_file();
+    let ready_for_offline = expected_data_files > 0
+        && missing_data_files.is_empty()
+        && data_dir.join("champions.json").is_file();
     let ready_for_ocr = missing_model_files.is_empty();
 
     AssetSyncStatus {
@@ -200,7 +206,9 @@ fn is_safe_file_name(name: &str) -> bool {
         && !name.starts_with('.')
         && name.is_ascii()
         && !name.ends_with(['.', ' '])
-        && !name.bytes().any(|byte| byte.is_ascii_control() || b"<>\"|?*".contains(&byte))
+        && !name
+            .bytes()
+            .any(|byte| byte.is_ascii_control() || b"<>\"|?*".contains(&byte))
         && !is_windows_device_name(name)
         && !name.contains("..")
         && !name.contains('/')
@@ -210,9 +218,15 @@ fn is_safe_file_name(name: &str) -> bool {
 }
 
 fn is_windows_device_name(name: &str) -> bool {
-    let stem = name.split('.').next().unwrap_or_default().trim_end().to_ascii_uppercase();
+    let stem = name
+        .split('.')
+        .next()
+        .unwrap_or_default()
+        .trim_end()
+        .to_ascii_uppercase();
     matches!(stem.as_str(), "CON" | "PRN" | "AUX" | "NUL")
-        || (stem.len() == 4 && (stem.starts_with("COM") || stem.starts_with("LPT"))
+        || (stem.len() == 4
+            && (stem.starts_with("COM") || stem.starts_with("LPT"))
             && matches!(stem.as_bytes()[3], b'1'..=b'9'))
 }
 
@@ -239,7 +253,11 @@ fn file_matches_hash(path: &Path, expected_hash: Option<&str>) -> bool {
 }
 
 async fn fetch_bytes(client: &reqwest::Client, url: &str) -> Result<Vec<u8>> {
-    let resp = client.get(url).send().await.map_err(|_| anyhow!("网络连接异常"))?;
+    let resp = client
+        .get(url)
+        .send()
+        .await
+        .map_err(|_| anyhow!("网络连接异常"))?;
     let status = resp.status();
     if !status.is_success() {
         return Err(anyhow!("数据服务响应异常 (HTTP {status})"));
@@ -258,126 +276,122 @@ pub async fn sync_remote_assets(
     model_dir: &Path,
     include_models: bool,
 ) -> Result<AssetSyncResult> {
+    sync_remote_assets_if(base_url, data_dir, model_dir, include_models, || true).await
+}
+
+struct LegacyStaging(PathBuf);
+
+impl Drop for LegacyStaging {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.0);
+    }
+}
+
+pub async fn sync_remote_assets_if(
+    base_url: &str,
+    data_dir: &Path,
+    model_dir: &Path,
+    include_models: bool,
+    can_install: impl FnOnce() -> bool,
+) -> Result<AssetSyncResult> {
     let trimmed = base_url.trim().trim_end_matches('/');
     if trimmed.is_empty() {
         return Err(anyhow!("暂未配置数据更新服务，请稍后重试"));
     }
-
-    fs::create_dir_all(data_dir)?;
-    fs::create_dir_all(model_dir)?;
-
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(60))
         .build()?;
-
-    let (manifest_bytes, data_base, model_base) =
+    let (manifest_bytes, data_base) =
         match fetch_bytes(&client, &format!("{trimmed}/data/manifest.json")).await {
-            Ok(bytes) => (bytes, format!("{trimmed}/data"), format!("{trimmed}/models")),
+            Ok(bytes) => (bytes, format!("{trimmed}/data")),
             Err(_) => {
                 let bytes = fetch_bytes(&client, &format!("{trimmed}/manifest.json")).await?;
-                (bytes, trimmed.to_string(), format!("{trimmed}/models"))
+                (bytes, trimmed.to_string())
             }
         };
-
-    let manifest_json: serde_json::Value = serde_json::from_slice(&manifest_bytes)
+    let manifest: serde_json::Value = serde_json::from_slice(&manifest_bytes)
         .map_err(|e| anyhow!("远程 manifest.json 解析失败: {e}"))?;
-    let patch = manifest_json
-        .get("version")
-        .and_then(|v| v.as_str())
-        .unwrap_or("unknown")
-        .to_string();
-    let report_date = manifest_json
-        .get("report_date")
-        .and_then(|v| v.as_str())
-        .unwrap_or("unknown")
-        .to_string();
-
-    let files = extract_manifest_files(&manifest_json);
-    let hashes = extract_manifest_hashes(&manifest_json);
-
-    let mut downloaded_data_files = Vec::new();
-    let mut downloaded_model_files = Vec::new();
-    let mut failed_files = Vec::new();
-    let mut skipped_files = 0usize;
-
-    for file_name in &files {
-        if !is_safe_file_name(file_name) || is_user_private_file(file_name) {
+    let hashes = extract_manifest_hashes(&manifest);
+    let mut names = HashSet::new();
+    let mut install = Vec::new();
+    for name in extract_manifest_files(&manifest) {
+        if name == "manifest.json" || is_user_private_file(&name) {
             continue;
         }
-        let dest = data_dir.join(file_name);
-        let expected_hash = hashes.get(file_name).map(String::as_str);
-        if file_matches_hash(&dest, expected_hash) {
+        if !runtime_bundle::is_runtime_file_name(&name) || !names.insert(name.to_ascii_lowercase())
+        {
+            return Err(anyhow!("远程数据清单包含非法或重复的文件名: {name}"));
+        }
+        install.push(name);
+    }
+    if install.is_empty() {
+        return Err(anyhow!("远程数据清单没有可同步的文件"));
+    }
+
+    fs::create_dir_all(data_dir)?;
+    let lock = runtime_bundle::lock_data_dir(data_dir)?;
+    runtime_bundle::recover_pending(data_dir)?;
+    let staging = LegacyStaging(runtime_bundle::create_staging_dir(data_dir)?);
+    let mut downloaded_data_files = Vec::new();
+    let mut failed_files = Vec::new();
+    let mut skipped_files = 0;
+    for name in &install {
+        let local = data_dir.join(name);
+        let expected = hashes.get(name).map(String::as_str);
+        if expected.is_some() && file_matches_hash(&local, expected) {
+            fs::copy(&local, staging.0.join(name))?;
             skipped_files += 1;
             continue;
         }
-        let url = format!("{data_base}/{file_name}");
+
+        let url = format!("{data_base}/{name}");
         match fetch_bytes(&client, &url).await {
-            Ok(bytes) => {
-                if let Some(exp) = expected_hash {
-                    let got = sha256_hex(&bytes);
-                    if !got.eq_ignore_ascii_case(exp) {
-                        failed_files.push(format!("{file_name} (sha256 mismatch)"));
-                        continue;
-                    }
-                }
-                write_atomic(&dest, &bytes)?;
-                downloaded_data_files.push(file_name.clone());
+            Ok(bytes)
+                if expected.is_none_or(|hash| sha256_hex(&bytes).eq_ignore_ascii_case(hash)) =>
+            {
+                fs::write(staging.0.join(name), bytes)?;
+                downloaded_data_files.push(name.clone());
             }
-            Err(err) => failed_files.push(format!("{file_name}: {err}")),
+            Ok(_) => failed_files.push(format!("{name} (sha256 mismatch)")),
+            Err(err) => failed_files.push(format!("{name}: {err}")),
         }
     }
 
-    write_atomic(&data_dir.join("manifest.json"), &manifest_bytes)?;
-
-    if include_models {
-        let model_hashes: HashMap<String, String> = manifest_json
-            .get("model_hashes")
-            .and_then(|v| v.as_object())
-            .map(|obj| {
-                obj.iter()
-                    .filter_map(|(k, v)| v.as_str().map(|s| (k.clone(), s.to_lowercase())))
-                    .collect()
-            })
-            .unwrap_or_default();
-
-        for model_name in extract_manifest_models(&manifest_json) {
-            if !is_safe_file_name(&model_name) {
-                continue;
+    if failed_files.is_empty() {
+        let manifest_changed = fs::read(data_dir.join("manifest.json")).ok().as_deref()
+            != Some(manifest_bytes.as_slice());
+        if manifest_changed || !downloaded_data_files.is_empty() {
+            if !can_install() {
+                return Err(anyhow!("对局进行中，请在对局结束后更新数据"));
             }
-            let dest = model_dir.join(&model_name);
-            let expected_hash = model_hashes.get(&model_name).map(String::as_str);
-            if file_matches_hash(&dest, expected_hash) {
-                skipped_files += 1;
-                continue;
-            }
-            let is_required = REQUIRED_MODEL_FILES.contains(&model_name.as_str());
-            let url = format!("{model_base}/{model_name}");
-            match fetch_bytes(&client, &url).await {
-                Ok(bytes) => {
-                    if let Some(exp) = expected_hash {
-                        let got = sha256_hex(&bytes);
-                        if !got.eq_ignore_ascii_case(exp) {
-                            failed_files.push(format!("models/{model_name} (sha256 mismatch)"));
-                            continue;
-                        }
-                    }
-                    write_atomic(&dest, &bytes)?;
-                    downloaded_model_files.push(model_name);
-                }
-                Err(err) => {
-                    if is_required {
-                        failed_files.push(format!("models/{model_name}: {err}"));
-                    }
-                }
+            fs::write(staging.0.join("manifest.json"), &manifest_bytes)?;
+            install.push("manifest.json".to_string());
+            // Legacy mirrors can carry a subset of locally bundled data.
+            runtime_bundle::commit_staged(data_dir, &staging.0, &install, false)?;
+            if downloaded_data_files.is_empty() {
+                downloaded_data_files.push("manifest.json".to_string());
             }
         }
+    } else {
+        downloaded_data_files.clear();
     }
+    drop(staging);
+    drop(lock);
 
+    let downloaded_model_files = if include_models {
+        let (downloaded, mut model_errors, skipped) =
+            sync_model_files(&client, &format!("{trimmed}/models"), model_dir, &manifest).await?;
+        failed_files.append(&mut model_errors);
+        skipped_files += skipped;
+        downloaded
+    } else {
+        Vec::new()
+    };
     let status = inspect_asset_status(data_dir, model_dir);
     Ok(AssetSyncResult {
         source_url: String::new(),
-        patch,
-        report_date,
+        patch: status.patch.clone(),
+        report_date: status.report_date.clone(),
         downloaded_data_files,
         downloaded_model_files,
         skipped_files,
@@ -402,6 +416,24 @@ pub async fn sync_missing_models(
         .ok()
         .and_then(|b| serde_json::from_slice(&b).ok())
         .unwrap_or(serde_json::Value::Null);
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(60))
+        .build()?;
+    sync_model_files(
+        &client,
+        &format!("{trimmed}/models"),
+        model_dir,
+        &manifest_json,
+    )
+    .await
+}
+
+async fn sync_model_files(
+    client: &reqwest::Client,
+    model_base: &str,
+    model_dir: &Path,
+    manifest_json: &serde_json::Value,
+) -> Result<(Vec<String>, Vec<String>, usize)> {
     let model_hashes: HashMap<String, String> = manifest_json
         .get("model_hashes")
         .and_then(|v| v.as_object())
@@ -412,7 +444,7 @@ pub async fn sync_missing_models(
         })
         .unwrap_or_default();
 
-    let candidates = extract_manifest_models(&manifest_json);
+    let candidates = extract_manifest_models(manifest_json);
     let mut missing = Vec::new();
     let mut skipped = 0usize;
     for model_name in candidates {
@@ -432,10 +464,6 @@ pub async fn sync_missing_models(
     }
 
     fs::create_dir_all(model_dir)?;
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(60))
-        .build()?;
-    let model_base = format!("{trimmed}/models");
     let mut downloaded = Vec::new();
     let mut failed = Vec::new();
 
@@ -444,7 +472,7 @@ pub async fn sync_missing_models(
         let expected_hash = model_hashes.get(&model_name).map(String::as_str);
         let is_required = REQUIRED_MODEL_FILES.contains(&model_name.as_str());
         let url = format!("{model_base}/{model_name}");
-        match fetch_bytes(&client, &url).await {
+        match fetch_bytes(client, &url).await {
             Ok(bytes) => {
                 if let Some(exp) = expected_hash {
                     if !sha256_hex(&bytes).eq_ignore_ascii_case(exp) {
@@ -542,14 +570,36 @@ mod tests {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
 
+        let new_champs = br#"[{"id":"1","hero":"Test champion"}]"#.to_vec();
+        let partial_manifest = serde_json::json!({
+            "version": "16.25",
+            "files": ["champions.json", "augments_full.json"],
+            "hashes": { "champions.json": sha256_hex(&new_champs) }
+        })
+        .to_string();
+        let manifest_only = serde_json::json!({
+            "version": "16.26",
+            "files": ["champions.json"],
+            "hashes": { "champions.json": sha256_hex(&champs_bytes) }
+        })
+        .to_string();
         let routes: HashMap<String, Vec<u8>> = HashMap::from([
+            (
+                "/partial/data/manifest.json".to_string(),
+                partial_manifest.into_bytes(),
+            ),
+            ("/partial/data/champions.json".to_string(), new_champs),
+            (
+                "/manifest-only/data/manifest.json".to_string(),
+                manifest_only.into_bytes(),
+            ),
             ("/data/manifest.json".to_string(), manifest_body),
-            ("/data/champions.json".to_string(), champs_bytes),
+            ("/data/champions.json".to_string(), champs_bytes.clone()),
             ("/models/ch_PP-OCRv4_rec_int8.onnx".to_string(), model_bytes),
         ]);
 
         let server = tokio::spawn(async move {
-            for _ in 0..8 {
+            for _ in 0..12 {
                 let Ok((mut socket, _)) = listener.accept().await else {
                     break;
                 };
@@ -591,7 +641,10 @@ mod tests {
             .expect("sync remote assets");
         assert_eq!(res.patch, "16.24");
         assert_eq!(res.downloaded_data_files, vec!["champions.json"]);
-        assert_eq!(res.downloaded_model_files, vec!["ch_PP-OCRv4_rec_int8.onnx"]);
+        assert_eq!(
+            res.downloaded_model_files,
+            vec!["ch_PP-OCRv4_rec_int8.onnx"]
+        );
         assert!(res.failed_files.is_empty());
         assert!(data_dir.join("champions.json").exists());
         assert!(model_dir.join("ch_PP-OCRv4_rec_int8.onnx").exists());
@@ -603,6 +656,33 @@ mod tests {
         assert!(res2.downloaded_data_files.is_empty());
         assert!(res2.downloaded_model_files.is_empty());
         assert_eq!(res2.skipped_files, 2);
+
+        let partial = sync_remote_assets(
+            &format!("http://{addr}/partial"),
+            &data_dir,
+            &model_dir,
+            false,
+        )
+        .await
+        .expect("report uninstalled partial mirror without changing local data");
+        assert_eq!(partial.patch, "16.24");
+        assert!(partial.downloaded_data_files.is_empty());
+        assert_eq!(partial.failed_files.len(), 1);
+        assert_eq!(
+            fs::read(data_dir.join("champions.json")).unwrap(),
+            champs_bytes
+        );
+
+        let metadata = sync_remote_assets(
+            &format!("http://{addr}/manifest-only"),
+            &data_dir,
+            &model_dir,
+            false,
+        )
+        .await
+        .expect("install updated metadata for unchanged files");
+        assert_eq!(metadata.patch, "16.26");
+        assert_eq!(metadata.downloaded_data_files, vec!["manifest.json"]);
 
         server.abort();
         let _ = fs::remove_dir_all(&root);

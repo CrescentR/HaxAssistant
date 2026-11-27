@@ -179,7 +179,7 @@ fn is_complete_snapshot(data_dir: &Path) -> bool {
         })
 }
 
-fn is_runtime_file_name(name: &str) -> bool {
+pub(crate) fn is_runtime_file_name(name: &str) -> bool {
     !name.starts_with('.') && name.ends_with(".json") && is_safe_file_name(name)
 }
 
@@ -322,7 +322,7 @@ fn restore_backup(data_dir: &Path, backup: &Path, files: &[String]) -> Result<()
     }
 }
 
-fn lock_data_dir(data_dir: &Path) -> Result<File> {
+pub(crate) fn lock_data_dir(data_dir: &Path) -> Result<File> {
     let lock = OpenOptions::new()
         .create(true)
         .truncate(false)
@@ -333,7 +333,7 @@ fn lock_data_dir(data_dir: &Path) -> Result<File> {
     Ok(lock)
 }
 
-fn recover_pending(data_dir: &Path) -> Result<()> {
+pub(crate) fn recover_pending(data_dir: &Path) -> Result<()> {
     let pending = data_dir.join(PENDING_FILE);
     let bytes = match fs::read(&pending) {
         Ok(bytes) => bytes,
@@ -376,8 +376,17 @@ fn obsolete_files(data_dir: &Path, install: &[String]) -> Vec<String> {
         .collect()
 }
 
-fn commit_staged(data_dir: &Path, staging: &Path, install: &[String]) -> Result<()> {
-    let obsolete = obsolete_files(data_dir, install);
+pub(crate) fn commit_staged(
+    data_dir: &Path,
+    staging: &Path,
+    install: &[String],
+    retire_obsolete: bool,
+) -> Result<()> {
+    let obsolete = if retire_obsolete {
+        obsolete_files(data_dir, install)
+    } else {
+        Vec::new()
+    };
     let affected: Vec<_> = install.iter().chain(&obsolete).cloned().collect();
     let backup = data_dir.join(BACKUP_DIR);
     match fs::remove_dir_all(&backup) {
@@ -426,7 +435,7 @@ fn commit_staged(data_dir: &Path, staging: &Path, install: &[String]) -> Result<
     Ok(())
 }
 
-fn create_staging_dir(data_dir: &Path) -> Result<PathBuf> {
+pub(crate) fn create_staging_dir(data_dir: &Path) -> Result<PathBuf> {
     let staging = data_dir.join(format!(
         "{STAGING_PREFIX}{}-{}",
         std::process::id(),
@@ -466,7 +475,7 @@ pub fn seed_bundled_data(source: &Path, destination: &Path) -> Result<()> {
             }
         }
         install.sort_by_key(|name| name == "manifest.json");
-        commit_staged(destination, &staging, &install)
+        commit_staged(destination, &staging, &install, false)
     })();
     let _ = fs::remove_dir_all(&staging);
     result
@@ -581,7 +590,7 @@ pub async fn run_runtime_update_if(
         if !can_install() {
             return Ok::<_, anyhow::Error>(None);
         }
-        commit_staged(data_dir, &staging, &install)?;
+        commit_staged(data_dir, &staging, &install, true)?;
         Ok(Some(install))
     })();
     let _ = fs::remove_dir_all(&staging);
