@@ -366,6 +366,7 @@ const App: React.FC = () => {
                 kind={overlayPreview}
                 db={db}
                 liveState={liveOverlayState ?? undefined}
+                valueMode={settings.augment_value_mode}
               />
             </div>
           </div>

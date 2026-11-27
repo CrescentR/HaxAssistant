@@ -233,9 +233,9 @@ export function evaluateAugmentOffer(
 
     const baseHex = row?.hex_score ?? cat?.hex_score ?? 56.0;
     const winRate = row?.win_rate ?? cat?.win_rate ?? 0.5;
-    const pickRate = row?.pick_rate ?? cat?.pick_rate ?? 0.05;
+    const pickRate = row?.pick_rate ?? cat?.pick_rate ?? 0;
     const deltaWr = row?.delta_win_rate ?? winRate - 0.5;
-    const sampleSize = row?.games ?? cat?.games ?? 1200;
+    const sampleSize = row?.games ?? cat?.games ?? 0;
     const rarity = row?.rarity ?? cat?.rarity ?? "黄金";
     const stageShift = db.stageShifts[candName]?.[stage] ?? 0;
 

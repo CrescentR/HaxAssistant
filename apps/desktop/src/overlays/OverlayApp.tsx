@@ -21,6 +21,7 @@ interface OverlayAppProps {
   kind: OverlayKind;
   db: LoadedHexBoxDatabase;
   heroName?: string;
+  valueMode?: string;
   liveState?: OverlayStatePayload;
 }
 
@@ -28,6 +29,7 @@ export const OverlayApp: React.FC<OverlayAppProps> = ({
   kind,
   db,
   heroName = "",
+  valueMode = "balanced",
   liveState,
 }) => {
   const effectiveHero = liveState ? liveState.heroName : heroName;
@@ -47,9 +49,10 @@ export const OverlayApp: React.FC<OverlayAppProps> = ({
         effectiveHero,
         candidateAugments,
         effectiveStage,
-        confirmedAugments
+        confirmedAugments,
+        valueMode
       ),
-    [db, effectiveHero, candidateAugments, effectiveStage, confirmedAugments]
+    [db, effectiveHero, candidateAugments, effectiveStage, confirmedAugments, valueMode]
   );
 
   const formula = db.formulaItemsByHero[effectiveHero];
@@ -113,9 +116,9 @@ export const OverlayApp: React.FC<OverlayAppProps> = ({
                 {c.hex_label} · {c.hex_score.toFixed(1)}
               </div>
               <div className="overlay-aug-meta">
-                胜率 {(c.win_rate * 100).toFixed(1)}% · 净胜率{" "}
-                {c.delta_win_rate >= 0 ? "+" : ""}
-                {(c.delta_win_rate * 100).toFixed(1)}%
+                {c.sample_size > 0
+                  ? `胜率 ${(c.win_rate * 100).toFixed(1)}% · 净胜率 ${c.delta_win_rate >= 0 ? "+" : ""}${(c.delta_win_rate * 100).toFixed(1)}%`
+                  : "暂无胜率样本"}
               </div>
               {c.synergy_note && <div className="overlay-note ok">{c.synergy_note}</div>}
               {c.conflict_note && <div className="overlay-note warn">{c.conflict_note}</div>}

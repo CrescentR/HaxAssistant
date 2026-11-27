@@ -118,7 +118,7 @@ const OverlayEntry: React.FC = () => {
           ⌖
         </button>
       </div>
-      <OverlayApp kind={kind} db={db} liveState={liveState ?? undefined} />
+      <OverlayApp kind={kind} db={db} liveState={liveState ?? undefined} valueMode={settings.augment_value_mode} />
     </div>
   );
 };

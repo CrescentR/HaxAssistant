@@ -787,14 +787,15 @@ export const OngoingWorkspace: React.FC<Props> = ({
                     <div className="stat-cell">
                       <span className="stat-lbl">搭配胜率</span>
                       <strong className={card.win_rate >= 0.51 ? "pos-text" : ""}>
-                        {(card.win_rate * 100).toFixed(2)}%
+                        {card.sample_size > 0 ? `${(card.win_rate * 100).toFixed(2)}%` : "暂无统计"}
                       </strong>
                     </div>
                     <div className="stat-cell">
                       <span className="stat-lbl">同阶净胜率差</span>
                       <strong className={card.delta_win_rate >= 0 ? "pos-text" : "neg-text"}>
-                        {card.delta_win_rate >= 0 ? "+" : ""}
-                        {(card.delta_win_rate * 100).toFixed(2)}%
+                        {card.sample_size > 0
+                          ? `${card.delta_win_rate >= 0 ? "+" : ""}${(card.delta_win_rate * 100).toFixed(2)}%`
+                          : "—"}
                       </strong>
                     </div>
                     <div className="stat-cell">

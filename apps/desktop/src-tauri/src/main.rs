@@ -33,6 +33,7 @@ struct AppState {
     core: Arc<HexBoxCore>,
     overlay_layout: Arc<OverlayLayoutStore>,
     main_window: Arc<MainWindowStore>,
+    data_update_wake: Arc<Notify>,
 }
 
 /// Save window layouts and quit.
@@ -175,10 +176,14 @@ fn update_settings(
     state: State<'_, AppState>,
     settings: AppSettings,
 ) -> Result<AppSettings, String> {
+    let previous_url = state.core.get_settings().data_sync_url;
     let saved = state
         .core
         .update_settings(settings)
         .map_err(|e| e.to_string())?;
+    if previous_url != saved.data_sync_url {
+        state.data_update_wake.notify_one();
+    }
     register_hotkeys(&app, state.core.clone(), &saved);
     overlay_layout::apply_zoom(&app, saved.overlay_zoom);
     let _ = app.emit("haxassistant://settings-updated", &saved);
@@ -1063,6 +1068,7 @@ fn spawn_background_data_updater(
         tokio::time::sleep(Duration::from_secs(6)).await;
         let mut pending_deferred = false;
         let mut retry_delay = RETRY_INTERVAL;
+        let mut previous_url = String::new();
         let mut next_check_at = tokio::time::Instant::now();
 
         loop {
@@ -1079,6 +1085,12 @@ fn spawn_background_data_updater(
             };
 
             let now = tokio::time::Instant::now();
+            if configured_url != previous_url {
+                previous_url.clone_from(&configured_url);
+                pending_deferred = false;
+                retry_delay = RETRY_INTERVAL;
+                next_check_at = now;
+            }
             let due_deferred = pending_deferred && core.is_safe_to_swap_data();
             let due_scheduled = now >= next_check_at;
 
@@ -1155,7 +1167,7 @@ fn main() {
             spawn_lcu_event_listener(lcu_wake);
             spawn_background_auto_ocr_watcher(app.handle().clone(), core.clone());
             spawn_startup_update_check(app.handle().clone(), core.clone());
-            spawn_background_data_updater(app.handle().clone(), core.clone(), data_update_wake);
+            spawn_background_data_updater(app.handle().clone(), core.clone(), data_update_wake.clone());
             let layout = Arc::new(OverlayLayoutStore::load(&core.data_dir()));
             overlay_layout::apply_zoom(app.handle(), core.get_settings().overlay_zoom);
             overlay_layout::restore_positions(app.handle(), &layout);
@@ -1178,6 +1190,7 @@ fn main() {
                 core,
                 overlay_layout: layout,
                 main_window: main_store,
+                data_update_wake,
             });
             Ok(())
         })

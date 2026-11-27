@@ -39,6 +39,26 @@ export const SettingsHubView: React.FC<SettingsHubViewProps> = ({
   const [cleaning, setCleaning] = useState(false);
   const [localeText, setLocaleText] = useState<string | null>(null);
   const [maintenanceMsg, setMaintenanceMsg] = useState<string>("");
+  const [dataServer, setDataServer] = useState(settings.data_sync_url);
+  useEffect(() => setDataServer(settings.data_sync_url), [settings.data_sync_url]);
+
+  const saveDataServer = () => {
+    const server = dataServer.trim().replace(/\/+$/, "");
+    if (server) {
+      try {
+        const url = new URL(server);
+        if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.search || url.hash) {
+          throw new Error("Invalid server URL");
+        }
+      } catch {
+        setMaintenanceMsg("请输入以 http:// 或 https:// 开头的服务器基础地址");
+        return;
+      }
+    }
+    onUpdateSettings({ data_sync_url: server });
+    setMaintenanceMsg(server ? "数据服务器已保存" : "已恢复默认数据服务器");
+  };
+
   const [updateInfo, setUpdateInfo] = useState<AppUpdateInfo | null>(null);
   const [updateBusy, setUpdateBusy] = useState<"" | "checking" | "installing">("");
   const [updateMsg, setUpdateMsg] = useState<string>("");
@@ -541,6 +561,20 @@ export const SettingsHubView: React.FC<SettingsHubViewProps> = ({
         </div>
 
         <div className="settings-section" style={{ marginTop: 8 }}>
+          <label htmlFor="data-server">数据服务器</label>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <input
+              id="data-server"
+              className="hex-select"
+              type="url"
+              value={dataServer}
+              placeholder="留空使用默认服务器"
+              onChange={(event) => setDataServer(event.target.value)}
+            />
+            <button type="button" className="hex-btn ghost sm" onClick={saveDataServer}>
+              保存地址
+            </button>
+          </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 4 }}>
             <button
               className="hex-btn primary sm"
