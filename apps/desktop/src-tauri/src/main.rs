@@ -6,6 +6,7 @@
 
 mod main_window;
 mod overlay_layout;
+mod overlay_window;
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -414,11 +415,7 @@ fn overlay_label(kind: &str) -> &'static str {
 fn set_overlay_visible(app: &AppHandle, kind: &str, visible: bool) {
     let label = overlay_label(kind);
     if let Some(win) = app.get_webview_window(label) {
-        if visible {
-            let _ = win.show();
-        } else {
-            let _ = win.hide();
-        }
+        let _ = overlay_window::set_visible(&win, visible);
     }
 }
 
@@ -716,8 +713,8 @@ fn get_bench_grab_status(state: State<'_, AppState>) -> BenchGrabStatus {
 fn show_overlay(app: AppHandle, kind: String) -> Result<(), String> {
     let label = overlay_label(&kind);
     if let Some(win) = app.get_webview_window(label) {
-        win.show().map_err(|e| e.to_string())?;
-        let _ = win.set_focus();
+        // No set_focus: an overlay must never take the foreground from League.
+        overlay_window::set_visible(&win, true).map_err(|e| e.to_string())?;
     }
     Ok(())
 }
@@ -726,7 +723,7 @@ fn show_overlay(app: AppHandle, kind: String) -> Result<(), String> {
 fn hide_overlay(app: AppHandle, kind: String) -> Result<(), String> {
     let label = overlay_label(&kind);
     if let Some(win) = app.get_webview_window(label) {
-        win.hide().map_err(|e| e.to_string())?;
+        overlay_window::set_visible(&win, false).map_err(|e| e.to_string())?;
     }
     Ok(())
 }
@@ -736,13 +733,8 @@ fn toggle_overlay(app: AppHandle, kind: String) -> Result<bool, String> {
     let label = overlay_label(&kind);
     if let Some(win) = app.get_webview_window(label) {
         let visible = win.is_visible().unwrap_or(false);
-        if visible {
-            win.hide().map_err(|e| e.to_string())?;
-            return Ok(false);
-        } else {
-            win.show().map_err(|e| e.to_string())?;
-            return Ok(true);
-        }
+        overlay_window::set_visible(&win, !visible).map_err(|e| e.to_string())?;
+        return Ok(!visible);
     }
     Ok(false)
 }
@@ -895,13 +887,8 @@ fn toggle_overlay_internal(app: &AppHandle, kind: &str) -> bool {
     let label = overlay_label(kind);
     if let Some(win) = app.get_webview_window(label) {
         let visible = win.is_visible().unwrap_or(false);
-        if visible {
-            let _ = win.hide();
-            return false;
-        } else {
-            let _ = win.show();
-            return true;
-        }
+        let _ = overlay_window::set_visible(&win, !visible);
+        return !visible;
     }
     false
 }
@@ -1174,6 +1161,7 @@ fn main() {
             let layout = Arc::new(OverlayLayoutStore::load(&core.data_dir()));
             overlay_layout::apply_zoom(app.handle(), core.get_settings().overlay_zoom);
             overlay_layout::restore_positions(app.handle(), &layout);
+            overlay_window::make_non_activating(app.handle());
             let main_store = Arc::new(MainWindowStore::load(&core.data_dir()));
             main_window::restore(app.handle(), &main_store);
             if let Err(err) = main_window::build_tray(app.handle()) {
