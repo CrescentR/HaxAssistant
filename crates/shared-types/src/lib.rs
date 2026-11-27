@@ -504,17 +504,28 @@ pub struct MatchHistoryEntry {
     pub queue_id: u32,
     pub game_mode: String,
     pub augments: Vec<String>,
-    pub hex_score: f64,
+    /// Mean dataset HexScore of the augments taken in this match. `None` when
+    /// none of them are in the dataset; it is never derived from KDA or result.
+    #[serde(default)]
+    pub hex_score: Option<f64>,
     pub game_creation: u64,
+    /// Empty when the source did not report a creation time.
     pub time_ago: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MatchHistoryResponse {
+    /// `sgp` / `lcu` for real data, `offline` when no client is running,
+    /// `error` when a running client failed to answer.
     pub source: String,
     pub summoner_name: Option<String>,
+    /// PUUID of the player the matches belong to (the logged-in summoner).
+    #[serde(default)]
+    pub puuid: Option<String>,
     pub matches: Vec<MatchHistoryEntry>,
+    #[serde(default)]
+    pub error: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

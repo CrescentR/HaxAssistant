@@ -323,7 +323,7 @@ mod tests {
             queue_id: 450,
             game_mode: "ARAM".to_string(),
             augments: augments.iter().map(|s| s.to_string()).collect(),
-            hex_score: 60.0,
+            hex_score: None,
             game_creation: 0,
             time_ago: String::new(),
         }

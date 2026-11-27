@@ -330,6 +330,12 @@ impl LcuClient {
         Ok(parse_live_game_data(&data))
     }
 
+    /// `/lol-summoner/v1/current-summoner` (puuid, gameName, tagLine, ...).
+    pub async fn fetch_current_summoner(&self, creds: &LockfileCredentials) -> Result<Value> {
+        self.get_json(creds, "/lol-summoner/v1/current-summoner")
+            .await
+    }
+
     pub async fn fetch_match_history(
         &self,
         creds: &LockfileCredentials,
@@ -794,7 +800,7 @@ pub fn parse_live_game_data(data: &Value) -> LiveGameSnapshot {
 
 pub fn format_time_ago(game_creation_ms: u64) -> String {
     if game_creation_ms == 0 {
-        return "近期".to_string();
+        return String::new();
     }
     let now_ms = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -812,8 +818,50 @@ pub fn format_time_ago(game_creation_ms: u64) -> String {
     }
 }
 
+/// Pick the participant that belongs to `target_puuid`.
+///
+/// LCU match-history games pair `participants[].participantId` with
+/// `participantIdentities[].player.puuid`. Without a matching identity the
+/// game is only accepted when it carries a single participant (the scoped
+/// current-summoner payload); otherwise it would be another player's row.
+fn select_lcu_participant<'a>(game: &'a Value, target_puuid: Option<&str>) -> Option<&'a Value> {
+    let participants = game.get("participants").and_then(|v| v.as_array())?;
+    if let Some(puuid) = target_puuid.filter(|p| !p.is_empty()) {
+        let by_inline = participants
+            .iter()
+            .find(|p| p.get("puuid").and_then(|v| v.as_str()) == Some(puuid));
+        if by_inline.is_some() {
+            return by_inline;
+        }
+        let participant_id = game
+            .get("participantIdentities")
+            .and_then(|v| v.as_array())
+            .and_then(|ids| {
+                ids.iter().find(|id| {
+                    id.get("player")
+                        .and_then(|p| p.get("puuid"))
+                        .and_then(|v| v.as_str())
+                        == Some(puuid)
+                })
+            })
+            .and_then(|id| id.get("participantId"))
+            .and_then(|v| v.as_u64());
+        if let Some(pid) = participant_id {
+            return participants
+                .iter()
+                .find(|p| p.get("participantId").and_then(|v| v.as_u64()) == Some(pid));
+        }
+    }
+    if participants.len() == 1 {
+        participants.first()
+    } else {
+        None
+    }
+}
+
 pub fn parse_match_history(
     raw: &Value,
+    target_puuid: Option<&str>,
     resolve_hero: impl Fn(u32) -> String,
     resolve_augment: impl Fn(u32) -> Option<String>,
 ) -> Vec<MatchHistoryEntry> {
@@ -828,16 +876,19 @@ pub fn parse_match_history(
 
     let mut out = Vec::new();
     for game in games {
-        let game_id = game
+        let Some(game_id) = game
             .get("gameId")
             .and_then(|v| v.as_u64())
+            .filter(|id| *id > 0)
             .map(|id| id.to_string())
-            .unwrap_or_else(|| "0".to_string());
+        else {
+            continue;
+        };
         let queue_id = game.get("queueId").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
         let game_mode = game
             .get("gameMode")
             .and_then(|v| v.as_str())
-            .unwrap_or("ARAM")
+            .unwrap_or_default()
             .to_string();
         let duration_secs = game
             .get("gameDuration")
@@ -848,11 +899,7 @@ pub fn parse_match_history(
             .and_then(|v| v.as_u64())
             .unwrap_or(0);
 
-        let Some(participant) = game
-            .get("participants")
-            .and_then(|v| v.as_array())
-            .and_then(|arr| arr.first())
-        else {
+        let Some(participant) = select_lcu_participant(game, target_puuid) else {
             continue;
         };
 
@@ -860,10 +907,17 @@ pub fn parse_match_history(
             .get("championId")
             .and_then(|v| v.as_u64())
             .unwrap_or(0) as u32;
+        if champion_id == 0 {
+            continue;
+        }
         let hero_name = resolve_hero(champion_id);
 
         let stats = participant.get("stats").unwrap_or(&Value::Null);
-        let win = stats.get("win").and_then(|v| v.as_bool()).unwrap_or(false);
+        // A game without an outcome (remake in progress, truncated payload) is
+        // skipped rather than shown as an invented loss.
+        let Some(win) = stats.get("win").and_then(|v| v.as_bool()) else {
+            continue;
+        };
         let kills = stats.get("kills").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
         let deaths = stats.get("deaths").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
         let assists = stats.get("assists").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
@@ -902,12 +956,8 @@ pub fn parse_match_history(
             }
         }
 
-        let kda_ratio = (kills as f64 + assists as f64) / (deaths.max(1) as f64);
-        let dmg_bonus = ((damage as f64) / 5000.0).min(12.0);
-        let win_bonus = if win { 11.0 } else { -7.0 };
-        let hex_score = (56.0 + win_bonus + (kda_ratio * 3.8).min(18.0) + dmg_bonus)
-            .clamp(32.0, 95.0);
-        let hex_score = (hex_score * 10.0).round() / 10.0;
+        // HexScore comes from dataset augment ratings (filled in by app-core),
+        // never from a KDA/result heuristic.
 
         let duration = format!("{:02}:{:02}", duration_secs / 60, duration_secs % 60);
         out.push(MatchHistoryEntry {
@@ -928,7 +978,7 @@ pub fn parse_match_history(
             queue_id,
             game_mode,
             augments,
-            hex_score,
+            hex_score: None,
             game_creation,
             time_ago: format_time_ago(game_creation),
         });
@@ -1049,6 +1099,7 @@ mod tests {
 
         let entries = parse_match_history(
             &raw,
+            None,
             |cid| if cid == 22 { "寒冰射手".to_string() } else { cid.to_string() },
             |aid| match aid {
                 101 => Some("亮出你的剑".to_string()),
@@ -1057,11 +1108,113 @@ mod tests {
             },
         );
         assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].game_id, "987654321");
         assert_eq!(entries[0].hero_name, "寒冰射手");
         assert_eq!(entries[0].result, "WIN");
         assert_eq!(entries[0].kda, "12 / 4 / 22");
         assert_eq!(entries[0].duration, "17:42");
         assert_eq!(entries[0].augments, vec!["亮出你的剑", "易损"]);
-        assert!(entries[0].hex_score >= 70.0);
+        // HexScore is not invented from KDA/result; app-core fills it from data.
+        assert_eq!(entries[0].hex_score, None);
+        // No creation time reported → no fabricated "recent" label.
+        assert_eq!(entries[0].time_ago, "");
+    }
+
+    /// Shape of `/lol-match-history/v1/products/lol/{puuid}/matches` when the
+    /// client returns full participant lists: the row must be the target's.
+    #[test]
+    fn lcu_history_scopes_to_target_puuid_via_identities() {
+        let raw = json!({
+            "accountId": 1,
+            "games": {
+                "gameCount": 2,
+                "games": [
+                    {
+                        "gameId": 1001,
+                        "queueId": 2400,
+                        "gameMode": "KIWI",
+                        "gameDuration": 1100,
+                        "gameCreation": 1_700_000_000_000u64,
+                        "participantIdentities": [
+                            { "participantId": 1, "player": { "puuid": "other", "gameName": "Other" } },
+                            { "participantId": 7, "player": { "puuid": "me", "gameName": "Me" } }
+                        ],
+                        "participants": [
+                            { "participantId": 1, "championId": 99,
+                              "stats": { "win": false, "kills": 1, "deaths": 9, "assists": 2 } },
+                            { "participantId": 7, "championId": 157,
+                              "stats": { "win": true, "kills": 15, "deaths": 3, "assists": 9,
+                                         "item0": 3031, "item1": 0, "item6": 3340 } }
+                        ]
+                    },
+                    {
+                        // Target absent from a multi-participant game → skipped,
+                        // never attributed to participants[0].
+                        "gameId": 1002,
+                        "gameDuration": 900,
+                        "participantIdentities": [
+                            { "participantId": 1, "player": { "puuid": "a" } },
+                            { "participantId": 2, "player": { "puuid": "b" } }
+                        ],
+                        "participants": [
+                            { "participantId": 1, "championId": 22, "stats": { "win": true } },
+                            { "participantId": 2, "championId": 99, "stats": { "win": false } }
+                        ]
+                    }
+                ]
+            }
+        });
+        let entries = parse_match_history(&raw, Some("me"), |cid| format!("#{cid}"), |_| None);
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].game_id, "1001");
+        assert_eq!(entries[0].champion_id, 157);
+        assert_eq!(entries[0].result, "WIN");
+        assert_eq!(entries[0].kda, "15 / 3 / 9");
+        assert_eq!(entries[0].items, vec![3031]);
+        assert_eq!(entries[0].game_mode, "KIWI");
+        assert!(!entries[0].time_ago.is_empty());
+    }
+
+    #[test]
+    fn lcu_history_skips_rows_without_real_identity_or_outcome() {
+        let raw = json!({
+            "games": { "games": [
+                // No gameId → cannot be a real, reviewable match.
+                { "participants": [ { "championId": 22, "stats": { "win": true } } ] },
+                // No outcome → not shown as an invented loss.
+                { "gameId": 5, "participants": [ { "championId": 22, "stats": { "kills": 3 } } ] },
+                // No champion.
+                { "gameId": 6, "participants": [ { "championId": 0, "stats": { "win": true } } ] },
+                // Unknown augment ids keep a visible placeholder, not a guessed name.
+                { "gameId": 7, "gameMode": "ARAM", "participants": [
+                    { "championId": 22, "stats": { "win": false, "playerAugment1": 999 } }
+                ] }
+            ] }
+        });
+        let entries = parse_match_history(&raw, None, |cid| format!("#{cid}"), |_| None);
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].game_id, "7");
+        assert_eq!(entries[0].result, "LOSS");
+        assert_eq!(entries[0].augments, vec!["强化 #999"]);
+    }
+
+    #[test]
+    fn lcu_history_handles_empty_or_malformed_payloads() {
+        let none = |_: u32| -> Option<String> { None };
+        assert!(parse_match_history(&json!({}), None, |c| c.to_string(), none).is_empty());
+        assert!(parse_match_history(
+            &json!({ "games": { "games": [] } }),
+            None,
+            |c| c.to_string(),
+            none
+        )
+        .is_empty());
+        assert!(parse_match_history(
+            &json!({ "errorCode": "RPC_ERROR" }),
+            Some("me"),
+            |c| c.to_string(),
+            none
+        )
+        .is_empty());
     }
 }

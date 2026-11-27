@@ -264,15 +264,21 @@ export interface MatchHistoryEntry {
   queueId: number;
   gameMode: string;
   augments: string[];
-  hexScore: number;
+  /** Mean dataset HexScore of the match's augments; null when none are rated. */
+  hexScore: number | null;
   gameCreation: number;
+  /** Empty when the source did not report a creation time. */
   timeAgo: string;
 }
 
 export interface MatchHistoryResponse {
-  source: "lcu" | "offline" | string;
+  /** "sgp" / "lcu" = real data; "offline" = no client; "error" = client failed. */
+  source: "sgp" | "lcu" | "offline" | "error" | string;
   summonerName: string | null;
+  /** PUUID of the summoner the matches belong to. */
+  puuid?: string | null;
   matches: MatchHistoryEntry[];
+  error?: string | null;
 }
 
 export interface RuntimeSummary {

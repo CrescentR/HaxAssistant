@@ -92,6 +92,71 @@ fn now_epoch_secs() -> u64 {
         .unwrap_or(0)
 }
 
+/// `gameName#tagLine` from a current-summoner payload (falls back to the
+/// legacy `displayName`).
+fn summoner_display_name(summoner: &Value) -> Option<String> {
+    let name = summoner
+        .get("gameName")
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.is_empty())
+        .or_else(|| {
+            summoner
+                .get("displayName")
+                .and_then(|v| v.as_str())
+                .filter(|s| !s.is_empty())
+        })?;
+    match summoner
+        .get("tagLine")
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.is_empty())
+    {
+        Some(tag) => Some(format!("{name}#{tag}")),
+        None => Some(name.to_string()),
+    }
+}
+
+/// Mean dataset HexScore of the given augments for `hero_name`. Only rows
+/// backed by real samples (`games > 0`) count, so default/placeholder scores
+/// never leak in. `None` when nothing could be rated.
+fn augment_hex_score(ds: &Dataset, hero_name: &str, augments: &[String]) -> Option<f64> {
+    let hero_rows = ds
+        .hero_augment_stats
+        .get(hero_name)
+        .map(|v| v.as_slice())
+        .unwrap_or(&[]);
+    let scores: Vec<f64> = augments
+        .iter()
+        .filter_map(|name| {
+            hero_rows
+                .iter()
+                .find(|r| r.augment_name == *name && r.games > 0)
+                .map(|r| r.hex_score)
+                .or_else(|| {
+                    ds.augments_full
+                        .iter()
+                        .find(|a| a.augment_name == *name && a.games > 0)
+                        .map(|a| a.hex_score)
+                })
+        })
+        .filter(|s| s.is_finite())
+        .collect();
+    if scores.is_empty() {
+        return None;
+    }
+    let mean = scores.iter().sum::<f64>() / scores.len() as f64;
+    Some((mean * 10.0).round() / 10.0)
+}
+
+/// Mean of the rated matches' HexScores; unrated matches are skipped.
+fn mean_match_hex_score(matches: &[MatchHistoryEntry]) -> Option<f64> {
+    let rated: Vec<f64> = matches.iter().filter_map(|m| m.hex_score).collect();
+    if rated.is_empty() {
+        return None;
+    }
+    let mean = rated.iter().sum::<f64>() / rated.len() as f64;
+    Some((mean * 10.0).round() / 10.0)
+}
+
 impl HexBoxCore {
     pub fn initialize(root: &Path) -> Result<Self> {
         Self::initialize_with_resources(root, root)
@@ -794,37 +859,111 @@ impl HexBoxCore {
     // P1: SGP / LCU Player Search, Profile & 10-Player Game Intel
     // -----------------------------------------------------------------------
 
+    /// Personal match history of the logged-in summoner, real sources only.
+    ///
+    /// SGP (when enabled) is tried first, then the LCU current-summoner
+    /// endpoint; both are scoped to the current summoner's PUUID. No client →
+    /// `offline`; a running client that fails to answer → `error`. Rows are
+    /// never synthesised.
     pub async fn fetch_personal_match_history(&self, count: usize) -> MatchHistoryResponse {
-        let Some(creds) = discover_lockfile() else {
-            return MatchHistoryResponse {
-                source: "offline".to_string(),
-                summoner_name: None,
-                matches: Vec::new(),
-            };
+        let response = |source: &str,
+                        summoner_name: Option<String>,
+                        puuid: Option<String>,
+                        matches: Vec<MatchHistoryEntry>,
+                        error: Option<String>| MatchHistoryResponse {
+            source: source.to_string(),
+            summoner_name,
+            puuid,
+            matches,
+            error,
         };
 
-        let status = self.lcu.probe_status().await;
-        match self.lcu.fetch_match_history(&creds, count).await {
-            Ok(raw) => {
-                let matches = parse_match_history(
-                    &raw,
-                    |cid| {
-                        self.champion_name_by_id(cid)
-                            .unwrap_or_else(|| format!("英雄 #{cid}"))
-                    },
-                    |aid| self.augment_name_by_id(aid),
+        let Some(creds) = discover_lockfile() else {
+            return response("offline", None, None, Vec::new(), None);
+        };
+
+        let summoner = match self.lcu.fetch_current_summoner(&creds).await {
+            Ok(v) => v,
+            Err(e) => {
+                // A lockfile without a reachable client usually means it just
+                // closed; report it as offline with the reason.
+                return response(
+                    "offline",
+                    None,
+                    None,
+                    Vec::new(),
+                    Some(format!("无法连接英雄联盟客户端：{e}")),
                 );
-                MatchHistoryResponse {
-                    source: "lcu".to_string(),
-                    summoner_name: status.summoner_name,
-                    matches,
+            }
+        };
+        let puuid = summoner
+            .get("puuid")
+            .and_then(|v| v.as_str())
+            .filter(|s| !s.is_empty())
+            .map(ToString::to_string);
+        let summoner_name = summoner_display_name(&summoner);
+
+        if self.get_settings().sgp_enabled {
+            if let Some(ref p) = puuid {
+                if let Ok(raw) = self.lcu.fetch_sgp_match_history(&creds, p, count).await {
+                    let list = self.parse_sgp_history(&raw, p);
+                    if !list.is_empty() {
+                        return response("sgp", summoner_name, puuid, list, None);
+                    }
                 }
             }
-            Err(_) => MatchHistoryResponse {
-                source: "offline".to_string(),
-                summoner_name: status.summoner_name,
-                matches: Vec::new(),
+        }
+
+        match self.lcu.fetch_match_history(&creds, count).await {
+            Ok(raw) => {
+                let matches = self.parse_lcu_history(&raw, puuid.as_deref());
+                response("lcu", summoner_name, puuid, matches, None)
+            }
+            Err(e) => response(
+                "error",
+                summoner_name,
+                puuid,
+                Vec::new(),
+                Some(format!("读取 LCU 战绩失败：{e}")),
+            ),
+        }
+    }
+
+    fn parse_lcu_history(&self, raw: &Value, puuid: Option<&str>) -> Vec<MatchHistoryEntry> {
+        let mut list = parse_match_history(
+            raw,
+            puuid,
+            |cid| {
+                self.champion_name_by_id(cid)
+                    .unwrap_or_else(|| format!("英雄 #{cid}"))
             },
+            |aid| self.augment_name_by_id(aid),
+        );
+        self.fill_match_hex_scores(&mut list);
+        list
+    }
+
+    fn parse_sgp_history(&self, raw: &Value, puuid: &str) -> Vec<MatchHistoryEntry> {
+        let mut list = parse_sgp_match_history(
+            raw,
+            puuid,
+            |cid| {
+                self.champion_name_by_id(cid)
+                    .unwrap_or_else(|| format!("英雄 #{cid}"))
+            },
+            |aid| self.augment_name_by_id(aid),
+        );
+        self.fill_match_hex_scores(&mut list);
+        list
+    }
+
+    /// Set each match's HexScore to the mean dataset rating of its augments
+    /// (hero-specific row first, then the all-hero catalog). Augments missing
+    /// from the dataset are ignored; with none rated the score stays `None`.
+    fn fill_match_hex_scores(&self, matches: &mut [MatchHistoryEntry]) {
+        let ds = self.dataset();
+        for m in matches.iter_mut() {
+            m.hex_score = augment_hex_score(&ds, &m.hero_name, &m.augments);
         }
     }
 
@@ -925,15 +1064,7 @@ impl HexBoxCore {
         let sgp_enabled = self.get_settings().sgp_enabled;
         if sgp_enabled {
             if let Ok(raw) = self.lcu.fetch_sgp_match_history(creds, puuid, count).await {
-                let list = parse_sgp_match_history(
-                    &raw,
-                    puuid,
-                    |cid| {
-                        self.champion_name_by_id(cid)
-                            .unwrap_or_else(|| format!("英雄 #{cid}"))
-                    },
-                    |aid| self.augment_name_by_id(aid),
-                );
+                let list = self.parse_sgp_history(&raw, puuid);
                 if !list.is_empty() {
                     return ("sgp".to_string(), list);
                 }
@@ -944,14 +1075,7 @@ impl HexBoxCore {
             .fetch_match_history_by_puuid(creds, puuid, count)
             .await
         {
-            let list = parse_match_history(
-                &raw,
-                |cid| {
-                    self.champion_name_by_id(cid)
-                        .unwrap_or_else(|| format!("英雄 #{cid}"))
-                },
-                |aid| self.augment_name_by_id(aid),
-            );
+            let list = self.parse_lcu_history(&raw, Some(puuid));
             return ("lcu".to_string(), list);
         }
         ("offline".to_string(), Vec::new())
@@ -1005,13 +1129,7 @@ impl HexBoxCore {
         } else {
             0
         };
-        let avg_hex_score = if games > 0 {
-            ((recent_matches.iter().map(|m| m.hex_score).sum::<f64>() / games as f64) * 10.0)
-                .round()
-                / 10.0
-        } else {
-            0.0
-        };
+        let avg_hex_score = mean_match_hex_score(&recent_matches).unwrap_or(0.0);
 
         let mut champ_counts: HashMap<String, usize> = HashMap::new();
         for m in &recent_matches {
@@ -1162,16 +1280,7 @@ impl HexBoxCore {
             } else {
                 None
             };
-            let avg_hex_score = if recent_games > 0 {
-                Some(
-                    ((matches.iter().map(|m| m.hex_score).sum::<f64>() / recent_games as f64)
-                        * 10.0)
-                        .round()
-                        / 10.0,
-                )
-            } else {
-                None
-            };
+            let avg_hex_score = mean_match_hex_score(&matches);
 
             let mut tags = Vec::new();
             if let Some(wr) = recent_win_rate {

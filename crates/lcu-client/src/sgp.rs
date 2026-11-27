@@ -6,7 +6,7 @@ use anyhow::{anyhow, Result};
 use serde_json::Value;
 use shared_types::MatchHistoryEntry;
 
-use crate::{LcuClient, LockfileCredentials};
+use crate::{format_time_ago, LcuClient, LockfileCredentials};
 
 /// Map Riot platform/region identifiers to their SGP match-history host.
 pub fn sgp_host_for_region(region: &str) -> Option<&'static str> {
@@ -124,14 +124,11 @@ where
             .get("gameDuration")
             .and_then(|v| v.as_u64())
             .unwrap_or(0);
-        let queue_id = payload
-            .get("queueId")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(450) as u32;
+        let queue_id = payload.get("queueId").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
         let game_mode = payload
             .get("gameMode")
             .and_then(|v| v.as_str())
-            .unwrap_or("ARAM")
+            .unwrap_or_default()
             .to_string();
         let game_creation = payload
             .get("gameCreation")
@@ -141,15 +138,23 @@ where
         let Some(participants) = payload.get("participants").and_then(|v| v.as_array()) else {
             continue;
         };
-        let p = participants
+        // SUMMARY carries all ten players; only the queried PUUID's row is
+        // theirs. Never fall back to another participant.
+        let Some(p) = participants
             .iter()
             .find(|p| p.get("puuid").and_then(|v| v.as_str()) == Some(target_puuid))
-            .or_else(|| participants.first());
-        let Some(p) = p else { continue };
+        else {
+            continue;
+        };
 
         let champion_id = p.get("championId").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+        if champion_id == 0 {
+            continue;
+        }
         let hero_name = resolve_champion(champion_id);
-        let win = p.get("win").and_then(|v| v.as_bool()).unwrap_or(false);
+        let Some(win) = p.get("win").and_then(|v| v.as_bool()) else {
+            continue;
+        };
         let kills = p.get("kills").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
         let deaths = p.get("deaths").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
         let assists = p.get("assists").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
@@ -190,10 +195,6 @@ where
             }
         }
 
-        let kda_ratio = (kills as f64 + assists as f64) / (deaths.max(1) as f64);
-        let hex_score = (48.0 + if win { 14.0 } else { -6.0 } + (kda_ratio * 4.5).min(24.0))
-            .clamp(20.0, 96.0);
-
         out.push(MatchHistoryEntry {
             game_id,
             champion_id,
@@ -208,37 +209,17 @@ where
             heal,
             items,
             duration_secs,
-            duration: format!("{}:{:02}", duration_secs / 60, duration_secs % 60),
+            duration: format!("{:02}:{:02}", duration_secs / 60, duration_secs % 60),
             queue_id,
             game_mode,
             augments,
-            hex_score: (hex_score * 10.0).round() / 10.0,
+            // Filled in from dataset augment ratings by app-core.
+            hex_score: None,
             game_creation,
-            time_ago: time_label_or_empty(game_creation),
+            time_ago: format_time_ago(game_creation),
         });
     }
     out
-}
-
-fn time_label_or_empty(game_creation_ms: u64) -> String {
-    if game_creation_ms == 0 {
-        return "近期".to_string();
-    }
-    let now_ms = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_millis() as u64)
-        .unwrap_or(0);
-    if now_ms <= game_creation_ms {
-        return "刚刚".to_string();
-    }
-    let mins = (now_ms - game_creation_ms) / 60_000;
-    if mins < 60 {
-        format!("{mins} 分钟前")
-    } else if mins < 1440 {
-        format!("{} 小时前", mins / 60)
-    } else {
-        format!("{} 天前", mins / 1440)
-    }
 }
 
 #[cfg(test)]
@@ -291,5 +272,72 @@ mod tests {
         assert_eq!(list[0].hero_name, "寒冰射手");
         assert_eq!(list[0].items, vec![3032, 3085]);
         assert_eq!(list[0].augments, vec!["易损"]);
+        // No KDA/result-derived score and no invented "recent" label.
+        assert_eq!(list[0].hex_score, None);
+        assert_eq!(list[0].duration, "17:00");
+        assert_eq!(list[0].time_ago, "");
+    }
+
+    /// SUMMARY games list all ten players; only the queried PUUID's row may be
+    /// used, and a game where that PUUID is absent must be dropped instead of
+    /// being attributed to `participants[0]`.
+    #[test]
+    fn sgp_history_scopes_to_target_puuid() {
+        let raw = serde_json::json!({
+            "games": [
+                {
+                    "metadata": { "match_id": "HN1_1" },
+                    "json": {
+                        "gameId": 1,
+                        "gameDuration": 1200,
+                        "queueId": 2400,
+                        "gameMode": "KIWI",
+                        "gameCreation": 1_700_000_000_000u64,
+                        "participants": [
+                            { "puuid": "enemy", "championId": 99, "win": false,
+                              "kills": 2, "deaths": 8, "assists": 3 },
+                            { "puuid": "me", "championId": 157, "win": true,
+                              "kills": 9, "deaths": 2, "assists": 11 }
+                        ]
+                    }
+                },
+                {
+                    "json": {
+                        "gameId": 2,
+                        "participants": [
+                            { "puuid": "someone-else", "championId": 22, "win": true }
+                        ]
+                    }
+                },
+                {
+                    // Missing outcome → skipped, not shown as a loss.
+                    "json": {
+                        "gameId": 3,
+                        "participants": [ { "puuid": "me", "championId": 22 } ]
+                    }
+                }
+            ]
+        });
+        let list = parse_sgp_match_history(&raw, "me", |id| format!("#{id}"), |_| None);
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0].game_id, "1");
+        assert_eq!(list[0].champion_id, 157);
+        assert_eq!(list[0].result, "WIN");
+        assert_eq!(list[0].kda, "9 / 2 / 11");
+        assert_eq!(list[0].game_mode, "KIWI");
+        assert!(!list[0].time_ago.is_empty());
+    }
+
+    #[test]
+    fn sgp_history_handles_empty_or_error_payloads() {
+        let champ = |c: u32| c.to_string();
+        let none = |_: u32| -> Option<String> { None };
+        for raw in [
+            serde_json::json!({}),
+            serde_json::json!({ "games": [] }),
+            serde_json::json!({ "httpStatus": 401, "message": "unauthorized" }),
+        ] {
+            assert!(parse_sgp_match_history(&raw, "me", champ, none).is_empty());
+        }
     }
 }
