@@ -365,6 +365,10 @@ pub struct LcuStatus {
     pub lockfile_path: Option<String>,
     #[serde(default)]
     pub locale: Option<String>,
+    /// Why a running client could not be connected to (`elevation_mismatch`,
+    /// `client_access_denied`, `credentials_unavailable`, `client_unreachable`).
+    #[serde(default)]
+    pub access_issue: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -457,6 +461,7 @@ impl Default for OverlayStatePayload {
                 summoner_name: None,
                 lockfile_path: None,
                 locale: None,
+                access_issue: None,
             },
             live_players: Vec::new(),
             ocr_status: None,

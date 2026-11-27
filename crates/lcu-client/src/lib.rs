@@ -3,9 +3,13 @@ pub mod sgp;
 pub mod websocket;
 
 pub use discovery::{
-    candidate_lockfile_paths, discover_lockfile, invalidate_discovery_cache,
-    is_league_client_running, parse_ux_cmdline,
+    candidate_lockfile_paths, client_access_issue, discover_lockfile, invalidate_discovery_cache,
+    is_league_client_running, parse_ux_cmdline, CLIENT_ACCESS_DENIED, CREDENTIALS_UNAVAILABLE,
+    ELEVATION_MISMATCH,
 };
+
+/// The client's port was discovered but did not answer (closed, restarting, or blocked).
+pub const CLIENT_UNREACHABLE: &str = "client_unreachable";
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -77,7 +81,12 @@ impl Default for LcuClient {
 
 impl LcuClient {
     pub fn new() -> Self {
+        // Loopback only (LCU + liveclientdata on 127.0.0.1). Never route it
+        // through HTTP(S)_PROXY or the Windows system proxy (Clash, accelerator
+        // tools): a proxy cannot reach the client's loopback port and turns
+        // every request into a refusal/timeout that looks like "not connected".
         let http = reqwest::Client::builder()
+            .no_proxy()
             .danger_accept_invalid_certs(true)
             .timeout(Duration::from_millis(2500))
             .build()
@@ -134,6 +143,7 @@ impl LcuClient {
                 summoner_name: None,
                 lockfile_path: None,
                 locale: None,
+                access_issue: client_access_issue().map(str::to_string),
             };
         };
 
@@ -152,6 +162,7 @@ impl LcuClient {
                 summoner_name: None,
                 lockfile_path: None,
                 locale: None,
+                access_issue: client_running.then(|| CLIENT_UNREACHABLE.to_string()),
             };
         };
 
@@ -181,6 +192,7 @@ impl LcuClient {
             summoner_name,
             lockfile_path: Some(creds.path.display().to_string()),
             locale,
+            access_issue: None,
         }
     }
 

@@ -174,7 +174,14 @@ jobs:
             Get-ChildItem "ocr-sidecar" -File | Copy-Item -Destination "$stage/ocr-sidecar"
           }
           if (Test-Path "ocr") {
-            Copy-Item "ocr" "$stage/ocr" -Recurse -Force
+            # Copy the contents: `Copy-Item ocr $stage/ocr -Recurse` nests to
+            # ocr/ocr/hexbox-ocr.exe when the destination already exists,
+            # but app-core resolves ocr/hexbox-ocr.exe.
+            New-Item -ItemType Directory -Force -Path "$stage/ocr" | Out-Null
+            Copy-Item "ocr/*" "$stage/ocr" -Recurse -Force
+            if (-not (Test-Path "$stage/ocr/hexbox-ocr.exe")) {
+              throw "portable bundle is missing ocr/hexbox-ocr.exe"
+            }
           }
           if (Test-Path "scripts") {
             Copy-Item "scripts" "$stage/scripts" -Recurse -Force

@@ -31,10 +31,17 @@ const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 #[derive(Debug, Clone)]
 struct CachedDiscovery {
     checked_at: Instant,
-    #[allow(dead_code)]
     ux_pid: Option<u32>,
     creds: Option<LockfileCredentials>,
+    /// Set when the client is running but no credentials were found.
+    issue: Option<&'static str>,
 }
+
+type Discovery = (
+    Option<u32>,
+    Option<LockfileCredentials>,
+    Option<&'static str>,
+);
 
 fn cache_slot() -> &'static Mutex<Option<CachedDiscovery>> {
     static CACHE: OnceLock<Mutex<Option<CachedDiscovery>>> = OnceLock::new();
@@ -77,7 +84,14 @@ pub fn candidate_lockfile_paths() -> Vec<PathBuf> {
 
     #[cfg(target_os = "windows")]
     {
-        for drive in ["C", "D", "E", "F", "G", "H"] {
+        // Every mounted fixed letter (WeGame installs land on any drive, e.g. R:).
+        // Only reached while LeagueClientUx is confirmed running; unmounted
+        // letters are skipped with one cheap root stat.
+        for letter in b'C'..=b'Z' {
+            let drive = letter as char;
+            if !PathBuf::from(format!("{drive}:\\")).exists() {
+                continue;
+            }
             paths.push(PathBuf::from(format!(
                 "{drive}:\\Riot Games\\League of Legends\\lockfile"
             )));
@@ -127,6 +141,53 @@ pub fn is_league_client_running() -> bool {
     scan_running_client().ux_pid.is_some()
 }
 
+/// Why a running client could not be connected to, when it is running but no
+/// usable credentials were found. Codes are stable strings for the UI:
+///
+/// - `elevation_mismatch`: the client's command line and image path are hidden
+///   from this process and this process is not elevated (Windows hides them
+///   from lower-privilege processes, e.g. WeGame started League as
+///   administrator but the assistant runs as a normal user), and no lockfile
+///   could be read.
+/// - `client_access_denied`: same, but this process is already elevated.
+/// - `credentials_unavailable`: the client process is visible, but neither its
+///   command line nor a lockfile yielded credentials (empty/unreadable lockfile).
+pub fn client_access_issue() -> Option<&'static str> {
+    let scan = scan_running_client();
+    if scan.ux_pid.is_some() && scan.creds.is_none() {
+        scan.issue
+    } else {
+        None
+    }
+}
+
+/// League runs elevated (WeGame default) while the assistant does not.
+pub const ELEVATION_MISMATCH: &str = "elevation_mismatch";
+/// The client's process details are hidden even though we are elevated.
+pub const CLIENT_ACCESS_DENIED: &str = "client_access_denied";
+/// The client is visible but exposed no credentials (empty lockfile, no token).
+pub const CREDENTIALS_UNAVAILABLE: &str = "credentials_unavailable";
+
+/// Pure classification, kept platform-independent so it is unit-tested everywhere.
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+fn classify_access_issue(process_hidden: bool, self_elevated: bool) -> &'static str {
+    match (process_hidden, self_elevated) {
+        (true, false) => ELEVATION_MISMATCH,
+        (true, true) => CLIENT_ACCESS_DENIED,
+        (false, _) => CREDENTIALS_UNAVAILABLE,
+    }
+}
+
+/// `whoami /groups /fo csv /nh` lists the token's mandatory label by SID, which
+/// is locale-independent: High (S-1-16-12288) or System (S-1-16-16384) means
+/// the token is elevated; a filtered UAC admin token carries Medium.
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+fn whoami_groups_report_elevated(csv_output: &str) -> bool {
+    csv_output
+        .lines()
+        .any(|line| line.contains("S-1-16-12288") || line.contains("S-1-16-16384"))
+}
+
 fn scan_running_client() -> CachedDiscovery {
     let now = Instant::now();
     if let Ok(guard) = cache_slot().lock() {
@@ -142,12 +203,13 @@ fn scan_running_client() -> CachedDiscovery {
         .ok()
         .and_then(|g| g.clone());
 
-    let (ux_pid, creds) = discover_from_running_process(prev_cached.as_ref());
+    let (ux_pid, creds, issue) = discover_from_running_process(prev_cached.as_ref());
 
     let discovered = CachedDiscovery {
         checked_at: Instant::now(),
         ux_pid,
         creds,
+        issue,
     };
     if let Ok(mut guard) = cache_slot().lock() {
         *guard = Some(discovered.clone());
@@ -304,19 +366,17 @@ fn parse_unix_ps_output(output: &str) -> Option<(u32, LockfileCredentials)> {
 }
 
 #[cfg(unix)]
-fn discover_from_running_process(
-    _prev: Option<&CachedDiscovery>,
-) -> (Option<u32>, Option<LockfileCredentials>) {
+fn discover_from_running_process(_prev: Option<&CachedDiscovery>) -> Discovery {
     let Ok(out) = Command::new("ps").args(["-ax", "-o", "pid=,command="]).output() else {
-        return (None, None);
+        return (None, None, None);
     };
     if !out.status.success() {
-        return (None, None);
+        return (None, None, None);
     }
     let stdout = String::from_utf8_lossy(&out.stdout);
     match parse_unix_ps_output(&stdout) {
-        Some((pid, creds)) => (Some(pid), Some(creds)),
-        None => (None, None),
+        Some((pid, creds)) => (Some(pid), Some(creds), None),
+        None => (None, None, None),
     }
 }
 
@@ -440,29 +500,41 @@ fn query_windows_ux_cmdline_and_exe() -> (Option<String>, Option<String>) {
 }
 
 #[cfg(target_os = "windows")]
-fn discover_from_running_process(
-    prev: Option<&CachedDiscovery>,
-) -> (Option<u32>, Option<LockfileCredentials>) {
+fn discover_from_running_process(prev: Option<&CachedDiscovery>) -> Discovery {
     // Fast native check (~15ms): if LeagueClientUx.exe is NOT running, stop immediately.
     let Some(ux_pid) = query_windows_ux_pid() else {
-        return (None, None);
+        return (None, None, None);
     };
 
-    // Same live UX process PID as before → reuse cached credentials with zero PowerShell spawns!
-    if let Some(cached) = prev {
-        if cached.ux_pid == Some(ux_pid) && cached.creds.is_some() {
-            return (Some(ux_pid), cached.creds.clone());
+    if let Some(cached) = prev.filter(|cached| cached.ux_pid == Some(ux_pid)) {
+        // Same live UX process PID as before → reuse cached credentials with zero PowerShell spawns!
+        if cached.creds.is_some() {
+            return (Some(ux_pid), cached.creds.clone(), None);
+        }
+        // Same process whose command line was hidden from us last time: asking
+        // again cannot succeed until the process or our privileges change, and
+        // a PowerShell spawn per poll is expensive. Only retry the cheap
+        // lockfile reads (the client may write it after login).
+        if matches!(
+            cached.issue,
+            Some(ELEVATION_MISMATCH | CLIENT_ACCESS_DENIED)
+        ) {
+            return match read_fallback_lockfile_while_running() {
+                Some(creds) => (Some(ux_pid), Some(creds), None),
+                None => (Some(ux_pid), None, cached.issue),
+            };
         }
     }
 
     let (cmdline, exe_path) = query_windows_ux_cmdline_and_exe();
+    let process_hidden = cmdline.is_none() && exe_path.is_none();
 
     if let Some(ref cmd) = cmdline {
         if let Some(creds) = parse_ux_cmdline(cmd, ux_pid) {
-            return (Some(ux_pid), Some(creds));
+            return (Some(ux_pid), Some(creds), None);
         }
         if let Some(creds) = read_lockfile_from_install_dir(cmd) {
-            return (Some(ux_pid), Some(creds));
+            return (Some(ux_pid), Some(creds), None);
         }
     }
 
@@ -472,26 +544,69 @@ fn discover_from_running_process(
             let lockfile = parent.join("lockfile");
             if let Ok(content) = fs::read_to_string(&lockfile) {
                 if let Ok(creds) = LockfileCredentials::parse(&content, lockfile) {
-                    return (Some(ux_pid), Some(creds));
+                    return (Some(ux_pid), Some(creds), None);
                 }
             }
         }
     }
 
     // Final safety net ONLY while LeagueClientUx.exe is confirmed alive (elevated WeGame UAC case)
-    (Some(ux_pid), read_fallback_lockfile_while_running())
+    if let Some(creds) = read_fallback_lockfile_while_running() {
+        return (Some(ux_pid), Some(creds), None);
+    }
+    (
+        Some(ux_pid),
+        None,
+        Some(classify_access_issue(
+            process_hidden,
+            current_process_elevated(),
+        )),
+    )
+}
+
+/// Cached: our own token elevation does not change while we run.
+#[cfg(target_os = "windows")]
+fn current_process_elevated() -> bool {
+    static ELEVATED: OnceLock<bool> = OnceLock::new();
+    *ELEVATED.get_or_init(|| {
+        win_command("whoami")
+            .args(["/groups", "/fo", "csv", "/nh"])
+            .output()
+            .ok()
+            .filter(|out| out.status.success())
+            .map(|out| whoami_groups_report_elevated(&String::from_utf8_lossy(&out.stdout)))
+            .unwrap_or(false)
+    })
 }
 
 #[cfg(not(any(unix, target_os = "windows")))]
-fn discover_from_running_process(
-    _prev: Option<&CachedDiscovery>,
-) -> (Option<u32>, Option<LockfileCredentials>) {
-    (None, None)
+fn discover_from_running_process(_prev: Option<&CachedDiscovery>) -> Discovery {
+    (None, None, None)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn classifies_hidden_client_by_own_elevation() {
+        assert_eq!(classify_access_issue(true, false), ELEVATION_MISMATCH);
+        assert_eq!(classify_access_issue(true, true), CLIENT_ACCESS_DENIED);
+        assert_eq!(classify_access_issue(false, false), CREDENTIALS_UNAVAILABLE);
+        assert_eq!(classify_access_issue(false, true), CREDENTIALS_UNAVAILABLE);
+    }
+
+    #[test]
+    fn whoami_integrity_label_detects_elevation() {
+        let medium = "\"Mandatory Label\\Medium Mandatory Level\",\"Label\",\"S-1-16-8192\",\"\"\n";
+        let high = "\"BUILTIN\\Administrators\",\"Alias\",\"S-1-5-32-544\",\"Enabled group\"\n\"Mandatory Label\\High Mandatory Level\",\"Label\",\"S-1-16-12288\",\"\"\n";
+        // Localized label names must not matter: only the SID is checked.
+        let high_zh = "\"Mandatory Label\\高强制级别\",\"标签\",\"S-1-16-12288\",\"\"\n";
+        assert!(!whoami_groups_report_elevated(medium));
+        assert!(whoami_groups_report_elevated(high));
+        assert!(whoami_groups_report_elevated(high_zh));
+        assert!(!whoami_groups_report_elevated(""));
+    }
 
     #[test]
     fn parses_quoted_windows_ux_cmdline_and_ignores_riotclient_port() {

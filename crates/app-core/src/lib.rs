@@ -85,6 +85,22 @@ fn normalize_summoner_name(name: &str) -> String {
         .to_lowercase()
 }
 
+/// Actionable copy for a running League client the assistant cannot authenticate to.
+fn lcu_access_issue_message(issue: Option<&str>) -> &'static str {
+    match issue {
+        Some(lcu_client::ELEVATION_MISMATCH) => {
+            "已检测到英雄联盟客户端，但客户端以管理员权限运行（WeGame 默认），助手以普通权限运行，系统不允许读取其连接信息。请以普通权限启动 WeGame/英雄联盟，或以管理员身份运行助手后刷新。"
+        }
+        Some(lcu_client::CLIENT_ACCESS_DENIED) => {
+            "已检测到英雄联盟客户端，但系统拒绝读取其进程信息，且未找到可用的 lockfile。请重启英雄联盟客户端后刷新。"
+        }
+        Some(lcu_client::CREDENTIALS_UNAVAILABLE) => {
+            "已检测到英雄联盟客户端，但客户端尚未提供连接信息（lockfile 为空）。请登录到大厅后刷新。"
+        }
+        _ => "已检测到英雄联盟客户端，但无法读取客户端连接信息。请登录后刷新，并确认客户端与助手以相同权限启动。",
+    }
+}
+
 fn now_epoch_secs() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -930,7 +946,7 @@ impl HexBoxCore {
                     None,
                     None,
                     Vec::new(),
-                    Some("已检测到英雄联盟客户端，但无法读取客户端连接信息。请登录后刷新，并确认客户端与助手以相同权限启动。".to_string()),
+                    Some(lcu_access_issue_message(lcu_client::client_access_issue()).to_string()),
                 );
             }
             return response("offline", None, None, Vec::new(), None);
