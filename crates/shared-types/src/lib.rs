@@ -47,6 +47,27 @@ pub struct AppSettings {
     /// select starts, so overlays can be drawn over the game.
     #[serde(default)]
     pub auto_fix_borderless: bool,
+    /// Settings schema version. Files saved before versioning deserialize as 0.
+    #[serde(default)]
+    pub settings_schema_version: u32,
+}
+
+/// Version 1: bench auto-grab became opt-in. Before it, `bench_autograb_enabled`
+/// was saved as `true` by default, so a stored `true` is not a real choice.
+pub const SETTINGS_SCHEMA_VERSION: u32 = 1;
+
+impl AppSettings {
+    /// One-time upgrade of settings saved before versioning: turns bench
+    /// auto-grab off (the user must opt in again) and keeps everything else.
+    /// Returns whether anything changed, so the caller can persist it.
+    pub fn migrate_legacy(&mut self) -> bool {
+        if self.settings_schema_version >= SETTINGS_SCHEMA_VERSION {
+            return false;
+        }
+        self.bench_autograb_enabled = false;
+        self.settings_schema_version = SETTINGS_SCHEMA_VERSION;
+        true
+    }
 }
 
 fn default_flash_slot() -> String {
@@ -96,6 +117,7 @@ impl Default for AppSettings {
             close_button_action: default_close_button_action(),
             auto_check_update: true,
             auto_fix_borderless: false,
+            settings_schema_version: SETTINGS_SCHEMA_VERSION,
         }
     }
 }

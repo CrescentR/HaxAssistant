@@ -579,6 +579,8 @@ export function evaluate5v5Lineup(
 }
 
 const SETTINGS_KEY = "hexbox:replica:settings:v1";
+/** Keep in sync with `SETTINGS_SCHEMA_VERSION` in crates/shared-types. */
+export const SETTINGS_SCHEMA_VERSION = 1;
 const MARKERS_KEY = "hexbox:replica:markers:v1";
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -609,13 +611,37 @@ export const DEFAULT_SETTINGS: AppSettings = {
   close_button_action: "ask",
   auto_check_update: true,
   auto_fix_borderless: false,
+  settings_schema_version: SETTINGS_SCHEMA_VERSION,
 };
+
+/**
+ * One-time upgrade of settings saved before versioning. Bench auto-grab used
+ * to be saved as `true` by default, so a stored `true` is not a real choice:
+ * turn it off (the user must opt in again) and keep everything else. Mirrors
+ * `AppSettings::migrate_legacy` in Rust.
+ */
+export function migrateLegacySettings(stored: Partial<AppSettings>): AppSettings {
+  const merged: AppSettings = { ...DEFAULT_SETTINGS, ...stored };
+  if ((stored.settings_schema_version ?? 0) < SETTINGS_SCHEMA_VERSION) {
+    merged.bench_autograb_enabled = false;
+    merged.settings_schema_version = SETTINGS_SCHEMA_VERSION;
+  }
+  return merged;
+}
 
 export function loadSettings(): AppSettings {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (!raw) return DEFAULT_SETTINGS;
-    return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+    const stored = JSON.parse(raw) as Partial<AppSettings>;
+    const migrated = migrateLegacySettings(stored);
+    if (stored.settings_schema_version !== migrated.settings_schema_version) {
+      // Persist so a later explicit opt-in is not reset again.
+      try {
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(migrated));
+      } catch {}
+    }
+    return migrated;
   } catch {
     return DEFAULT_SETTINGS;
   }

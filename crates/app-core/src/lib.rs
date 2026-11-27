@@ -262,7 +262,11 @@ impl HexBoxCore {
             .unwrap_or_default()
     }
 
-    pub fn update_settings(&self, next: AppSettings) -> Result<AppSettings> {
+    pub fn update_settings(&self, mut next: AppSettings) -> Result<AppSettings> {
+        // A write without the schema version comes from settings loaded before
+        // the migration (e.g. a stale frontend copy); its auto-grab `true` is
+        // the old default, not a choice, so it must not re-enable auto-grab.
+        next.migrate_legacy();
         if let Ok(mut guard) = self.settings.write() {
             *guard = next.clone();
         }
@@ -1415,17 +1419,39 @@ impl HexBoxCore {
         self.lcu.accept_ready_check(&creds).await
     }
 
+    /// Manual bench click: the player's own choice, so preferred auto-grab and
+    /// any armed grab target stand down for the rest of this champ select.
     pub async fn bench_swap(&self, champion_id: u32) -> Result<()> {
+        self.note_manual_bench_choice();
+        if let Ok(mut target) = self.pending_bench_grab.lock() {
+            *target = None;
+        }
         let creds = discover_lockfile().ok_or_else(|| anyhow!("LeagueClient lockfile not found"))?;
         self.lcu.bench_swap(&creds, champion_id).await
     }
 
+    /// Record that the player chose a bench champion themselves. Preferred
+    /// auto-grab stays off until champ select ends, so a background tick can
+    /// never swap them off the champion they picked.
+    fn note_manual_bench_choice(&self) {
+        if let Ok(mut c) = self.bench_autograb_cancelled.lock() {
+            *c = true;
+        }
+    }
+
+    fn bench_autograb_paused(&self) -> bool {
+        self.bench_autograb_cancelled
+            .lock()
+            .ok()
+            .map(|g| *g)
+            .unwrap_or(false)
+    }
+
     /// Arm a one-shot bench grab for `champion_id` (swaps immediately if already on bench).
+    /// An explicit grab wins over preferred auto-grab for this champ select.
     pub async fn grab_bench_champion(&self, champion_id: u32) -> BenchGrabStatus {
         let hero_name = self.champion_name_by_id(champion_id);
-        if let Ok(mut c) = self.bench_autograb_cancelled.lock() {
-            *c = false;
-        }
+        self.note_manual_bench_choice();
         if let Some(creds) = discover_lockfile() {
             if self.lcu.bench_swap(&creds, champion_id).await.is_ok() {
                 if let Ok(mut target) = self.pending_bench_grab.lock() {
@@ -1653,23 +1679,24 @@ impl HexBoxCore {
                             }
                         }
 
-                        // Priority 2: preferred bench auto-grab list (unless cancelled for this session)
-                        let cancelled = self
-                            .bench_autograb_cancelled
-                            .lock()
-                            .ok()
-                            .map(|g| *g)
-                            .unwrap_or(false);
+                        // Priority 2: preferred bench auto-grab list (unless
+                        // cancelled or the player chose manually this session).
+                        // Settings are re-read so a toggle-off made during this
+                        // tick's LCU requests is honoured.
                         if auto_grabbed_champion_id.is_none()
-                            && settings.bench_autograb_enabled
-                            && !cancelled
+                            && self.get_settings().bench_autograb_enabled
+                            && !self.bench_autograb_paused()
                         {
                             if let Some(preferred_id) = autograb_target(
                                 &cs.bench_champion_ids,
                                 cs.my_champion_id,
                                 &settings.bench_preferred_champion_ids,
                             ) {
-                                if self.lcu.bench_swap(&creds, preferred_id).await.is_ok() {
+                                // Last check right before the swap: a manual
+                                // click or cancel may have landed meanwhile.
+                                if !self.bench_autograb_paused()
+                                    && self.lcu.bench_swap(&creds, preferred_id).await.is_ok()
+                                {
                                     auto_grabbed_champion_id = Some(preferred_id);
                                 }
                             }
@@ -2160,7 +2187,12 @@ fn autograb_target(bench: &[u32], mine: Option<u32>, preferred: &[u32]) -> Optio
 fn load_settings_file(data_dir: &Path) -> AppSettings {
     let path = data_dir.join("user_settings.json");
     if let Ok(raw) = fs::read_to_string(&path) {
-        if let Ok(parsed) = serde_json::from_str::<AppSettings>(&raw) {
+        if let Ok(mut parsed) = serde_json::from_str::<AppSettings>(&raw) {
+            // Persist the one-time migration so a later explicit opt-in is
+            // not reset again on the next start.
+            if parsed.migrate_legacy() {
+                let _ = save_settings_file(data_dir, &parsed);
+            }
             return parsed;
         }
     }
@@ -2271,6 +2303,94 @@ mod tests {
         let s = AppSettings::default();
         assert!(!s.bench_autograb_enabled);
         assert!(!s.auto_apply_summoner_spells);
+    }
+
+    fn legacy_settings_json(autograb: bool) -> String {
+        // A settings file saved before versioning: no settings_schema_version.
+        let mut v = serde_json::to_value(AppSettings::default()).unwrap();
+        let obj = v.as_object_mut().unwrap();
+        obj.remove("settings_schema_version");
+        obj.insert("bench_autograb_enabled".into(), json!(autograb));
+        obj.insert("ready_check_auto_accept".into(), json!(false));
+        obj.insert("overlay_zoom".into(), json!(125));
+        obj.insert("bench_preferred_champion_ids".into(), json!([22, 4]));
+        serde_json::to_string(&v).unwrap()
+    }
+
+    #[test]
+    fn legacy_autograb_true_is_migrated_off_once_and_opt_in_survives_restart() {
+        let dir = std::env::temp_dir().join(format!(
+            "hexbox-settings-migration-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join("user_settings.json"), legacy_settings_json(true)).unwrap();
+
+        // Upgrade: the old default `true` is switched off, nothing else changes.
+        let migrated = load_settings_file(&dir);
+        assert!(!migrated.bench_autograb_enabled);
+        assert_eq!(migrated.settings_schema_version, shared_types::SETTINGS_SCHEMA_VERSION);
+        assert!(!migrated.ready_check_auto_accept);
+        assert_eq!(migrated.overlay_zoom, 125);
+        assert_eq!(migrated.bench_preferred_champion_ids, vec![22, 4]);
+
+        // The migration is persisted on disk.
+        let on_disk: Value =
+            serde_json::from_str(&fs::read_to_string(dir.join("user_settings.json")).unwrap())
+                .unwrap();
+        assert_eq!(on_disk["bench_autograb_enabled"], json!(false));
+        assert_eq!(
+            on_disk["settings_schema_version"],
+            json!(shared_types::SETTINGS_SCHEMA_VERSION)
+        );
+
+        // A new explicit opt-in is kept across a restart.
+        let mut opted_in = migrated.clone();
+        opted_in.bench_autograb_enabled = true;
+        save_settings_file(&dir, &opted_in).unwrap();
+        assert!(load_settings_file(&dir).bench_autograb_enabled);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn stale_unversioned_write_cannot_re_enable_autograb() {
+        // A frontend holding pre-migration settings sends the whole object back.
+        let mut stale: AppSettings = serde_json::from_str(&legacy_settings_json(true)).unwrap();
+        assert_eq!(stale.settings_schema_version, 0);
+        assert!(stale.migrate_legacy());
+        assert!(!stale.bench_autograb_enabled);
+        assert_eq!(stale.overlay_zoom, 125);
+
+        // A current-version opt-in is an explicit choice and is untouched.
+        let mut current = AppSettings::default();
+        current.bench_autograb_enabled = true;
+        assert!(!current.migrate_legacy());
+        assert!(current.bench_autograb_enabled);
+    }
+
+    #[tokio::test]
+    async fn manual_bench_choice_suppresses_autograb_for_this_champ_select() {
+        let root = workspace_root();
+        let core = HexBoxCore::initialize(&root).expect("initialize HexBoxCore");
+        assert!(!core.bench_autograb_paused());
+
+        // A manual bench click pauses auto-grab, even if the LCU call fails.
+        let _ = core.bench_swap(22).await;
+        assert!(core.bench_autograb_paused());
+
+        // An explicit grab no longer clears the pause, so a later background
+        // tick cannot override the player's choice.
+        core.cancel_bench_grab();
+        *core.bench_autograb_cancelled.lock().unwrap() = false;
+        let _ = core.grab_bench_champion(22).await;
+        assert!(core.bench_autograb_paused());
+
+        // Cancel also pauses and clears any armed target.
+        *core.bench_autograb_cancelled.lock().unwrap() = false;
+        core.cancel_bench_grab();
+        assert!(core.bench_autograb_paused());
+        assert!(core.pending_bench_grab.lock().unwrap().is_none());
     }
 
     #[test]

@@ -12,3 +12,6 @@ reco-engine = { path = "../reco-engine" }
 serde.workspace = true
 serde_json.workspace = true
 shared-types = { path = "../shared-types" }
+
+[dev-dependencies]
+tokio.workspace = true

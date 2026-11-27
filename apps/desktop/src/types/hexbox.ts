@@ -28,6 +28,8 @@ export interface AppSettings {
   auto_check_update: boolean;
   /** Switch League to borderless when champ select starts. */
   auto_fix_borderless: boolean;
+  /** Settings schema version; missing or 0 means saved before versioning. */
+  settings_schema_version: number;
 }
 
 export interface AppUpdateInfo {
