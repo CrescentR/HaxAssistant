@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { Award, History, RefreshCw, Trophy, Wifi, WifiOff } from "lucide-react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { AlertTriangle, Award, History, RefreshCw, Trophy, Wifi, WifiOff } from "lucide-react";
 import type { LoadedHexBoxDatabase } from "../api/dataService";
 import { isTauriRuntime, tauriGetMatchHistory, tauriGetPostgameReview } from "../api/tauriBridge";
 import type { MatchHistoryEntry, PostgameReview } from "../types/hexbox";
@@ -70,154 +70,214 @@ interface PersonalHistoryViewProps {
   onSelectHero: (heroName: string) => void;
 }
 
-const DEMO_MATCHES: MatchHistoryEntry[] = [
-  {
-    gameId: "demo-1",
-    championId: 22,
-    heroName: "寒冰射手",
-    result: "WIN",
-    kills: 14,
-    deaths: 5,
-    assists: 27,
-    kda: "14 / 5 / 27",
-    damage: 62400,
-    durationSecs: 1062,
-    duration: "17:42",
-    queueId: 450,
-    gameMode: "ARAM",
-    augments: ["易损", "亮出你的剑", "暴击飞弹", "最终形态"],
-    hexScore: 86.4,
-    gameCreation: 0,
-    timeAgo: "2 小时前",
-  },
-  {
-    gameId: "demo-2",
-    championId: 157,
-    heroName: "疾风剑豪",
-    result: "WIN",
-    kills: 18,
-    deaths: 8,
-    assists: 15,
-    kda: "18 / 8 / 15",
-    damage: 54900,
-    durationSecs: 1155,
-    duration: "19:15",
-    queueId: 450,
-    gameMode: "ARAM",
-    augments: ["回归基本功", "钢化你心", "杀戮时间到了"],
-    hexScore: 81.2,
-    gameCreation: 0,
-    timeAgo: "昨天 22:30",
-  },
-  {
-    gameId: "demo-3",
-    championId: 99,
-    heroName: "光辉女郎",
-    result: "LOSS",
-    kills: 9,
-    deaths: 9,
-    assists: 21,
-    kda: "9 / 9 / 21",
-    damage: 41200,
-    durationSecs: 1268,
-    duration: "21:08",
-    queueId: 450,
-    gameMode: "ARAM",
-    augments: ["尤里卡", "神射法师", "冰寒"],
-    hexScore: 63.5,
-    gameCreation: 0,
-    timeAgo: "昨天 21:45",
-  },
-  {
-    gameId: "demo-4",
-    championId: 111,
-    heroName: "深海泰坦",
-    result: "WIN",
-    kills: 5,
-    deaths: 7,
-    assists: 34,
-    kda: "5 / 7 / 34",
-    damage: 24800,
-    durationSecs: 980,
-    duration: "16:20",
-    queueId: 450,
-    gameMode: "ARAM",
-    augments: ["坦克引擎", "不动如山", "歌利亚巨人"],
-    hexScore: 78.8,
-    gameCreation: 0,
-    timeAgo: "2 天前",
-  },
-];
+/**
+ * - `unsupported`: browser preview, no desktop host to read the client from.
+ * - `offline`: desktop host found no running League client.
+ * - `error`: the client (or the host call) failed.
+ * - `ready`: a real SGP/LCU answer, possibly with zero matches.
+ */
+type LoadStatus = "loading" | "unsupported" | "offline" | "error" | "ready";
+
+const SOURCE_LABELS: Record<string, string> = {
+  sgp: "SGP 战绩服务",
+  lcu: "LCU 客户端",
+};
+
+/** Reviews are keyed by player + game so a summoner switch never reuses one. */
+const reviewKey = (puuid: string | null, gameId: string) => `${puuid ?? ""}:${gameId}`;
+
+type ReviewState =
+  | { kind: "loading" }
+  | { kind: "ready"; review: PostgameReview }
+  | { kind: "error"; message: string };
 
 export const PersonalHistoryView: React.FC<PersonalHistoryViewProps> = ({
   db,
   onSelectHero,
 }) => {
-  const [matches, setMatches] = useState<MatchHistoryEntry[]>(DEMO_MATCHES);
-  const [source, setSource] = useState<"lcu" | "offline">("offline");
+  const [status, setStatus] = useState<LoadStatus>(() =>
+    isTauriRuntime() ? "loading" : "unsupported"
+  );
+  const [matches, setMatches] = useState<MatchHistoryEntry[]>([]);
+  const [source, setSource] = useState<string | null>(null);
   const [summonerName, setSummonerName] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [puuid, setPuuid] = useState<string | null>(null);
+  const [errorText, setErrorText] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Only the latest request may write state; older in-flight responses are dropped.
+  const requestSeq = useRef(0);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  const [openReviewKey, setOpenReviewKey] = useState<string | null>(null);
+  const [reviews, setReviews] = useState<Record<string, ReviewState>>({});
+  const puuidRef = useRef<string | null>(null);
+
+  const clearMatches = useCallback((next: "offline" | "error") => {
+    puuidRef.current = null;
+    setStatus(next);
+    setSource(null);
+    setMatches([]);
+    setPuuid(null);
+    setReviews({});
+    setOpenReviewKey(null);
+  }, []);
 
   const loadMatches = useCallback(async () => {
     if (!isTauriRuntime()) {
-      setSource("offline");
-      setMatches(DEMO_MATCHES);
+      setStatus("unsupported");
       return;
     }
-    setLoading(true);
+    const seq = ++requestSeq.current;
+    const isCurrent = () => mounted.current && seq === requestSeq.current;
+    setRefreshing(true);
     try {
       const resp = await tauriGetMatchHistory(20);
-      if (resp && resp.source === "lcu" && resp.matches.length > 0) {
-        setSource("lcu");
-        setSummonerName(resp.summonerName);
+      if (!isCurrent()) return;
+      if (!resp) {
+        setStatus("unsupported");
+        return;
+      }
+      const nextPuuid = resp.puuid ?? null;
+      setSummonerName(resp.summonerName);
+      setErrorText(resp.error ?? null);
+      if (resp.source === "sgp" || resp.source === "lcu") {
+        if (puuidRef.current !== nextPuuid) {
+          // Different summoner: drop reviews computed for the previous one.
+          setReviews({});
+          setOpenReviewKey(null);
+        } else {
+          // Close a review whose match is no longer in the list.
+          setOpenReviewKey((open) =>
+            open && resp.matches.some((m) => reviewKey(nextPuuid, m.gameId) === open)
+              ? open
+              : null
+          );
+        }
+        puuidRef.current = nextPuuid;
+        setPuuid(nextPuuid);
+        setStatus("ready");
+        setSource(resp.source);
         setMatches(resp.matches);
       } else {
-        setSource("offline");
-        setSummonerName(resp?.summonerName ?? null);
-        setMatches(DEMO_MATCHES);
+        // Never keep showing a previous summoner's matches as if current.
+        clearMatches(resp.source === "offline" ? "offline" : "error");
       }
-    } catch {
-      setSource("offline");
-      setMatches(DEMO_MATCHES);
+    } catch (err) {
+      if (!isCurrent()) return;
+      setErrorText(String(err));
+      clearMatches("error");
     } finally {
-      setLoading(false);
+      if (isCurrent()) setRefreshing(false);
     }
-  }, []);
+  }, [clearMatches]);
 
   useEffect(() => {
     void loadMatches();
   }, [loadMatches]);
 
-  // Post-game reviews are computed by the desktop host, one match at a time.
-  const [openReviewId, setOpenReviewId] = useState<string | null>(null);
-  const [reviews, setReviews] = useState<Record<string, PostgameReview>>({});
-  const [reviewError, setReviewError] = useState<string | null>(null);
+  const reviewsRef = useRef(reviews);
+  reviewsRef.current = reviews;
+
   const toggleReview = useCallback(
     async (m: MatchHistoryEntry) => {
-      setReviewError(null);
-      if (openReviewId === m.gameId) {
-        setOpenReviewId(null);
+      const key = reviewKey(puuid, m.gameId);
+      if (openReviewKey === key) {
+        setOpenReviewKey(null);
         return;
       }
-      setOpenReviewId(m.gameId);
-      if (reviews[m.gameId]) return;
+      setOpenReviewKey(key);
+      const existing = reviewsRef.current[key];
+      if (existing && existing.kind !== "error") return;
+
+      setReviews((prev) => ({ ...prev, [key]: { kind: "loading" } }));
+      let next: ReviewState;
       try {
         const review = await tauriGetPostgameReview(m);
-        if (review) {
-          setReviews((prev) => ({ ...prev, [m.gameId]: review }));
-        } else {
-          setReviewError("复盘需要在桌面端运行");
-        }
+        next = review
+          ? { kind: "ready", review }
+          : { kind: "error", message: "复盘需要在桌面端运行" };
       } catch (err) {
-        setReviewError(`复盘失败：${String(err)}`);
+        next = { kind: "error", message: `复盘失败：${String(err)}` };
       }
+      if (!mounted.current) return;
+      // Results land under their own key, so a late answer can never be shown
+      // under a different match; a reset (summoner switch) discards it.
+      setReviews((prev) => (prev[key]?.kind === "loading" ? { ...prev, [key]: next } : prev));
     },
-    [openReviewId, reviews]
+    [openReviewKey, puuid]
   );
 
   const wins = matches.filter((m) => m.result === "WIN").length;
-  const avgHex =
-    matches.reduce((sum, m) => sum + m.hexScore, 0) / Math.max(1, matches.length);
+  const rated = matches.filter((m): m is MatchHistoryEntry & { hexScore: number } =>
+    typeof m.hexScore === "number"
+  );
+  const avgHex = rated.length
+    ? rated.reduce((sum, m) => sum + m.hexScore, 0) / rated.length
+    : null;
+
+  const sourceLabel = source ? SOURCE_LABELS[source] ?? source.toUpperCase() : null;
+  const statusLine = (() => {
+    switch (status) {
+      case "loading":
+        return (
+          <>
+            <RefreshCw size={12} style={{ verticalAlign: "middle", marginRight: 4 }} />
+            正在读取英雄联盟客户端战绩...
+          </>
+        );
+      case "ready":
+        return (
+          <>
+            <Wifi size={12} style={{ verticalAlign: "middle", marginRight: 4 }} />
+            来源：{sourceLabel}
+            {summonerName ? ` · ${summonerName}` : ""}（共 {matches.length} 局）
+          </>
+        );
+      case "offline":
+        return (
+          <>
+            <WifiOff size={12} style={{ verticalAlign: "middle", marginRight: 4 }} />
+            未检测到运行中的英雄联盟客户端，启动并登录后点击刷新
+          </>
+        );
+      case "unsupported":
+        return (
+          <>
+            <WifiOff size={12} style={{ verticalAlign: "middle", marginRight: 4 }} />
+            浏览器预览无法读取客户端战绩，请在桌面端中打开
+          </>
+        );
+      case "error":
+        return (
+          <>
+            <AlertTriangle size={12} style={{ verticalAlign: "middle", marginRight: 4 }} />
+            战绩读取失败{summonerName ? `（${summonerName}）` : ""}
+          </>
+        );
+    }
+  })();
+
+  const emptyMessage = (() => {
+    switch (status) {
+      case "loading":
+        return "正在加载战绩...";
+      case "ready":
+        return "该账号暂无可显示的对局记录";
+      case "offline":
+        return errorText ?? "英雄联盟客户端未运行，暂无战绩";
+      case "unsupported":
+        return "个人战绩仅在桌面端可用";
+      case "error":
+        return errorText ?? "战绩读取失败，请稍后重试";
+    }
+  })();
 
   return (
     <div className="workspace-container">
@@ -227,101 +287,115 @@ export const PersonalHistoryView: React.FC<PersonalHistoryViewProps> = ({
             <h3>
               <History size={18} className="gold-text" /> 个人海克斯大乱斗战绩与复盘
             </h3>
-            <div className="card-sub">
-              {source === "lcu" ? (
-                <>
-                  <Wifi size={12} style={{ verticalAlign: "middle", marginRight: 4 }} />
-                  LCU 实时战绩同步{summonerName ? ` · ${summonerName}` : ""}（共 {matches.length} 局）
-                </>
-              ) : (
-                <>
-                  <WifiOff size={12} style={{ verticalAlign: "middle", marginRight: 4 }} />
-                  未检测到运行中的英雄联盟客户端，当前展示本地离线预览数据
-                </>
-              )}
-            </div>
+            <div className="card-sub">{statusLine}</div>
           </div>
           <div className="lineup-metrics">
-            <span className="metric-pill highlight">
-              <Trophy size={13} /> 近期胜率：{Math.round((wins / Math.max(1, matches.length)) * 100)}% ({wins}胜{" "}
-              {matches.length - wins}负)
-            </span>
-            <span className="metric-pill">
-              <Award size={13} /> 平均选卡 HexScore：{avgHex.toFixed(1)}
-            </span>
-            <button
-              className="hex-btn ghost sm"
-              onClick={() => void loadMatches()}
-              disabled={loading}
-            >
-              <RefreshCw size={13} /> {loading ? "同步中..." : "刷新战绩"}
-            </button>
+            {status === "ready" && matches.length > 0 && (
+              <>
+                <span className="metric-pill highlight">
+                  <Trophy size={13} /> 近期胜率：{Math.round((wins / matches.length) * 100)}% ({wins}胜{" "}
+                  {matches.length - wins}负)
+                </span>
+                <span className="metric-pill">
+                  <Award size={13} /> 平均选卡 HexScore：
+                  {avgHex != null ? `${avgHex.toFixed(1)}（${rated.length} 局有评分）` : "暂无评分"}
+                </span>
+              </>
+            )}
+            {status !== "unsupported" && (
+              <button
+                className="hex-btn ghost sm"
+                onClick={() => void loadMatches()}
+                disabled={refreshing}
+              >
+                <RefreshCw size={13} /> {refreshing ? "同步中..." : "刷新战绩"}
+              </button>
+            )}
           </div>
         </div>
       </div>
 
       <div className="panel-card">
-        <div className="history-list">
-          {matches.map((m) => {
-            const ch = db.champions.find(
-              (c) => c.hero === m.heroName || c.id === String(m.championId)
-            );
-            const tier = getTierMeta(m.hexScore);
-            return (
-              <div key={m.gameId} className={`history-row ${m.result === "WIN" ? "win" : "loss"}`}>
-                <img
-                  src={getChampionIconUrl(ch?.id || String(m.championId || 22))}
-                  alt={m.heroName}
-                  className="hero-avatar-md"
-                  onError={(e) => ((e.target as HTMLImageElement).src = "/app-logo.png")}
-                />
-                <div className="history-main">
-                  <div className="history-title-row">
-                    <strong>{m.heroName}</strong>
-                    <span className={`tag-badge ${m.result === "WIN" ? "success" : "warn"}`}>
-                      {m.result === "WIN" ? "胜利" : "失败"} · {m.duration}
-                    </span>
-                    <span className="history-kda">{m.kda}</span>
-                    <span className="card-sub">
-                      {m.gameMode} · 输出 {m.damage.toLocaleString()} · {m.timeAgo}
-                    </span>
+        {matches.length === 0 ? (
+          <div className="card-sub" role="status">
+            {emptyMessage}
+          </div>
+        ) : (
+          <div className="history-list">
+            {matches.map((m) => {
+              const key = reviewKey(puuid, m.gameId);
+              const ch = db.champions.find(
+                (c) => c.id === String(m.championId) || c.hero === m.heroName
+              );
+              const tier = m.hexScore != null ? getTierMeta(m.hexScore) : null;
+              const review = reviews[key];
+              const meta = [
+                m.gameMode,
+                `输出 ${m.damage.toLocaleString()}`,
+                m.timeAgo,
+              ].filter(Boolean);
+              return (
+                <div key={key} className={`history-row ${m.result === "WIN" ? "win" : "loss"}`}>
+                  <img
+                    src={getChampionIconUrl(ch?.id || String(m.championId))}
+                    alt={m.heroName}
+                    className="hero-avatar-md"
+                    onError={(e) => ((e.target as HTMLImageElement).src = "/app-logo.png")}
+                  />
+                  <div className="history-main">
+                    <div className="history-title-row">
+                      <strong>{m.heroName}</strong>
+                      <span className={`tag-badge ${m.result === "WIN" ? "success" : "warn"}`}>
+                        {m.result === "WIN" ? "胜利" : "失败"} · {m.duration}
+                      </span>
+                      <span className="history-kda">{m.kda}</span>
+                      <span className="card-sub">{meta.join(" · ")}</span>
+                    </div>
+                    <div className="history-augs">
+                      {m.augments.length > 0 ? (
+                        m.augments.map((a, i) => (
+                          <span key={`${a}-${i}`} className="confirmed-aug-chip">
+                            {a}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="card-sub">无强化记录</span>
+                      )}
+                    </div>
                   </div>
-                  <div className="history-augs">
-                    {m.augments.length > 0 ? (
-                      m.augments.map((a) => (
-                        <span key={a} className="confirmed-aug-chip">
-                          {a}
-                        </span>
-                      ))
+                  <div className="history-right">
+                    {tier && m.hexScore != null ? (
+                      <span className="tier-pill" style={{ background: tier.bg, color: tier.color }}>
+                        {tier.label} {m.hexScore.toFixed(1)}
+                      </span>
                     ) : (
-                      <span className="card-sub">常规大乱斗 / 无强化记录</span>
+                      <span className="card-sub" title="本局强化不在数据集中，无法评分">
+                        无评分
+                      </span>
                     )}
+                    <button className="hex-btn ghost sm" onClick={() => void toggleReview(m)}>
+                      {openReviewKey === key ? "收起复盘" : "复盘"}
+                    </button>
+                    <button
+                      className="hex-btn ghost sm"
+                      onClick={() => onSelectHero(ch?.hero || m.heroName)}
+                    >
+                      查看英雄库 →
+                    </button>
                   </div>
+                  {openReviewKey === key &&
+                    (review?.kind === "ready" ? (
+                      <PostgameReviewPanel review={review.review} />
+                    ) : (
+                      <div className="postgame-review">
+                        {review?.kind === "error" ? review.message : "正在生成复盘..."}
+                      </div>
+                    ))}
                 </div>
-                <div className="history-right">
-                  <span className="tier-pill" style={{ background: tier.bg, color: tier.color }}>
-                    {tier.label} {m.hexScore.toFixed(1)}
-                  </span>
-                  <button className="hex-btn ghost sm" onClick={() => void toggleReview(m)}>
-                    {openReviewId === m.gameId ? "收起复盘" : "复盘"}
-                  </button>
-                  <button
-                    className="hex-btn ghost sm"
-                    onClick={() => onSelectHero(ch?.hero || m.heroName)}
-                  >
-                    查看英雄库 →
-                  </button>
-                </div>
-                {openReviewId === m.gameId &&
-                  (reviews[m.gameId] ? (
-                    <PostgameReviewPanel review={reviews[m.gameId]} />
-                  ) : (
-                    <div className="postgame-review">{reviewError || "正在生成复盘..."}</div>
-                  ))}
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
