@@ -57,10 +57,6 @@ async function fetchBundledJson<T>(fileName: string): Promise<T | undefined> {
   }
 }
 
-async function fetchJsonSafe<T>(fileName: string, fallback: T): Promise<T> {
-  return (await readSyncedJson<T>(fileName)) ?? (await fetchBundledJson<T>(fileName)) ?? fallback;
-}
-
 /**
  * `augments.json` only carries name/rarity/tier. Fill the remaining catalog
  * fields with neutral values so views built for `augments_full.json` keep working.
@@ -93,8 +89,9 @@ function normalizeAugment(raw: Partial<AugmentCatalogEntry>, index: number): Aug
  * Same order as the Rust loader: `augments_full.json`, then `augments.json`,
  * trying the synced data directory before the bundled copy.
  */
-async function loadAugments(): Promise<AugmentCatalogEntry[]> {
-  for (const read of [readSyncedJson, fetchBundledJson]) {
+async function loadAugments(hasSyncedManifest: boolean): Promise<AugmentCatalogEntry[]> {
+  const readers = hasSyncedManifest ? [readSyncedJson] : [readSyncedJson, fetchBundledJson];
+  for (const read of readers) {
     for (const fileName of ["augments_full.json", "augments.json"]) {
       const rows = await read<Partial<AugmentCatalogEntry>[]>(fileName);
       if (Array.isArray(rows) && rows.length > 0) return rows.map(normalizeAugment);
@@ -124,6 +121,17 @@ export function loadDatabase(forceReload = false): Promise<LoadedHexBoxDatabase>
 }
 
 async function readDatabase(): Promise<LoadedHexBoxDatabase> {
+  type Manifest = { version?: string; report_date?: string };
+  const syncedManifest = await readSyncedJson<Manifest>("manifest.json");
+  const hasSyncedManifest = syncedManifest != null;
+  // A desktop snapshot can intentionally retire optional files. Keep those
+  // absent so older bundled stats cannot reappear after a successful update.
+  async function fetchJsonSafe<T>(fileName: string, fallback: T): Promise<T> {
+    const data = await readSyncedJson<T>(fileName);
+    if (data != null || hasSyncedManifest) return data ?? fallback;
+    return (await fetchBundledJson<T>(fileName)) ?? fallback;
+  }
+
   const [
     manifest,
     runtimeMeta,
@@ -143,10 +151,10 @@ async function readDatabase(): Promise<LoadedHexBoxDatabase> {
     itemPricesDoc,
     presets,
   ] = await Promise.all([
-    fetchJsonSafe<{ version?: string; report_date?: string } | null>("manifest.json", null),
+    syncedManifest ?? fetchBundledJson<Manifest>("manifest.json"),
     fetchJsonSafe<any>("runtime_meta.json", { version: "16.23", report_date: "2026-11-22" }),
     fetchJsonSafe<ChampionSummary[]>("champions.json", []),
-    loadAugments(),
+    loadAugments(hasSyncedManifest),
     fetchJsonSafe<Record<string, HeroAugmentStatRow[]>>("hero_augment_stats.json", {}),
     fetchJsonSafe<Record<string, HeroItemBuildPack>>("hero_item_builds.json", {}),
     fetchJsonSafe<Record<string, any[]>>("hero_augment_trios.json", {}),
