@@ -679,13 +679,36 @@ pub fn parse_champ_select_session(session: &Value) -> ChampSelectSnapshot {
     }
 }
 
+fn riot_identity(player: &Value) -> String {
+    let read = |key: &str| player.get(key).and_then(Value::as_str).filter(|value| !value.is_empty());
+    if let Some(id) = read("riotId") {
+        return id.to_string();
+    }
+    if let (Some(name), Some(tag)) = (read("riotIdGameName"), read("riotIdTagLine")) {
+        return format!("{name}#{tag}");
+    }
+    read("summonerName").or_else(|| read("riotIdGameName")).unwrap_or_default().to_string()
+}
+
+fn find_active_player(active: &str, players: &[String]) -> Option<usize> {
+    if active.is_empty() {
+        return None;
+    }
+    let mut exact = players.iter().enumerate().filter(|(_, name)| name.eq_ignore_ascii_case(active));
+    if let Some((index, _)) = exact.next() {
+        return exact.next().is_none().then_some(index);
+    }
+    let (active_name, active_tag) = active.split_once('#').unwrap_or((active, ""));
+    let mut fallback = players.iter().enumerate().filter(|(_, id)| {
+        let (name, tag) = id.split_once('#').unwrap_or((id, ""));
+        (active_tag.is_empty() || tag.is_empty()) && name.eq_ignore_ascii_case(active_name)
+    });
+    let (index, _) = fallback.next()?;
+    fallback.next().is_none().then_some(index)
+}
+
 pub fn parse_live_game_data(data: &Value) -> LiveGameSnapshot {
-    let active_name = data
-        .get("activePlayer")
-        .and_then(|ap| ap.get("summonerName").or_else(|| ap.get("riotIdGameName")))
-        .and_then(|v| v.as_str())
-        .unwrap_or("")
-        .to_string();
+    let active_name = data.get("activePlayer").map(riot_identity).unwrap_or_default();
 
     let current_gold = data
         .get("activePlayer")
@@ -700,19 +723,16 @@ pub fn parse_live_game_data(data: &Value) -> LiveGameSnapshot {
         .unwrap_or(0.0);
 
     let mut active_champion = None;
-    let mut active_team = "ORDER".to_string();
+    let mut active_team = String::new();
     let mut is_dead = false;
     let mut owned_item_ids: Vec<u32> = Vec::new();
     let mut players = Vec::new();
 
     if let Some(all_players) = data.get("allPlayers").and_then(|v| v.as_array()) {
-        for p in all_players {
-            let summoner = p
-                .get("summonerName")
-                .or_else(|| p.get("riotIdGameName"))
-                .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .to_string();
+        let identities: Vec<_> = all_players.iter().map(riot_identity).collect();
+        let active_index = find_active_player(&active_name, &identities);
+        for (index, p) in all_players.iter().enumerate() {
+            let summoner = identities[index].clone();
             let champion = p
                 .get("championName")
                 .and_then(|v| v.as_str())
@@ -721,7 +741,7 @@ pub fn parse_live_game_data(data: &Value) -> LiveGameSnapshot {
             let team = p
                 .get("team")
                 .and_then(|v| v.as_str())
-                .unwrap_or("ORDER")
+                .unwrap_or("")
                 .to_string();
             let dead = p.get("isDead").and_then(|v| v.as_bool()).unwrap_or(false);
             let scores = p.get("scores");
@@ -738,8 +758,8 @@ pub fn parse_live_game_data(data: &Value) -> LiveGameSnapshot {
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0) as u32;
 
-            if !active_name.is_empty() && summoner == active_name {
-                active_champion = Some(champion.clone());
+            if active_index == Some(index) {
+                active_champion = (!champion.trim().is_empty()).then(|| champion.clone());
                 active_team = team.clone();
                 is_dead = dead;
                 owned_item_ids = p
@@ -769,16 +789,21 @@ pub fn parse_live_game_data(data: &Value) -> LiveGameSnapshot {
 
     let mut allies = Vec::new();
     let mut enemies = Vec::new();
-    for p in &players {
-        if p.team == active_team {
-            allies.push(p.champion_name.clone());
-        } else {
-            enemies.push(p.champion_name.clone());
+    if !active_team.is_empty() {
+        for p in &players {
+            if p.champion_name.is_empty() || p.team.is_empty() {
+                continue;
+            }
+            if p.team == active_team {
+                allies.push(p.champion_name.clone());
+            } else {
+                enemies.push(p.champion_name.clone());
+            }
         }
     }
 
     LiveGameSnapshot {
-        in_game: !players.is_empty(),
+        in_game: data.get("gameData").is_some_and(Value::is_object) && !players.is_empty(),
         active_champion,
         current_gold,
         is_dead,
@@ -983,6 +1008,28 @@ mod tests {
         assert_eq!(snap.enemy_champion_ids, vec![157]);
         assert_eq!(snap.bench_champion_ids, vec![4, 114]);
         assert_eq!(snap.timer_phase, "FINALIZATION");
+    }
+
+    #[test]
+    fn live_game_rejects_ambiguous_riot_names_and_uses_exact_tag() {
+        let mut data = serde_json::json!({
+            "activePlayer": { "riotIdGameName": "SameName", "riotIdTagLine": "CN2" },
+            "gameData": { "gameTime": 5.0 },
+            "allPlayers": [
+                { "riotId": "SameName#CN1", "championName": "杰斯", "team": "CHAOS" },
+                { "riotId": "SameName#CN2", "championName": "寒冰射手", "team": "ORDER" }
+            ]
+        });
+        let exact = parse_live_game_data(&data);
+        assert!(exact.in_game);
+        assert_eq!(exact.active_champion.as_deref(), Some("寒冰射手"));
+        assert_eq!(exact.allies, ["寒冰射手"]);
+
+        data["activePlayer"] = serde_json::json!({ "summonerName": "SameName" });
+        let ambiguous = parse_live_game_data(&data);
+        assert!(ambiguous.in_game);
+        assert!(ambiguous.active_champion.is_none());
+        assert!(ambiguous.allies.is_empty());
     }
 
     #[test]

@@ -7,7 +7,7 @@ import {
   type LoadedHexBoxDatabase,
 } from "../api/dataService";
 import { getChampionIconUrl, getItemIconUrl, getTierMeta } from "../utils/hexScore";
-import { tauriGetItemPlan } from "../api/tauriBridge";
+import { tauriConfirmOcrAugment, tauriGetItemPlan } from "../api/tauriBridge";
 import type { ItemPlan, OverlayStatePayload } from "../types/hexbox";
 
 export type OverlayKind =
@@ -27,32 +27,18 @@ interface OverlayAppProps {
 export const OverlayApp: React.FC<OverlayAppProps> = ({
   kind,
   db,
-  heroName = "寒冰射手",
+  heroName = "",
   liveState,
 }) => {
-  const effectiveHero = liveState?.heroName || heroName;
-  const effectiveStage = liveState?.stage || 2;
-  const candidateAugments =
-    liveState && liveState.candidateAugments.length > 0
-      ? liveState.candidateAugments
-      : ["亮出你的剑", "暴击飞弹", "最终形态"];
-  const confirmedAugments =
-    liveState && liveState.confirmedAugments.length > 0
-      ? liveState.confirmedAugments
-      : ["易损"];
-  const allyTeam =
-    liveState && liveState.allyTeam.length > 0
-      ? liveState.allyTeam
-      : ["寒冰射手", "光辉女郎", "探险家", "皮城女警", "深海泰坦"];
-  const enemyTeam =
-    liveState && liveState.enemyTeam.length > 0
-      ? liveState.enemyTeam
-      : ["疾风剑豪", "暗裔剑魔", "祖安狂人", "众星之子", "影流之主"];
-  const benchPool =
-    liveState && liveState.benchPool.length > 0
-      ? liveState.benchPool
-      : ["曙光女神", "卡牌大师", "无双剑姬", "虚空女皇"];
-  const currentGold = liveState?.currentGold ?? 2850;
+  const effectiveHero = liveState ? liveState.heroName : heroName;
+  const effectiveStage = liveState?.stage ?? 1;
+  const candidateAugments = liveState?.candidateAugments ?? [];
+  const confirmedAugments = liveState?.confirmedAugments ?? [];
+  const allyTeam = liveState?.allyTeam ?? [];
+  const enemyTeam = liveState?.enemyTeam ?? [];
+  const benchPool = liveState?.benchPool ?? [];
+  const currentGold = liveState?.currentGold ?? 0;
+  const [selectionError, setSelectionError] = useState("");
 
   const augmentCards = useMemo(
     () =>
@@ -96,6 +82,10 @@ export const OverlayApp: React.FC<OverlayAppProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wantsPlan, db, effectiveHero, goldKey, ownedKey, enemyKey]);
 
+  if (kind === "augment" && (!liveState?.liveGameReady || candidateAugments.length !== 3)) {
+    return <div className="overlay-card">等待游戏中的海克斯三选一界面</div>;
+  }
+
   if (kind === "augment") {
     return (
       <div className="overlay-card overlay-augment">
@@ -129,9 +119,20 @@ export const OverlayApp: React.FC<OverlayAppProps> = ({
               </div>
               {c.synergy_note && <div className="overlay-note ok">{c.synergy_note}</div>}
               {c.conflict_note && <div className="overlay-note warn">{c.conflict_note}</div>}
+              <button
+                type="button"
+                className="hex-btn ghost sm"
+                onClick={() => {
+                  setSelectionError("");
+                  tauriConfirmOcrAugment(c.augment_name).catch((err) => setSelectionError(String(err)));
+                }}
+              >
+                标记已选
+              </button>
             </div>
           ))}
         </div>
+        {selectionError && <div role="alert" className="overlay-note warn">{selectionError}</div>}
       </div>
     );
   }

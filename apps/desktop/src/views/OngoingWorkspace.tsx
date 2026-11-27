@@ -36,9 +36,9 @@ import {
   tauriGrabBenchChampion,
   tauriRefreshGamePlayerIntel,
   tauriRunOcrPreset,
+  tauriSetAugmentStage,
   tauriSetManualAugmentOverride,
   tauriSetManualAugmentSelection,
-  tauriSetOverlayState,
   tauriSyncItemSetToClient,
 } from "../api/tauriBridge";
 import type {
@@ -63,10 +63,6 @@ interface Props {
   onOpenOverlayPreview: (overlayKind: string) => void;
 }
 
-function sameStringList(a: string[], b: string[]): boolean {
-  return a.length === b.length && a.every((item, idx) => item === b[idx]);
-}
-
 function formatOcrStatus(status: string, ocrMs?: number | null): string {
   const trimmed = status.trim();
   if (typeof ocrMs !== "number" || !Number.isFinite(ocrMs) || ocrMs <= 0) {
@@ -84,36 +80,15 @@ export const OngoingWorkspace: React.FC<Props> = ({
   onOpenHeroRecommend,
   onOpenOverlayPreview,
 }) => {
-  const [phase, setPhase] = useState<"ChampSelect" | "InProgress" | "PostgameReview">("InProgress");
-  const [selectedHero, setSelectedHero] = useState<string>("寒冰射手");
-  const [stage, setStage] = useState<number>(2);
-  const [confirmedAugments, setConfirmedAugments] = useState<string[]>(["易损"]);
-  const [candidateOffer, setCandidateOffer] = useState<string[]>([
-    "亮出你的剑",
-    "暴击飞弹",
-    "最终形态",
-  ]);
-  const [allyTeam, setAllyTeam] = useState<string[]>([
-    "寒冰射手",
-    "光辉女郎",
-    "探险家",
-    "皮城女警",
-    "深海泰坦",
-  ]);
-  const [enemyTeam, setEnemyTeam] = useState<string[]>([
-    "疾风剑豪",
-    "暗裔剑魔",
-    "祖安狂人",
-    "众星之子",
-    "影流之主",
-  ]);
-  const [benchPool, setBenchPool] = useState<string[]>([
-    "曙光女神",
-    "卡牌大师",
-    "无双剑姬",
-    "虚空女皇",
-  ]);
-  const [autoGrabIds, setAutoGrabIds] = useState<string[]>(["卡牌大师", "曙光女神"]);
+  const [phase, setPhase] = useState<"ChampSelect" | "InProgress" | "PostgameReview">("ChampSelect");
+  const [selectedHero, setSelectedHero] = useState("");
+  const [stage, setStage] = useState(1);
+  const [confirmedAugments, setConfirmedAugments] = useState<string[]>([]);
+  const [candidateOffer, setCandidateOffer] = useState<string[]>([]);
+  const [allyTeam, setAllyTeam] = useState<string[]>([]);
+  const [enemyTeam, setEnemyTeam] = useState<string[]>([]);
+  const [benchPool, setBenchPool] = useState<string[]>([]);
+  const [autoGrabIds, setAutoGrabIds] = useState<string[]>([]);
   const [benchGrabStatus, setBenchGrabStatus] = useState<BenchGrabStatus | null>(null);
   const [spellSnapshot, setSpellSnapshot] = useState<SummonerSpellSnapshot | null>(null);
   const [arurfRec, setArurfRec] = useState<ArurfRecommendation | null>(null);
@@ -122,21 +97,21 @@ export const OngoingWorkspace: React.FC<Props> = ({
   const [intelCache, setIntelCache] = useState<IntelCacheStatus | null>(null);
   const [intelLoading, setIntelLoading] = useState<boolean>(false);
   const [offerStats, setOfferStats] = useState<AugmentOfferStatsReport | null>(null);
-  const [ocrStatus, setOcrStatus] = useState<string>("ONNX Runtime 就绪 · 35.1ms");
+  const [ocrStatus, setOcrStatus] = useState<string>("等待英雄联盟客户端");
   const [ocrRunning, setOcrRunning] = useState<boolean>(false);
 
   const heroObj = useMemo(
-    () => db.champions.find((c) => c.hero === selectedHero) || db.champions[0],
+    () => db.champions.find((c) => c.hero === selectedHero),
     [db.champions, selectedHero]
   );
 
   const formulaBuild = useMemo(
-    () => db.formulaItemsByHero[selectedHero] || db.formulaItemsByHero[heroObj?.id || "22"],
+    () => db.formulaItemsByHero[selectedHero] || db.formulaItemsByHero[heroObj?.id || ""],
     [db.formulaItemsByHero, selectedHero, heroObj]
   );
 
   const skillOrder = useMemo(
-    () => db.skillOrdersByHeroId[heroObj?.id || "22"],
+    () => db.skillOrdersByHeroId[heroObj?.id || ""],
     [db.skillOrdersByHeroId, heroObj]
   );
 
@@ -163,90 +138,31 @@ export const OngoingWorkspace: React.FC<Props> = ({
     [db, allyTeam, enemyTeam, benchPool, selectedHero]
   );
 
+  const connected = Boolean(lcuStatus?.connected || liveOverlayState?.lcu.connected);
+  const liveGameReady = liveOverlayState?.liveGameReady === true;
+  const gameflow = liveOverlayState?.phase || lcuStatus?.phase;
   useEffect(() => {
-    if (!liveOverlayState) return;
-    if (liveOverlayState.lcu?.connected) {
-      if (liveOverlayState.phase === "ChampSelect") {
-        setPhase((prev) => (prev === "ChampSelect" ? prev : "ChampSelect"));
-      } else if (liveOverlayState.phase === "InProgress") {
-        setPhase((prev) => (prev === "InProgress" ? prev : "InProgress"));
-      }
-      if (liveOverlayState.heroName) {
-        setSelectedHero((prev) =>
-          prev === liveOverlayState.heroName ? prev : liveOverlayState.heroName
-        );
-      }
-      if (liveOverlayState.allyTeam.length > 0) {
-        setAllyTeam((prev) =>
-          sameStringList(prev, liveOverlayState.allyTeam) ? prev : liveOverlayState.allyTeam
-        );
-      }
-      if (liveOverlayState.enemyTeam.length > 0) {
-        setEnemyTeam((prev) =>
-          sameStringList(prev, liveOverlayState.enemyTeam) ? prev : liveOverlayState.enemyTeam
-        );
-      }
-      if (liveOverlayState.benchPool.length > 0) {
-        setBenchPool((prev) =>
-          sameStringList(prev, liveOverlayState.benchPool) ? prev : liveOverlayState.benchPool
-        );
-      }
-    }
-    if (liveOverlayState.candidateAugments.length === 3) {
-      setCandidateOffer((prev) =>
-        sameStringList(prev, liveOverlayState.candidateAugments)
-          ? prev
-          : liveOverlayState.candidateAugments
-      );
-    }
-    if (liveOverlayState.ocrStatus) {
-      const formatted = formatOcrStatus(liveOverlayState.ocrStatus, liveOverlayState.ocrMs);
-      setOcrStatus((prev) => (prev === formatted ? prev : formatted));
-    }
-  }, [liveOverlayState]);
+    if (gameflow === "ChampSelect") setPhase("ChampSelect");
+    else if (gameflow === "InProgress" || gameflow === "Reconnect") setPhase("InProgress");
+    else if (gameflow === "EndOfGame" || gameflow === "PreEndOfGame") setPhase("PostgameReview");
+  }, [gameflow]);
 
   useEffect(() => {
-    if (!isTauriRuntime()) return;
-    const nextPhase = lcuStatus?.connected ? lcuStatus.phase : phase;
-    if (
-      liveOverlayState &&
-      liveOverlayState.heroName === selectedHero &&
-      liveOverlayState.phase === nextPhase &&
-      liveOverlayState.stage === stage &&
-      sameStringList(liveOverlayState.candidateAugments, candidateOffer) &&
-      sameStringList(liveOverlayState.confirmedAugments, confirmedAugments) &&
-      sameStringList(liveOverlayState.allyTeam, allyTeam) &&
-      sameStringList(liveOverlayState.enemyTeam, enemyTeam) &&
-      sameStringList(liveOverlayState.benchPool, benchPool)
-    ) {
-      return;
+    if (!liveOverlayState) return;
+    setSelectedHero(liveOverlayState.heroName);
+    setStage(liveOverlayState.stage);
+    setConfirmedAugments(liveOverlayState.confirmedAugments);
+    setCandidateOffer(liveOverlayState.candidateAugments);
+    setAllyTeam(liveOverlayState.allyTeam);
+    setEnemyTeam(liveOverlayState.enemyTeam);
+    setBenchPool(liveOverlayState.benchPool);
+    if (liveOverlayState.ocrStatus) {
+      setOcrStatus(formatOcrStatus(liveOverlayState.ocrStatus, liveOverlayState.ocrMs));
+    } else {
+      setOcrStatus(liveOverlayState.liveGameReady ? "实时 OCR 等待三选一界面" :
+        liveOverlayState.lcu.connected ? "客户端已连接 · 等待进入对局" : "等待英雄联盟客户端");
     }
-    const payload: OverlayStatePayload = {
-      heroName: selectedHero,
-      phase: nextPhase,
-      stage,
-      candidateAugments: candidateOffer,
-      confirmedAugments,
-      allyTeam,
-      enemyTeam,
-      benchPool,
-      currentGold: liveOverlayState?.currentGold ?? 2850,
-      ownedItemIds: liveOverlayState?.ownedItemIds ?? [],
-      isDead: liveOverlayState?.isDead ?? false,
-      lcu: lcuStatus ?? {
-        connected: false,
-        phase: "Disconnected",
-        port: null,
-        summoner_name: null,
-        lockfile_path: null,
-        locale: liveOverlayState?.lcu?.locale ?? null,
-      },
-      livePlayers: liveOverlayState?.livePlayers ?? [],
-      ocrStatus: liveOverlayState?.ocrStatus ?? null,
-      ocrMs: liveOverlayState?.ocrMs ?? null,
-    };
-    tauriSetOverlayState(payload).catch(() => {});
-  }, [selectedHero, stage, candidateOffer, confirmedAugments, allyTeam, enemyTeam, benchPool]);
+  }, [liveOverlayState]);
 
   const handleTriggerLiveOcr = async () => {
     setOcrRunning(true);
@@ -264,7 +180,8 @@ export const OngoingWorkspace: React.FC<Props> = ({
           .map((r) => r.match_name)
           .filter((n): n is string => typeof n === "string" && n.length > 0);
         if (names.length === 3) {
-          setCandidateOffer((prev) => (sameStringList(prev, names) ? prev : names));
+          setPhase("InProgress");
+          onOpenOverlayPreview("augment");
         }
         const timings = data.timings as { ocr_ms?: number; total_ms?: number } | undefined;
         const ocrMsText =
@@ -272,10 +189,14 @@ export const OngoingWorkspace: React.FC<Props> = ({
         const totalMsText =
           typeof timings?.total_ms === "number" ? timings.total_ms.toFixed(1) : "0.0";
         setOcrStatus(
-          `常驻 ONNX 识别成功：${names.join(" / ")} · 推理 ${ocrMsText}ms (总耗时 ${totalMsText}ms)`
+          names.length === 3
+            ? `实时识别：${names.join(" / ")} · 推理 ${ocrMsText}ms，合计 ${totalMsText}ms`
+            : "未识别到完整三选一卡片，请让游戏保持前台"
         );
       } else {
-        setOcrStatus(`OCR 返回异常：${String(data.error ?? "unknown")}`);
+        setOcrStatus(data.status === "skipped"
+          ? "等待真实对局和可见的游戏窗口"
+          : `OCR 返回异常：${String(data.error ?? "未知错误")}`);
       }
     } catch (err) {
       setOcrStatus(`OCR 调用失败：${String(err)}`);
@@ -416,30 +337,12 @@ export const OngoingWorkspace: React.FC<Props> = ({
     }
   };
 
-  const presetOffers: Array<{ label: string; cards: string[]; confirmed: string[] }> = [
-    {
-      label: "暴击联动局 (含【易损】联动)",
-      cards: ["亮出你的剑", "暴击飞弹", "最终形态"],
-      confirmed: ["易损"],
-    },
-    {
-      label: "废卡冲突局 (已选【回归基本功】)",
-      cards: ["风语者的祝福", "终极刷新", "杀戮时间到了"],
-      confirmed: ["回归基本功"],
-    },
-    {
-      label: "棱彩神仙打架局",
-      cards: ["亮出你的剑", "男爵之手", "艾卡西亚的陷落"],
-      confirmed: ["泰坦的坚决"],
-    },
-  ];
-
   return (
     <div className="workspace-container">
       {/* Top Gameflow Status Bar */}
       <div className="panel-card status-banner">
         <div className="status-left">
-          <span className="pulse-dot online" />
+          <span className={`pulse-dot ${connected ? "online" : ""}`} />
           <div>
             <div className="status-title">
               海克斯大乱斗 ·{" "}
@@ -476,26 +379,29 @@ export const OngoingWorkspace: React.FC<Props> = ({
           <select
             className="hex-select"
             value={selectedHero}
+            disabled={isTauriRuntime()}
             onChange={(e) => {
               const next = e.target.value;
               setAllyTeam((prev) => prev.map((h) => (h === selectedHero ? next : h)));
               setSelectedHero(next);
             }}
           >
+            <option value="">{connected ? "等待客户端提供本局英雄" : "英雄联盟未连接"}</option>
+            {selectedHero && !heroObj && <option value={selectedHero}>{selectedHero}</option>}
             {db.champions.map((c) => (
               <option key={c.id} value={c.hero}>
                 当前英雄：{c.hero} ({(c.win_rate * 100).toFixed(1)}%)
               </option>
             ))}
           </select>
-          <button className="hex-btn primary" onClick={handleTriggerLiveOcr} disabled={ocrRunning}>
+          <button className="hex-btn primary" onClick={handleTriggerLiveOcr} disabled={ocrRunning || !liveGameReady}>
             <RefreshCw size={14} className={ocrRunning ? "spin" : ""} /> 触发 OCR 识别 (F8)
           </button>
         </div>
       </div>
 
       {/* 5v5 Lineup Matchup Winrate Bar (Always visible across phases) */}
-      <div className="panel-card lineup-bar-card">
+      {allyTeam.length > 0 && enemyTeam.length > 0 && <div className="panel-card lineup-bar-card">
         <div className="lineup-header">
           <div className="lineup-title">
             <Swords size={16} className="gold-text" />
@@ -544,7 +450,7 @@ export const OngoingWorkspace: React.FC<Props> = ({
             <Eye size={13} /> 预览选人悬浮窗
           </button>
         </div>
-      </div>
+      </div>}
 
       {/* PHASE 1: CHAMP SELECT */}
       {phase === "ChampSelect" && (
@@ -765,7 +671,8 @@ export const OngoingWorkspace: React.FC<Props> = ({
                     <button
                       key={s}
                       className={`stage-btn ${stage === s ? "active" : ""}`}
-                      onClick={() => setStage(s)}
+                      disabled={!liveGameReady}
+                      onClick={() => tauriSetAugmentStage(s).catch((err) => setOcrStatus(String(err)))}
                     >
                       第 {s} 轮选择
                     </button>
@@ -774,29 +681,15 @@ export const OngoingWorkspace: React.FC<Props> = ({
                 <button
                   className="hex-btn ghost sm"
                   onClick={() => onOpenOverlayPreview("augment")}
+                  disabled={!liveGameReady || candidateOffer.length !== 3}
                 >
                   <Eye size={13} /> 打开局内强化悬浮窗
                 </button>
               </div>
             </div>
 
-            {/* Preset Simulation Switcher + Confirmed Augments */}
+            {/* Confirmed augments */}
             <div className="augment-sim-toolbar">
-              <div className="sim-group">
-                <span className="sim-label">快速测试场景：</span>
-                {presetOffers.map((po, i) => (
-                  <button
-                    key={i}
-                    className="hex-btn ghost sm"
-                    onClick={() => {
-                      setCandidateOffer(po.cards);
-                      setConfirmedAugments(po.confirmed);
-                    }}
-                  >
-                    {po.label}
-                  </button>
-                ))}
-              </div>
               <div className="sim-group">
                 <span className="sim-label">本局已选海克斯：</span>
                 {confirmedAugments.map((ca) => (
@@ -816,6 +709,7 @@ export const OngoingWorkspace: React.FC<Props> = ({
                 <select
                   className="hex-select sm"
                   value=""
+                  disabled={!liveGameReady}
                   onChange={(e) => {
                     if (e.target.value && !confirmedAugments.includes(e.target.value)) {
                       const next = [...confirmedAugments, e.target.value];

@@ -230,6 +230,7 @@ export interface LivePlayerScore {
 export interface OverlayStatePayload {
   heroName: string;
   phase: string;
+  liveGameReady: boolean;
   stage: number;
   candidateAugments: string[];
   confirmedAugments: string[];

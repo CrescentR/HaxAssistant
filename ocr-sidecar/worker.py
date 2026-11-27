@@ -91,20 +91,18 @@ def get_foreground_window_title() -> Optional[str]:
 
 def is_lol_foreground_window() -> tuple[bool, Optional[str]]:
     """
-    Returns (is_lol_or_unknown, window_title).
-    Fails open (True) when OS cannot query foreground window so OCR is never stuck.
+    Returns whether the foreground window is a League window and its title.
+    Windows screen capture requires a known game window.
     """
     title = get_foreground_window_title()
     if not title:
-        return True, None
+        return sys.platform != "win32", None
     lower = title.lower()
     keywords = (
         "league of legends",
         "leagueclient",
-        "riot",
         "英雄联盟",
         "리그 오브 레전드",
-        "hexbox",
     )
     return any(k in lower for k in keywords), title
 
@@ -231,7 +229,9 @@ class PersistentOcrRunner:
                 image = opened.convert("RGB")
             capture_meta = {"source": "file", "path": str(img_path), "image_size": list(image.size)}
         else:
-            image, capture_meta = capture_screen_image(preset_key=preset_key)
+            image, capture_meta = capture_screen_image(
+                preset_key=preset_key, foreground_client=not allow_non_lol_foreground
+            )
             capture_meta["source"] = "screen"
         capture_ms = (time.perf_counter() - t_cap) * 1000.0
 

@@ -470,20 +470,29 @@ impl HexBoxCore {
         )
     }
 
-    pub fn set_manual_augment_selection(
-        &self,
-        confirmed_augments: Vec<String>,
-    ) -> OverlayStatePayload {
-        let prev = self.get_overlay_state().confirmed_augments;
-        for aug in &confirmed_augments {
-            if !prev.contains(aug) {
-                self.player_store.record_augment_pick(aug);
+    pub fn set_manual_augment_selection(&self, confirmed_augments: Vec<String>) -> OverlayStatePayload {
+        let mut state = self.overlay_state.write().unwrap();
+        let mut confirmed = Vec::new();
+        for name in confirmed_augments {
+            let name = name.trim();
+            if !name.is_empty() && !confirmed.iter().any(|existing| existing == name) {
+                confirmed.push(name.to_string());
             }
         }
-        let mut state = self.get_overlay_state();
-        state.confirmed_augments = confirmed_augments;
-        state.stage = (state.confirmed_augments.len() as u8 + 1).clamp(1, 4);
-        self.set_overlay_state(state)
+        confirmed.truncate(4);
+        let new_picks: Vec<_> = if state.live_game_ready {
+            confirmed.iter().filter(|name| !state.confirmed_augments.contains(name)).cloned().collect()
+        } else {
+            Vec::new()
+        };
+        state.confirmed_augments = confirmed;
+        state.stage = (state.confirmed_augments.len() as u8 + 1).min(4);
+        let saved = state.clone();
+        drop(state);
+        for name in new_picks {
+            self.player_store.record_augment_pick(&name);
+        }
+        saved
     }
 
     /// Manually override a single candidate slot (1..=3) when OCR misreads or user rerolls.
@@ -499,13 +508,45 @@ impl HexBoxCore {
         if trimmed.is_empty() {
             return Err(anyhow!("augment name cannot be empty"));
         }
-        let mut state = self.get_overlay_state();
+        let mut state = self.overlay_state.write().unwrap();
         while state.candidate_augments.len() < 3 {
             state.candidate_augments.push(String::new());
         }
         state.candidate_augments[slot - 1] = trimmed.clone();
         state.ocr_status = Some(format!("已手动修正槽位 #{slot} → {trimmed}"));
-        Ok(self.set_overlay_state(state))
+        Ok(state.clone())
+    }
+
+    pub fn confirm_ocr_augment(&self, name: &str) -> Result<OverlayStatePayload> {
+        let state = {
+            let mut state = self.overlay_state.write().unwrap();
+            if !state.live_game_ready || state.candidate_augments.len() != 3
+                || !state.candidate_augments.iter().any(|candidate| candidate == name)
+            {
+                return Err(anyhow!("该强化已不在当前三选一中"));
+            }
+            if name.is_empty() || state.confirmed_augments.contains(&name.to_string())
+                || state.confirmed_augments.len() >= 4
+            {
+                return Err(anyhow!("该强化已记录，或本局已记录四轮强化"));
+            }
+            state.confirmed_augments.push(name.to_string());
+            state.candidate_augments.clear();
+            state.stage = state.stage.saturating_add(1).min(4);
+            state.ocr_status = Some(format!("已标记本局选择：{name}"));
+            state.clone()
+        };
+        self.player_store.record_augment_pick(name);
+        Ok(state)
+    }
+
+    pub fn set_augment_stage(&self, stage: u8) -> Result<OverlayStatePayload> {
+        let mut state = self.overlay_state.write().unwrap();
+        if !state.live_game_ready || !(1..=4).contains(&stage) {
+            return Err(anyhow!("无法设置当前强化轮次"));
+        }
+        state.stage = stage;
+        Ok(state.clone())
     }
 
     pub fn get_augment_offer_stats(&self, top_n: usize) -> AugmentOfferStatsReport {
@@ -1331,12 +1372,18 @@ impl HexBoxCore {
         let settings = self.get_settings();
         let mut next_state = self.get_overlay_state();
         let prev_phase = next_state.lcu.phase.clone();
-        let prev_connected = next_state.lcu.connected;
-        let prev_dead = next_state.is_dead;
-        let prev_hero = next_state.hero_name.clone();
 
         next_state.lcu = status.clone();
         next_state.phase = status.phase.clone();
+        next_state.live_game_ready = false;
+        next_state.current_gold = 0.0;
+        next_state.owned_item_ids.clear();
+        next_state.is_dead = false;
+        next_state.live_players.clear();
+        next_state.ally_team.clear();
+        next_state.enemy_team.clear();
+        next_state.bench_pool.clear();
+        next_state.hero_name.clear();
 
         let mut auto_accepted = false;
         let mut auto_grabbed_champion_id = None;
@@ -1440,17 +1487,13 @@ impl HexBoxCore {
                             .iter()
                             .filter_map(|id| self.champion_name_by_id(*id))
                             .collect();
-                        if !allies.is_empty() {
-                            next_state.ally_team = allies;
-                        }
+                        next_state.ally_team = allies;
                         let enemies: Vec<String> = cs
                             .enemy_champion_ids
                             .iter()
                             .filter_map(|id| self.champion_name_by_id(*id))
                             .collect();
-                        if !enemies.is_empty() {
-                            next_state.enemy_team = enemies;
-                        }
+                        next_state.enemy_team = enemies;
                         let bench: Vec<String> = cs
                             .bench_champion_ids
                             .iter()
@@ -1495,23 +1538,18 @@ impl HexBoxCore {
                             }
                         }
                     }
-                } else if status.phase == "InProgress" {
+                } else if matches!(status.phase.as_str(), "InProgress" | "Reconnect") {
                     if let Ok(live) = self.lcu.fetch_live_game_snapshot().await {
                         if live.in_game {
                             if let Some(ref champ) = live.active_champion {
-                                if !champ.is_empty() {
-                                    next_state.hero_name = champ.clone();
-                                }
+                                next_state.hero_name = champ.clone();
+                                next_state.live_game_ready = true;
                             }
                             next_state.current_gold = live.current_gold;
                             next_state.owned_item_ids = live.owned_item_ids.clone();
                             next_state.is_dead = live.is_dead;
-                            if !live.allies.is_empty() {
-                                next_state.ally_team = live.allies.clone();
-                            }
-                            if !live.enemies.is_empty() {
-                                next_state.enemy_team = live.enemies.clone();
-                            }
+                            next_state.ally_team = live.allies.clone();
+                            next_state.enemy_team = live.enemies.clone();
                             next_state.live_players = live.players.clone();
                             self.record_live_game_encounters(&live);
                         }
@@ -1520,14 +1558,34 @@ impl HexBoxCore {
             }
         }
 
-        let changed = prev_connected != status.connected
-            || prev_phase != status.phase
-            || prev_dead != next_state.is_dead
-            || prev_hero != next_state.hero_name
-            || auto_accepted
-            || auto_grabbed_champion_id.is_some();
-
-        let saved = self.set_overlay_state(next_state);
+        let (saved, changed) = {
+            let mut current = self.overlay_state.write().unwrap();
+            let match_phase = |phase: &str| matches!(phase, "InProgress" | "Reconnect");
+            let same_match = match_phase(&current.phase)
+                && match_phase(&next_state.phase)
+                && (current.hero_name.is_empty()
+                    || next_state.hero_name.is_empty()
+                    || current.hero_name == next_state.hero_name);
+            if same_match {
+                next_state.stage = current.stage;
+                next_state.confirmed_augments = current.confirmed_augments.clone();
+            } else {
+                next_state.stage = 1;
+                next_state.confirmed_augments.clear();
+            }
+            if same_match && current.live_game_ready && next_state.live_game_ready {
+                next_state.candidate_augments = current.candidate_augments.clone();
+                next_state.ocr_status = current.ocr_status.clone();
+                next_state.ocr_ms = current.ocr_ms;
+            } else {
+                next_state.candidate_augments.clear();
+                next_state.ocr_status = None;
+                next_state.ocr_ms = None;
+            }
+            let changed = *current != next_state || auto_accepted || auto_grabbed_champion_id.is_some();
+            *current = next_state.clone();
+            (next_state, changed)
+        };
         LcuPollOutcome {
             status,
             overlay_state: saved,
@@ -1644,75 +1702,66 @@ impl HexBoxCore {
         resolve_ocr_python_from_root(&self.root)
     }
 
-    fn resolve_image_path(&self, image_path: Option<&str>) -> Option<String> {
-        match image_path {
-            Some(p) if !p.is_empty() && Path::new(p).exists() => Some(p.to_string()),
-            Some(p) if !p.is_empty() => {
-                let rel = self.root.join(p);
-                if rel.exists() {
-                    Some(rel.display().to_string())
-                } else {
-                    None
-                }
-            }
-            _ => {
-                let sample = resolve_ocr_sidecar_dir(&self.root).join("sample_augment_1080p.png");
-                if sample.exists() {
-                    Some(sample.display().to_string())
-                } else {
-                    None
-                }
-            }
-        }
-    }
-
-    pub fn run_ocr_preset(
-        &self,
-        preset_key: &str,
-        image_path: Option<&str>,
-    ) -> Result<Value> {
-        let settings = self.get_settings();
-        let lang = self.current_ocr_lang();
-        let resolved_img = self.resolve_image_path(image_path);
-        let mut worker = self
-            .ocr_worker
-            .lock()
-            .map_err(|_| anyhow!("ocr worker lock poisoned"))?;
-        let resp = worker.run_pipeline(
-            preset_key,
-            resolved_img.as_deref(),
-            &settings.ocr_performance_mode,
-            lang,
-            true,
-        )?;
-        self.apply_ocr_response_to_overlay(&resp);
-        Ok(resp)
-    }
-
-    pub fn ocr_watch_tick(
-        &self,
-        preset_key: &str,
-        image_path: Option<&str>,
-    ) -> Result<Value> {
-        let settings = self.get_settings();
-        let lang = self.current_ocr_lang();
-        let resolved_img = match image_path {
-            Some(p) if !p.is_empty() => self.resolve_image_path(Some(p)),
-            _ => None, // live screen capture when no file path is passed
+    fn resolve_image_path(&self, image_path: Option<&str>) -> Result<Option<PathBuf>> {
+        let Some(path) = image_path.filter(|path| !path.trim().is_empty()) else {
+            return Ok(None);
         };
-        let mut worker = self
-            .ocr_worker
-            .lock()
-            .map_err(|_| anyhow!("ocr worker lock poisoned"))?;
-        let resp = worker.watch_tick(
-            preset_key,
-            resolved_img.as_deref(),
-            &settings.ocr_performance_mode,
-            lang,
-            settings.allow_non_lol_foreground,
-        )?;
-        self.apply_ocr_response_to_overlay(&resp);
-        Ok(resp)
+        let path = Path::new(path);
+        let path = if path.is_absolute() { path.to_path_buf() } else { self.root.join(path) };
+        if !path.is_file() {
+            return Err(anyhow!("找不到指定的 OCR 图片：{}", path.display()));
+        }
+        Ok(Some(path))
+    }
+
+    pub fn run_ocr_preset(&self, preset_key: &str, image_path: Option<&str>) -> Result<Value> {
+        self.scan_ocr(preset_key, image_path, false)
+    }
+
+    pub fn ocr_watch_tick(&self, preset_key: &str, image_path: Option<&str>) -> Result<Value> {
+        self.scan_ocr(preset_key, image_path, true)
+    }
+
+    fn scan_ocr(&self, preset_key: &str, image_path: Option<&str>, watch: bool) -> Result<Value> {
+        let settings = self.get_settings();
+        let path = self.resolve_image_path(image_path)?;
+        let image = path.as_ref().map(|path| path.to_string_lossy());
+        let game = self.get_overlay_state();
+        if image.is_none() && !game.live_game_ready {
+            return Ok(json!({
+                "status": "skipped",
+                "reason": "league_match_not_ready",
+                "ocr_matches": [],
+            }));
+        }
+        let response = {
+            let mut worker = self.ocr_worker.lock().map_err(|_| anyhow!("ocr worker lock poisoned"))?;
+            let scan = if watch { PersistentOcrWorker::watch_tick } else { PersistentOcrWorker::run_pipeline };
+            scan(
+                &mut worker,
+                preset_key,
+                image.as_deref(),
+                &settings.ocr_performance_mode,
+                self.current_ocr_lang(),
+                settings.allow_non_lol_foreground,
+            )?
+        };
+        let stable = !watch || response.pointer("/watcher/stable").and_then(Value::as_bool) == Some(true);
+        if image.is_none() && stable {
+            self.apply_live_ocr_response(&response, &game.hero_name);
+        }
+        Ok(response)
+    }
+
+    pub fn clear_ocr_offer(&self) -> bool {
+        let mut state = self.overlay_state.write().unwrap();
+        if state.candidate_augments.is_empty() {
+            return false;
+        }
+        state.candidate_augments.clear();
+        state.ocr_status = None;
+        state.ocr_ms = None;
+        true
     }
 
     pub fn reset_ocr_watcher(&self) -> Result<Value> {
@@ -1723,7 +1772,7 @@ impl HexBoxCore {
         worker.reset_watcher()
     }
 
-    fn apply_ocr_response_to_overlay(&self, resp: &Value) {
+    fn apply_live_ocr_response(&self, resp: &Value, hero: &str) {
         if resp.get("status").and_then(|v| v.as_str()) != Some("ok") {
             return;
         }
@@ -1750,7 +1799,10 @@ impl HexBoxCore {
 
         let mut offer_changed = false;
         if let Ok(mut guard) = self.overlay_state.write() {
-            if matches.len() == 3 {
+            if !guard.live_game_ready || guard.hero_name != hero {
+                return;
+            }
+            if matches.len() == 3 && !matches.iter().any(|name| guard.confirmed_augments.contains(name)) {
                 if guard.candidate_augments != matches {
                     offer_changed = true;
                 }
@@ -1987,6 +2039,19 @@ mod tests {
     }
 
     #[test]
+    fn live_ocr_requires_a_real_match_and_starts_without_sample_data() {
+        let core = HexBoxCore::initialize(&workspace_root()).unwrap();
+        let state = core.get_overlay_state();
+        assert!(state.hero_name.is_empty());
+        assert!(state.candidate_augments.is_empty());
+        assert!(state.ally_team.is_empty());
+        let scan = core.run_ocr_preset("1920x1080@100", None).unwrap();
+        assert_eq!(scan["status"], "skipped");
+        assert_eq!(scan["reason"], "league_match_not_ready");
+        assert!(core.confirm_ocr_augment("亮出你的剑").is_err());
+    }
+
+    #[test]
     fn persistent_ocr_worker_recognizes_sample_image() {
         let root = workspace_root();
         let sample = root.join("ocr-sidecar/sample_augment_1080p.png");
@@ -2012,9 +2077,10 @@ mod tests {
             "OCR sample failed: {}",
             res.get("error").and_then(|v| v.as_str()).unwrap_or("no error returned")
         );
-        let state = core.get_overlay_state();
-        assert_eq!(state.candidate_augments.len(), 3);
-        assert_eq!(state.candidate_augments[0], "亮出你的剑");
+        let matches = res["ocr_matches"].as_array().unwrap();
+        assert_eq!(matches.len(), 3);
+        assert_eq!(matches[0]["match_name"], "亮出你的剑");
+        assert!(core.get_overlay_state().candidate_augments.is_empty());
     }
 
     #[test]

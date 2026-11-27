@@ -61,11 +61,14 @@ export async function tauriGetOverlayState(): Promise<OverlayStatePayload | null
   return invoke<OverlayStatePayload>("get_overlay_state");
 }
 
-export async function tauriSetOverlayState(
-  payload: OverlayStatePayload
-): Promise<OverlayStatePayload | null> {
+export async function tauriConfirmOcrAugment(name: string): Promise<OverlayStatePayload | null> {
   if (!isTauriRuntime()) return null;
-  return invoke<OverlayStatePayload>("set_overlay_state", { payload });
+  return invoke<OverlayStatePayload>("confirm_ocr_augment", { name });
+}
+
+export async function tauriSetAugmentStage(stage: number): Promise<OverlayStatePayload | null> {
+  if (!isTauriRuntime()) return null;
+  return invoke<OverlayStatePayload>("set_augment_stage", { stage });
 }
 
 export async function tauriProbeLcuStatus(): Promise<LcuStatus | null> {

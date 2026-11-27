@@ -238,16 +238,18 @@ fn get_overlay_state(state: State<'_, AppState>) -> OverlayStatePayload {
 }
 
 #[tauri::command]
-fn set_overlay_state(
-    app: AppHandle,
-    state: State<'_, AppState>,
-    payload: OverlayStatePayload,
-) -> OverlayStatePayload {
-    let (saved, changed) = state.core.set_overlay_state_if_changed(payload);
-    if changed {
-        let _ = app.emit("haxassistant://overlay-state", &saved);
-    }
-    saved
+fn confirm_ocr_augment(app: AppHandle, state: State<'_, AppState>, name: String) -> Result<OverlayStatePayload, String> {
+    let saved = state.core.confirm_ocr_augment(&name).map_err(|err| err.to_string())?;
+    let _ = app.emit("haxassistant://overlay-state", &saved);
+    set_overlay_visible(&app, "augment", false);
+    Ok(saved)
+}
+
+#[tauri::command]
+fn set_augment_stage(app: AppHandle, state: State<'_, AppState>, stage: u8) -> Result<OverlayStatePayload, String> {
+    let saved = state.core.set_augment_stage(stage).map_err(|err| err.to_string())?;
+    let _ = app.emit("haxassistant://overlay-state", &saved);
+    Ok(saved)
 }
 
 #[tauri::command]
@@ -789,7 +791,15 @@ fn spawn_background_lcu_poller(
                 let _ = app.emit("haxassistant://overlay-state", &outcome.overlay_state);
 
                 let settings = core.get_settings();
-                if outcome.status.connected {
+                if !outcome.overlay_state.live_game_ready {
+                    set_overlay_visible(&app, "augment", false);
+                    set_overlay_visible(&app, "item", false);
+                    set_overlay_visible(&app, "player-scores", false);
+                    set_overlay_visible(&app, "death-hint", false);
+                }
+                if !outcome.status.connected {
+                    set_overlay_visible(&app, "champ-select", false);
+                } else {
                     match outcome.status.phase.as_str() {
                         "ChampSelect" => {
                             if settings.auto_show_overlay {
@@ -797,9 +807,9 @@ fn spawn_background_lcu_poller(
                             }
                             set_overlay_visible(&app, "death-hint", false);
                         }
-                        "InProgress" => {
+                        "InProgress" | "Reconnect" => {
                             set_overlay_visible(&app, "champ-select", false);
-                            if settings.death_shop_hint_enabled {
+                            if settings.death_shop_hint_enabled && outcome.overlay_state.live_game_ready {
                                 set_overlay_visible(&app, "death-hint", outcome.overlay_state.is_dead);
                             }
                         }
@@ -824,20 +834,32 @@ fn register_hotkeys(app: &AppHandle, core: Arc<HexBoxCore>, settings: &AppSettin
             if event.state() != ShortcutState::Pressed {
                 return;
             }
-            let visible = toggle_overlay_internal(app_handle, "augment");
-            if visible {
-                let app_bg = app_handle.clone();
-                let core_bg = core_clone.clone();
-                tauri::async_runtime::spawn(async move {
-                    let preset = core_bg.get_settings().selected_preset_key;
-                    let core_ocr = core_bg.clone();
-                    let _ = tokio::task::spawn_blocking(move || {
-                        core_ocr.run_ocr_preset(&preset, None)
-                    })
-                    .await;
-                    let _ = app_bg.emit("haxassistant://overlay-state", core_bg.get_overlay_state());
-                });
+            let overlay = app_handle.get_webview_window(overlay_label("augment"));
+            if overlay.as_ref().is_some_and(|window| window.is_visible().unwrap_or(false)) {
+                set_overlay_visible(app_handle, "augment", false);
+                return;
             }
+            if !core_clone.get_overlay_state().live_game_ready {
+                return;
+            }
+            let app_bg = app_handle.clone();
+            let core_bg = core_clone.clone();
+            tauri::async_runtime::spawn(async move {
+                let preset = core_bg.get_settings().selected_preset_key;
+                let core_ocr = core_bg.clone();
+                let result = tokio::task::spawn_blocking(move || core_ocr.run_ocr_preset(&preset, None)).await;
+                if let Ok(Ok(response)) = result {
+                    let state = core_bg.get_overlay_state();
+                    let recognized_three = response.get("ocr_matches").and_then(Value::as_array)
+                        .is_some_and(|matches| matches.len() == 3 && matches.iter().all(|entry| {
+                            entry.get("match_name").and_then(Value::as_str).is_some_and(|name| !name.is_empty())
+                        }));
+                    if state.live_game_ready && recognized_three {
+                        let _ = app_bg.emit("haxassistant://overlay-state", &state);
+                        set_overlay_visible(&app_bg, "augment", true);
+                    }
+                }
+            });
         }) {
             eprintln!(
                 "Failed to register augment hotkey '{}': {err}",
@@ -848,7 +870,7 @@ fn register_hotkeys(app: &AppHandle, core: Arc<HexBoxCore>, settings: &AppSettin
 
     if let Ok(item_sc) = settings.item_overlay_hotkey.trim().parse::<Shortcut>() {
         if let Err(err) = manager.on_shortcut(item_sc, move |app_handle, _shortcut, event| {
-            if event.state() != ShortcutState::Pressed {
+            if event.state() != ShortcutState::Pressed || !core.get_overlay_state().live_game_ready {
                 return;
             }
             let _ = toggle_overlay_internal(app_handle, "item");
@@ -878,57 +900,66 @@ fn toggle_overlay_internal(app: &AppHandle, kind: &str) -> bool {
 
 fn spawn_background_auto_ocr_watcher(app: AppHandle, core: Arc<HexBoxCore>) {
     tauri::async_runtime::spawn(async move {
-        let mut interval = tokio::time::interval(Duration::from_millis(1200));
-        let mut was_in_progress = false;
-        let mut last_emitted_sig: Vec<String> = Vec::new();
+        let mut interval = tokio::time::interval(Duration::from_millis(450));
+        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        let mut watching = false;
+        let mut misses = 0u8;
+        let mut last_signature = Vec::<String>::new();
 
         loop {
             interval.tick().await;
-            let state = core.get_overlay_state();
             let settings = core.get_settings();
-            let should_watch = state.lcu.connected
-                && state.lcu.phase == "InProgress"
-                && settings.auto_ocr_enabled;
-
-            if should_watch {
-                was_in_progress = true;
-                let preset = settings.selected_preset_key.clone();
-                let core_bg = core.clone();
-                let tick_res = tokio::task::spawn_blocking(move || {
-                    core_bg.ocr_watch_tick(&preset, None)
-                })
-                .await;
-
-                if let Ok(Ok(resp)) = tick_res {
-                    let watcher = resp.get("watcher");
-                    let is_stable = watcher
-                        .and_then(|w| w.get("stable"))
-                        .and_then(|v| v.as_bool())
-                        .unwrap_or(false);
-                    let sig: Vec<String> = watcher
-                        .and_then(|w| w.get("signature"))
-                        .and_then(|v| v.as_array())
-                        .map(|arr| {
-                            arr.iter()
-                                .filter_map(|v| v.as_str().map(ToString::to_string))
-                                .filter(|s| !s.is_empty())
-                                .collect()
-                        })
-                        .unwrap_or_default();
-
-                    if is_stable && sig.len() == 3 && sig != last_emitted_sig {
-                        last_emitted_sig = sig;
+            if !settings.auto_ocr_enabled || !core.get_overlay_state().live_game_ready {
+                if watching {
+                    watching = false;
+                    misses = 0;
+                    last_signature.clear();
+                    if core.clear_ocr_offer() {
                         let _ = app.emit("haxassistant://overlay-state", core.get_overlay_state());
-                        if settings.auto_show_overlay {
-                            set_overlay_visible(&app, "augment", true);
-                        }
+                    }
+                    set_overlay_visible(&app, "augment", false);
+                    let reset = core.clone();
+                    let _ = tokio::task::spawn_blocking(move || reset.reset_ocr_watcher()).await;
+                }
+                continue;
+            }
+            watching = true;
+            let preset = settings.selected_preset_key;
+            let worker = core.clone();
+            let result = tokio::task::spawn_blocking(move || worker.ocr_watch_tick(&preset, None)).await;
+            let response = result.ok().and_then(Result::ok);
+            let signature: Vec<String> = response.as_ref()
+                .and_then(|response| response.pointer("/watcher/signature"))
+                .and_then(Value::as_array)
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_str)
+                .filter(|name| !name.is_empty())
+                .map(str::to_string)
+                .collect();
+
+            if signature.len() != 3 {
+                misses = misses.saturating_add(1);
+                if misses >= 2 {
+                    last_signature.clear();
+                    if core.clear_ocr_offer() {
+                        let _ = app.emit("haxassistant://overlay-state", core.get_overlay_state());
+                        set_overlay_visible(&app, "augment", false);
                     }
                 }
-            } else if was_in_progress {
-                was_in_progress = false;
-                last_emitted_sig.clear();
-                let core_bg = core.clone();
-                let _ = tokio::task::spawn_blocking(move || core_bg.reset_ocr_watcher()).await;
+                continue;
+            }
+            misses = 0;
+            let stable = response.as_ref()
+                .and_then(|response| response.pointer("/watcher/stable"))
+                .and_then(Value::as_bool) == Some(true);
+            let state = core.get_overlay_state();
+            if stable && state.live_game_ready && state.candidate_augments == signature && last_signature != signature {
+                last_signature = signature;
+                let _ = app.emit("haxassistant://overlay-state", &state);
+                if settings.auto_show_overlay {
+                    set_overlay_visible(&app, "augment", true);
+                }
             }
         }
     });
@@ -1189,7 +1220,8 @@ fn main() {
             get_settings,
             update_settings,
             get_overlay_state,
-            set_overlay_state,
+            confirm_ocr_augment,
+            set_augment_stage,
             evaluate_augment_offer,
             analyze_enemy_counter,
             evaluate_5v5_lineup,

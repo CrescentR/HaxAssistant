@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import sys
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
@@ -99,9 +100,9 @@ class AutoWatcher:
 
         if not all_matched:
             self.failures += 1
+            self.consecutive_matches = 0
             if self.failures >= 2:
                 self.state = "watching_anchor"
-                self.consecutive_matches = 0
                 self.stable_result = None
             return {"state": self.state, "stable": False, "signature": list(names)}
 
@@ -179,12 +180,42 @@ def mss_shot_to_image(shot: Any) -> Image.Image:
     return Image.frombytes("RGB", shot.size, shot.bgra, "raw", "BGRX")
 
 
-def capture_screen_image(preset_key: Optional[str] = None) -> Tuple[Image.Image, Dict[str, Any]]:
+def foreground_client_region() -> Optional[Dict[str, int]]:
+    if sys.platform != "win32":
+        return None
+    import ctypes
+    from ctypes import wintypes
+
+    user32 = ctypes.windll.user32
+    user32.GetForegroundWindow.restype = wintypes.HWND
+    hwnd = user32.GetForegroundWindow()
+    if not hwnd:
+        return None
+    rect = wintypes.RECT()
+    origin = wintypes.POINT(0, 0)
+    if not user32.GetClientRect(wintypes.HWND(hwnd), ctypes.byref(rect)):
+        return None
+    if not user32.ClientToScreen(wintypes.HWND(hwnd), ctypes.byref(origin)):
+        return None
+    width = rect.right - rect.left
+    height = rect.bottom - rect.top
+    if width < 320 or height < 200:
+        return None
+    return {"left": origin.x, "top": origin.y, "width": width, "height": height}
+
+
+def capture_screen_image(
+    preset_key: Optional[str] = None,
+    foreground_client: bool = False,
+) -> Tuple[Image.Image, Dict[str, Any]]:
     import mss
 
     with mss.mss() as sct:
         monitors = sct.monitors
         mon = monitors[1] if len(monitors) > 1 else monitors[0]
+        region = foreground_client_region() if foreground_client else None
+        if region:
+            mon = region
         shot = sct.grab(mon)
         img = mss_shot_to_image(shot)
         preset = get_preset(preset_key, img.size)

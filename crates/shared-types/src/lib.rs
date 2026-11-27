@@ -414,6 +414,8 @@ pub struct LiveGameSnapshot {
 pub struct OverlayStatePayload {
     pub hero_name: String,
     pub phase: String,
+    #[serde(default)]
+    pub live_game_ready: bool,
     pub stage: u8,
     pub candidate_augments: Vec<String>,
     pub confirmed_augments: Vec<String>,
@@ -433,36 +435,16 @@ pub struct OverlayStatePayload {
 impl Default for OverlayStatePayload {
     fn default() -> Self {
         Self {
-            hero_name: "寒冰射手".to_string(),
+            hero_name: String::new(),
             phase: "Disconnected".to_string(),
-            stage: 2,
-            candidate_augments: vec![
-                "亮出你的剑".to_string(),
-                "暴击飞弹".to_string(),
-                "最终形态".to_string(),
-            ],
-            confirmed_augments: vec!["易损".to_string()],
-            ally_team: vec![
-                "寒冰射手".to_string(),
-                "光辉女郎".to_string(),
-                "探险家".to_string(),
-                "皮城女警".to_string(),
-                "深海泰坦".to_string(),
-            ],
-            enemy_team: vec![
-                "疾风剑豪".to_string(),
-                "暗裔剑魔".to_string(),
-                "祖安狂人".to_string(),
-                "众星之子".to_string(),
-                "影流之主".to_string(),
-            ],
-            bench_pool: vec![
-                "曙光女神".to_string(),
-                "卡牌大师".to_string(),
-                "无双剑姬".to_string(),
-                "虚空女皇".to_string(),
-            ],
-            current_gold: 2850.0,
+            live_game_ready: false,
+            stage: 1,
+            candidate_augments: Vec::new(),
+            confirmed_augments: Vec::new(),
+            ally_team: Vec::new(),
+            enemy_team: Vec::new(),
+            bench_pool: Vec::new(),
+            current_gold: 0.0,
             owned_item_ids: Vec::new(),
             is_dead: false,
             lcu: LcuStatus {
