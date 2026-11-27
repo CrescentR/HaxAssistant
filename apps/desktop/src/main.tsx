@@ -21,6 +21,7 @@ import {
 import {
   isTauriRuntime,
   subscribeCloseRequested,
+  subscribeDatasetUpdated,
   subscribeLcuStatus,
   subscribeOverlayState,
   subscribeSettingsUpdated,
@@ -68,15 +69,33 @@ const App: React.FC = () => {
   const [rememberClose, setRememberClose] = useState(false);
   const [pendingUpdate, setPendingUpdate] = useState<AppUpdateInfo | null>(null);
 
+  // Single entry point for every database refresh (startup, background update,
+  // manual sync) so the selected hero and the error banner follow the data shown.
+  const applyDatabase = (fresh: LoadedHexBoxDatabase) => {
+    setDb(fresh);
+    setLoadError(null);
+    setSelectedHero((current) =>
+      fresh.champions.some((c) => c.hero === current) ? current : fresh.champions[0].hero
+    );
+  };
+
   useEffect(() => {
-    loadDatabase()
-      .then((loaded) => {
-        setDb(loaded);
-        if (loaded.champions.length > 0 && !loaded.champions.some((c) => c.hero === selectedHero)) {
-          setSelectedHero(loaded.champions[0].hero);
-        }
-      })
-      .catch((err) => setLoadError(String(err)));
+    let active = true;
+    const refresh = (force: boolean) => {
+      loadDatabase(force)
+        .then((fresh) => {
+          if (active) applyDatabase(fresh);
+        })
+        .catch((err) => {
+          if (active) setLoadError(err instanceof Error ? err.message : String(err));
+        });
+    };
+    refresh(false);
+    const unlisten = subscribeDatasetUpdated(() => refresh(true));
+    return () => {
+      active = false;
+      unlisten.then((fn) => fn()).catch(() => {});
+    };
   }, []);
 
   useEffect(() => {
@@ -250,7 +269,8 @@ const App: React.FC = () => {
 
         {loadError && (
           <div className="panel-card error-card">
-            数据加载失败：{loadError}
+            {db ? "数据刷新失败，继续使用已加载的数据：" : "数据加载失败："}
+            {loadError}
           </div>
         )}
 
@@ -288,7 +308,6 @@ const App: React.FC = () => {
             settings={settings}
             onUpdateSettings={handleUpdateSettings}
             onOpenOverlayPreview={handleOpenOverlayPreview}
-            onDatabaseReloaded={(fresh) => setDb(fresh)}
           />
         )}
       </main>

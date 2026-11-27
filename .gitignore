@@ -23,6 +23,9 @@ __pycache__/
 /data/augment_offer_stats.json
 /data/ocr_cache/
 /data/*.tmp
+/data/.runtime-update*
+/data/.backup/
+/data/.staging-*/
 
 # Large binary models & executables
 models/*.onnx

@@ -94,7 +94,7 @@ export const OverlayApp: React.FC<OverlayAppProps> = ({
       active = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wantsPlan, effectiveHero, goldKey, ownedKey, enemyKey]);
+  }, [wantsPlan, db, effectiveHero, goldKey, ownedKey, enemyKey]);
 
   if (kind === "augment") {
     return (

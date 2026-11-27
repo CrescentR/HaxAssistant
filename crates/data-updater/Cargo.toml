@@ -5,11 +5,13 @@ edition.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+flate2.workspace = true
 reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
 shared-types = { path = "../shared-types" }
+tar.workspace = true
 
 [dev-dependencies]
 tokio.workspace = true

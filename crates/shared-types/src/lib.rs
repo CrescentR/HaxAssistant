@@ -707,6 +707,21 @@ pub struct AssetSyncResult {
     pub status: AssetSyncStatus,
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DataUpdateOutcome {
+    pub status: String,
+    pub source_url: String,
+    pub snapshot_id: String,
+    pub patch: String,
+    pub report_date: String,
+    pub remote_hash: String,
+    pub previous_hash: String,
+    pub updated_files: Vec<String>,
+    pub message: String,
+    pub checked_at_ms: u64,
+}
+
 /// League's in-game window mode as stored in the client's game settings
 /// (`General.WindowMode`: 0 fullscreen, 1 windowed, 2 borderless).
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

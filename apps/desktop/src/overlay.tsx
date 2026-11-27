@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { loadDatabase, loadSettings, type LoadedHexBoxDatabase } from "./api/dataService";
 import {
   isTauriRuntime,
+  subscribeDatasetUpdated,
   subscribeOverlayState,
   subscribeSettingsUpdated,
   tauriGetOverlayState,
@@ -36,7 +37,21 @@ const OverlayEntry: React.FC = () => {
   const kind = resolveOverlayKind();
 
   useEffect(() => {
-    loadDatabase().then(setDb).catch(() => {});
+    let active = true;
+    const refresh = (force: boolean) => {
+      // A failed reload keeps whatever the overlay is already showing.
+      loadDatabase(force)
+        .then((fresh) => {
+          if (active) setDb(fresh);
+        })
+        .catch(() => {});
+    };
+    refresh(false);
+    const unlisten = subscribeDatasetUpdated(() => refresh(true));
+    return () => {
+      active = false;
+      unlisten.then((fn) => fn()).catch(() => {});
+    };
   }, []);
 
   useEffect(() => {

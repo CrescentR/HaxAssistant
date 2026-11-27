@@ -47,6 +47,7 @@ fn main() {
                 n,
                 "user_settings.json"
                     | "overlay_layout.json"
+                    | "main_window.json"
                     | "player_markers.json"
                     | "player_encounters.json"
                     | "augment_offer_stats.json"

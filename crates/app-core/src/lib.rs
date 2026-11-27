@@ -4,6 +4,7 @@ pub mod player_store;
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
@@ -17,12 +18,12 @@ use player_store::PlayerStore;
 use serde_json::{json, Value};
 use shared_types::{
     AppSettings, ArurfRecommendation, AssetSyncResult, AssetSyncStatus, AugmentOfferStatsReport,
-    AugmentRecommendationCard, BenchGrabStatus, EnemyCounterAnalysis, GamePlayerIntel,
-    IntelCacheStatus, ItemPlan, ItemSetSyncResult, LcuStatus, LeagueWindowMode, LineupEvaluation,
-    LiveGameSnapshot,
-    MatchHistoryEntry, MatchHistoryResponse, OcrCacheCleanupReport, OverlayStatePayload,
-    PlayerEncounterRecord, PlayerEncounterSummary, PlayerLibraryBundle, PlayerMarker, PlayerProfile,
-    PlayerSearchResult, PostgameReview, RunePagePlan, RuntimeSummary, SummonerSpellSnapshot,
+    AugmentRecommendationCard, BenchGrabStatus, DataUpdateOutcome, EnemyCounterAnalysis,
+    GamePlayerIntel, IntelCacheStatus, ItemPlan, ItemSetSyncResult, LcuStatus, LeagueWindowMode,
+    LineupEvaluation, LiveGameSnapshot, MatchHistoryEntry, MatchHistoryResponse,
+    OcrCacheCleanupReport, OverlayStatePayload, PlayerEncounterRecord, PlayerEncounterSummary,
+    PlayerLibraryBundle, PlayerMarker, PlayerProfile, PlayerSearchResult, PostgameReview,
+    RunePagePlan, RuntimeSummary, SummonerSpellSnapshot,
 };
 
 const INTEL_CACHE_TTL_SECS: u64 = 300;
@@ -61,6 +62,15 @@ pub struct HexBoxCore {
     last_recorded_live_key: Mutex<Option<String>>,
     intel_cache: RwLock<HashMap<String, CachedIntelEntry>>,
     last_intel_refresh_epoch: RwLock<Option<u64>>,
+    data_sync_in_flight: AtomicBool,
+}
+
+struct SyncInFlightGuard<'a>(&'a AtomicBool);
+
+impl Drop for SyncInFlightGuard<'_> {
+    fn drop(&mut self) {
+        self.0.store(false, Ordering::Release);
+    }
 }
 
 /// Normalize a summoner/riot-id name for equality checks: strip any `#tag`,
@@ -84,11 +94,28 @@ fn now_epoch_secs() -> u64 {
 
 impl HexBoxCore {
     pub fn initialize(root: &Path) -> Result<Self> {
+        Self::initialize_with_resources(root, root)
+    }
+
+    pub fn initialize_with_resources(root: &Path, resource_root: &Path) -> Result<Self> {
+        data_updater::recover_runtime_update(&data_runtime::resolve_data_dir(root))?;
         let dataset = Dataset::load_from_root(root)?;
         let data_dir = dataset.data_dir.clone();
         let settings = load_settings_file(&data_dir);
-        let launcher = resolve_ocr_launcher(root);
-        let model_dir = resolve_model_dir(root);
+        let launcher = resolve_ocr_launcher(resource_root);
+        let bundled_models = resolve_model_dir(resource_root);
+        let model_dir = if root != resource_root && env_path("ARAM_ASSISTANT_OCR_MODEL_DIR").is_none() {
+            let writable_models = root.join("models");
+            match seed_writable_models(&bundled_models, &writable_models) {
+                Ok(()) => writable_models,
+                Err(err) => {
+                    eprintln!("[ocr] 初始化本地模型目录失败: {err:#}");
+                    bundled_models
+                }
+            }
+        } else {
+            bundled_models
+        };
         let ocr_worker =
             PersistentOcrWorker::new(launcher, data_dir.clone(), model_dir.clone());
         let player_store = PlayerStore::load(&data_dir);
@@ -110,6 +137,7 @@ impl HexBoxCore {
             last_recorded_live_key: Mutex::new(None),
             intel_cache: RwLock::new(HashMap::new()),
             last_intel_refresh_epoch: RwLock::new(None),
+            data_sync_in_flight: AtomicBool::new(false),
         })
     }
 
@@ -219,12 +247,8 @@ impl HexBoxCore {
         inspect_asset_status(&self.data_dir(), &self.model_dir)
     }
 
-    pub async fn sync_remote_assets(
-        &self,
-        source_url: Option<&str>,
-        include_models: bool,
-    ) -> Result<AssetSyncResult> {
-        let url = source_url
+    pub fn resolve_data_sync_url(&self, source_url: Option<&str>) -> String {
+        source_url
             .map(str::trim)
             .filter(|s| !s.is_empty())
             .map(ToString::to_string)
@@ -255,12 +279,140 @@ impl HexBoxCore {
                 } else {
                     String::new()
                 }
-            });
-        let result =
-            data_updater::sync_remote_assets(&url, &self.data_dir(), &self.model_dir, include_models)
+            })
+    }
+
+    /// True when the League client is not in champ select or an active match,
+    /// so swapping the local runtime dataset will not disrupt live decisions.
+    pub fn is_safe_to_swap_data(&self) -> bool {
+        let lcu = self.get_overlay_state().lcu;
+        if !lcu.connected {
+            return true;
+        }
+        !matches!(
+            lcu.phase.as_str(),
+            "ReadyCheck" | "ChampSelect" | "GameStart" | "InProgress" | "Reconnect"
+        )
+    }
+
+    fn acquire_sync_guard(&self) -> Result<SyncInFlightGuard<'_>> {
+        if self
+            .data_sync_in_flight
+            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+            .is_err()
+        {
+            return Err(anyhow!("已有数据更新任务正在进行，请稍候"));
+        }
+        Ok(SyncInFlightGuard(&self.data_sync_in_flight))
+    }
+
+    /// Check or apply an atomic whole-bundle update via `/api/hexdata/meta` +
+    /// `/api/hexdata/runtime-bundle`. Reloads the in-memory dataset on success.
+    pub async fn sync_runtime_bundle(
+        &self,
+        source_url: Option<&str>,
+        apply: bool,
+    ) -> Result<DataUpdateOutcome> {
+        let _guard = self.acquire_sync_guard()?;
+        let url = self.resolve_data_sync_url(source_url);
+        if url.is_empty() {
+            return Err(anyhow!("暂未配置数据更新服务，请稍后重试"));
+        }
+        let mut out = data_updater::run_runtime_update_if(
+            &url,
+            &self.data_dir(),
+            apply && self.is_safe_to_swap_data(),
+            || self.is_safe_to_swap_data(),
+        )
+        .await?;
+        if out.status == "updated" {
+            self.reload_dataset()?;
+        }
+        // Keep the compiled backend URL private from the UI layer.
+        out.source_url.clear();
+        Ok(out)
+    }
+
+    pub async fn sync_remote_assets(
+        &self,
+        source_url: Option<&str>,
+        include_models: bool,
+    ) -> Result<AssetSyncResult> {
+        let _guard = self.acquire_sync_guard()?;
+        let url = self.resolve_data_sync_url(source_url);
+        if url.is_empty() {
+            return Err(anyhow!("暂未配置数据更新服务，请稍后重试"));
+        }
+
+        // Prefer atomic whole-bundle updates (`/api/hexdata/meta` + `/api/hexdata/runtime-bundle`).
+        // Fall back to legacy file-by-file `/data/manifest.json` sync only when the server
+        // does not expose the bundle meta endpoint (HTTP 404).
+        match data_updater::run_runtime_update_if(
+            &url,
+            &self.data_dir(),
+            self.is_safe_to_swap_data(),
+            || self.is_safe_to_swap_data(),
+        )
+        .await
+        {
+            Ok(bundle_out) => {
+                if matches!(bundle_out.status.as_str(), "disabled" | "available") {
+                    return Err(anyhow!("{}", bundle_out.message));
+                }
+                if bundle_out.status == "updated" {
+                    self.reload_dataset()?;
+                }
+                let (downloaded_model_files, failed_files, skipped_models) = if include_models {
+                    data_updater::sync_missing_models(&url, &self.data_dir(), &self.model_dir)
+                        .await
+                        .unwrap_or_else(|err| (Vec::new(), vec![err.to_string()], 0))
+                } else {
+                    (Vec::new(), Vec::new(), 0)
+                };
+                let status = inspect_asset_status(&self.data_dir(), &self.model_dir);
+                let skipped_data = if bundle_out.status == "already_latest" {
+                    status.present_data_files
+                } else {
+                    0
+                };
+                let patch = if bundle_out.patch.is_empty() {
+                    status.patch.clone()
+                } else {
+                    bundle_out.patch
+                };
+                let report_date = if bundle_out.report_date.is_empty() {
+                    status.report_date.clone()
+                } else {
+                    bundle_out.report_date
+                };
+                Ok(AssetSyncResult {
+                    source_url: String::new(),
+                    patch,
+                    report_date,
+                    downloaded_data_files: bundle_out.updated_files,
+                    downloaded_model_files,
+                    skipped_files: skipped_data + skipped_models,
+                    failed_files,
+                    status,
+                })
+            }
+            Err(bundle_err) if bundle_err.is::<data_updater::MetaEndpointNotFound>() => {
+                if !self.is_safe_to_swap_data() {
+                    return Err(anyhow!("对局进行中，请在对局结束后更新数据"));
+                }
+                let mut result = data_updater::sync_remote_assets(
+                    &url,
+                    &self.data_dir(),
+                    &self.model_dir,
+                    include_models,
+                )
                 .await?;
-        let _ = self.reload_dataset();
-        Ok(result)
+                self.reload_dataset()?;
+                result.source_url.clear();
+                Ok(result)
+            }
+            Err(err) => Err(err),
+        }
     }
 
     pub fn cleanup_ocr_cache(&self) -> OcrCacheCleanupReport {
@@ -1621,6 +1773,10 @@ fn search_roots(root: &Path) -> Vec<PathBuf> {
     {
         roots.push(exe_dir.clone());
         roots.push(exe_dir.join("resources"));
+        // macOS .app bundle: executable lives in Contents/MacOS, bundled resources in Contents/Resources.
+        if let Some(parent) = exe_dir.parent() {
+            roots.push(parent.join("Resources"));
+        }
     }
     if let Some(workspace) = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
@@ -1729,6 +1885,59 @@ fn resolve_ocr_python_from_root(root: &Path) -> PathBuf {
     }
     // `python3` on Windows is usually the Microsoft Store stub, not a real interpreter.
     PathBuf::from(if cfg!(windows) { "python" } else { "python3" })
+}
+
+fn is_dir_writable(dir: &Path) -> bool {
+    if cfg!(target_os = "macos") && dir.to_string_lossy().contains(".app/Contents/") {
+        return false;
+    }
+    if fs::create_dir_all(dir).is_err() {
+        return false;
+    }
+    let probe = dir.join(format!(".haxassistant-write-probe-{}", std::process::id()));
+    match fs::write(&probe, b"ok") {
+        Ok(()) => {
+            let _ = fs::remove_file(&probe);
+            true
+        }
+        Err(_) => false,
+    }
+}
+
+fn seed_writable_models(source: &Path, destination: &Path) -> Result<()> {
+    fs::create_dir_all(destination)?;
+    if !source.is_dir() || source == destination {
+        return Ok(());
+    }
+    for entry in fs::read_dir(source)? {
+        let entry = entry?;
+        let target = destination.join(entry.file_name());
+        if entry.file_type()?.is_file() && !target.is_file() {
+            let tmp = target.with_extension(format!("{}.seed.tmp", std::process::id()));
+            fs::copy(entry.path(), &tmp)?;
+            fs::rename(tmp, target)?;
+        }
+    }
+    Ok(())
+}
+
+/// Use per-user storage for datasets installed under a read-only resource root.
+pub fn prepare_writable_data_root(bundled_root: &Path, local_data_dir: Option<&Path>) -> PathBuf {
+    let bundled_data = data_runtime::resolve_data_dir(bundled_root);
+    if is_dir_writable(&bundled_data) {
+        return bundled_root.to_path_buf();
+    }
+    let Some(writable_root) = local_data_dir else {
+        return bundled_root.to_path_buf();
+    };
+    let dest_data = writable_root.join("data");
+    match data_updater::seed_bundled_data(&bundled_data, &dest_data) {
+        Ok(()) => writable_root.to_path_buf(),
+        Err(err) => {
+            eprintln!("[data-updater] 初始化本地数据失败: {err:#}");
+            bundled_root.to_path_buf()
+        }
+    }
 }
 
 fn load_settings_file(data_dir: &Path) -> AppSettings {
@@ -1846,5 +2055,26 @@ mod tests {
 
         let (_, changed_again) = core.set_overlay_state_if_changed(payload);
         assert!(!changed_again);
+    }
+
+    #[test]
+    fn is_safe_to_swap_data_defers_during_champ_select_and_match() {
+        let root = workspace_root();
+        let core = HexBoxCore::initialize(&root).expect("initialize HexBoxCore");
+        assert!(core.is_safe_to_swap_data());
+
+        let mut st = core.get_overlay_state();
+        st.lcu.connected = true;
+        st.lcu.phase = "ChampSelect".to_string();
+        core.set_overlay_state(st.clone());
+        assert!(!core.is_safe_to_swap_data());
+
+        st.lcu.phase = "InProgress".to_string();
+        core.set_overlay_state(st.clone());
+        assert!(!core.is_safe_to_swap_data());
+
+        st.lcu.phase = "Lobby".to_string();
+        core.set_overlay_state(st);
+        assert!(core.is_safe_to_swap_data());
     }
 }

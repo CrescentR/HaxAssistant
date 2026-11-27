@@ -35,106 +35,175 @@ export interface LoadedHexBoxDatabase {
 
 let cachedDbPromise: Promise<LoadedHexBoxDatabase> | null = null;
 
-async function fetchJsonSafe<T>(url: string, fallback: T): Promise<T> {
-  if (isTauriRuntime() && url.startsWith("/data/")) {
-    const fileName = url.slice("/data/".length).split("?")[0];
-    try {
-      const text = await tauriReadDataFile(fileName);
-      if (text) return JSON.parse(text) as T;
-    } catch {
-      // Fall back to static bundled /data/* asset
-    }
-  }
+/** Synced copy in the app's writable data directory (desktop only). */
+async function readSyncedJson<T>(fileName: string): Promise<T | undefined> {
+  if (!isTauriRuntime()) return undefined;
   try {
-    const res = await fetch(url);
-    if (!res.ok) return fallback;
-    return (await res.json()) as T;
+    const text = await tauriReadDataFile(fileName);
+    return text ? (JSON.parse(text) as T) : undefined;
   } catch {
-    return fallback;
+    return undefined;
   }
 }
 
+/** Static copy bundled with the frontend (offline fallback, browser preview). */
+async function fetchBundledJson<T>(fileName: string): Promise<T | undefined> {
+  try {
+    const res = await fetch(`/data/${fileName}`);
+    if (!res.ok) return undefined;
+    return (await res.json()) as T;
+  } catch {
+    return undefined;
+  }
+}
+
+async function fetchJsonSafe<T>(fileName: string, fallback: T): Promise<T> {
+  return (await readSyncedJson<T>(fileName)) ?? (await fetchBundledJson<T>(fileName)) ?? fallback;
+}
+
+/**
+ * `augments.json` only carries name/rarity/tier. Fill the remaining catalog
+ * fields with neutral values so views built for `augments_full.json` keep working.
+ */
+function normalizeAugment(raw: Partial<AugmentCatalogEntry>, index: number): AugmentCatalogEntry {
+  const hexScore = raw.hex_score ?? 56;
+  const tierMeta = getTierMeta(hexScore);
+  const name = raw.augment_name ?? "";
+  return {
+    ...raw,
+    id: raw.id ?? raw.normalized_name ?? (name || `augment-${index}`),
+    augment_id: raw.augment_id ?? 0,
+    augment_name: name,
+    normalized_name: raw.normalized_name ?? name,
+    english_name: raw.english_name ?? "",
+    description: raw.description ?? "",
+    rarity: raw.rarity ?? "",
+    tier: raw.tier ?? 0,
+    games: raw.games ?? 0,
+    win_rate: raw.win_rate ?? 0.5,
+    pick_rate: raw.pick_rate ?? 0,
+    hex_score: hexScore,
+    hex_tier: raw.hex_tier ?? tierMeta.tier,
+    hex_label: raw.hex_label ?? tierMeta.label,
+    hex_tier_color: raw.hex_tier_color ?? tierMeta.color,
+  };
+}
+
+/**
+ * Same order as the Rust loader: `augments_full.json`, then `augments.json`,
+ * trying the synced data directory before the bundled copy.
+ */
+async function loadAugments(): Promise<AugmentCatalogEntry[]> {
+  for (const read of [readSyncedJson, fetchBundledJson]) {
+    for (const fileName of ["augments_full.json", "augments.json"]) {
+      const rows = await read<Partial<AugmentCatalogEntry>[]>(fileName);
+      if (Array.isArray(rows) && rows.length > 0) return rows.map(normalizeAugment);
+    }
+  }
+  return [];
+}
+
+/**
+ * Returns the newest database. A forced reload starts a new generation; loads
+ * it supersedes resolve to that newer generation, so callers can apply
+ * whatever they get without an older read overwriting a newer one.
+ */
 export function loadDatabase(forceReload = false): Promise<LoadedHexBoxDatabase> {
   if (cachedDbPromise && !forceReload) return cachedDbPromise;
 
-  cachedDbPromise = (async () => {
-    const [
-      runtimeMeta,
-      champions,
-      augments,
-      heroAugmentStats,
-      heroItemBuilds,
-      heroAugmentTrios,
-      heroSynergiesCounters,
-      formulaItemsDoc,
-      skillOrdersDoc,
-      mechanicPairs,
-      stageValueDoc,
-      postmatchByHeroId,
-      augmentRarity,
-      itemNames,
-      itemPricesDoc,
-      presets,
-    ] = await Promise.all([
-      fetchJsonSafe<any>("/data/runtime_meta.json", { version: "16.23", report_date: "2026-11-22" }),
-      fetchJsonSafe<ChampionSummary[]>("/data/champions.json", []),
-      fetchJsonSafe<AugmentCatalogEntry[]>("/data/augments_full.json", []),
-      fetchJsonSafe<Record<string, HeroAugmentStatRow[]>>("/data/hero_augment_stats.json", {}),
-      fetchJsonSafe<Record<string, HeroItemBuildPack>>("/data/hero_item_builds.json", {}),
-      fetchJsonSafe<Record<string, any[]>>("/data/hero_augment_trios.json", {}),
-      fetchJsonSafe<Record<string, any>>("/data/hero_synergies_counters.json", {}),
-      fetchJsonSafe<any>("/data/hero_formula_items.json", { items: [] }),
-      fetchJsonSafe<any>("/data/hero_skill_orders.json", { champions: {} }),
-      fetchJsonSafe<AugmentMechanicPairs>("/data/augment_mechanic_pairs_v1.json", {
-        schemaVersion: "1",
-        reviewedPatch: "16.23",
-        note: "",
-        links: [],
-        conflicts: [],
-      }),
-      fetchJsonSafe<any>("/data/augment_stage_value_v1.json", { rows: [] }),
-      fetchJsonSafe<Record<string, any>>("/data/postmatch.json", {}),
-      fetchJsonSafe<any>("/data/augment_rarity.json", { stages: [] }),
-      fetchJsonSafe<Record<string, string>>("/data/item_names.json", {}),
-      fetchJsonSafe<any>("/data/item_prices_v1.json", { items: {} }),
-      fetchJsonSafe<any[]>("/data/augment_presets.json", []),
-    ]);
-
-    const formulaItemsByHero: Record<string, FormulaItemBuild> = {};
-    for (const item of formulaItemsDoc?.items || []) {
-      formulaItemsByHero[item.heroName] = item;
-      formulaItemsByHero[String(item.heroId)] = item;
+  const current: Promise<LoadedHexBoxDatabase> = readDatabase().then(
+    (db) => (cachedDbPromise === current ? db : loadDatabase()),
+    (err) => {
+      if (cachedDbPromise !== current) return loadDatabase();
+      cachedDbPromise = null; // let the next call retry
+      throw err;
     }
+  );
+  cachedDbPromise = current;
+  return current;
+}
 
-    const stageShifts: Record<string, Record<number, number>> = {};
-    for (const row of stageValueDoc?.rows || []) {
-      if (!row?.name || !row?.stage) continue;
-      stageShifts[row.name] = stageShifts[row.name] || {};
-      stageShifts[row.name][Number(row.stage)] = Number(row.shift || 0);
-    }
+async function readDatabase(): Promise<LoadedHexBoxDatabase> {
+  const [
+    manifest,
+    runtimeMeta,
+    champions,
+    augments,
+    heroAugmentStats,
+    heroItemBuilds,
+    heroAugmentTrios,
+    heroSynergiesCounters,
+    formulaItemsDoc,
+    skillOrdersDoc,
+    mechanicPairs,
+    stageValueDoc,
+    postmatchByHeroId,
+    augmentRarity,
+    itemNames,
+    itemPricesDoc,
+    presets,
+  ] = await Promise.all([
+    fetchJsonSafe<{ version?: string; report_date?: string } | null>("manifest.json", null),
+    fetchJsonSafe<any>("runtime_meta.json", { version: "16.23", report_date: "2026-11-22" }),
+    fetchJsonSafe<ChampionSummary[]>("champions.json", []),
+    loadAugments(),
+    fetchJsonSafe<Record<string, HeroAugmentStatRow[]>>("hero_augment_stats.json", {}),
+    fetchJsonSafe<Record<string, HeroItemBuildPack>>("hero_item_builds.json", {}),
+    fetchJsonSafe<Record<string, any[]>>("hero_augment_trios.json", {}),
+    fetchJsonSafe<Record<string, any>>("hero_synergies_counters.json", {}),
+    fetchJsonSafe<any>("hero_formula_items.json", { items: [] }),
+    fetchJsonSafe<any>("hero_skill_orders.json", { champions: {} }),
+    fetchJsonSafe<AugmentMechanicPairs>("augment_mechanic_pairs_v1.json", {
+      schemaVersion: "1",
+      reviewedPatch: "16.23",
+      note: "",
+      links: [],
+      conflicts: [],
+    }),
+    fetchJsonSafe<any>("augment_stage_value_v1.json", { rows: [] }),
+    fetchJsonSafe<Record<string, any>>("postmatch.json", {}),
+    fetchJsonSafe<any>("augment_rarity.json", { stages: [] }),
+    fetchJsonSafe<Record<string, string>>("item_names.json", {}),
+    fetchJsonSafe<any>("item_prices_v1.json", { items: {} }),
+    fetchJsonSafe<any[]>("augment_presets.json", []),
+  ]);
 
-    return {
-      patch: runtimeMeta?.version || "16.23",
-      reportDate: runtimeMeta?.report_date || "2026-11-22",
-      champions,
-      augments,
-      heroAugmentStats,
-      heroItemBuilds,
-      heroAugmentTrios,
-      heroSynergiesCounters,
-      formulaItemsByHero,
-      skillOrdersByHeroId: skillOrdersDoc?.champions || {},
-      mechanicPairs,
-      stageShifts,
-      postmatchByHeroId,
-      augmentRarity,
-      itemNames,
-      itemPrices: itemPricesDoc?.items || {},
-      presets,
-    };
-  })();
+  if (!Array.isArray(champions) || champions.length === 0) {
+    throw new Error("英雄数据为空或无法读取");
+  }
 
-  return cachedDbPromise;
+  const formulaItemsByHero: Record<string, FormulaItemBuild> = {};
+  for (const item of formulaItemsDoc?.items || []) {
+    formulaItemsByHero[item.heroName] = item;
+    formulaItemsByHero[String(item.heroId)] = item;
+  }
+
+  const stageShifts: Record<string, Record<number, number>> = {};
+  for (const row of stageValueDoc?.rows || []) {
+    if (!row?.name || !row?.stage) continue;
+    stageShifts[row.name] = stageShifts[row.name] || {};
+    stageShifts[row.name][Number(row.stage)] = Number(row.shift || 0);
+  }
+
+  return {
+    patch: manifest?.version || runtimeMeta?.version || "16.23",
+    reportDate: manifest?.report_date || runtimeMeta?.report_date || "2026-11-22",
+    champions,
+    augments,
+    heroAugmentStats,
+    heroItemBuilds,
+    heroAugmentTrios,
+    heroSynergiesCounters,
+    formulaItemsByHero,
+    skillOrdersByHeroId: skillOrdersDoc?.champions || {},
+    mechanicPairs,
+    stageShifts,
+    postmatchByHeroId,
+    augmentRarity,
+    itemNames,
+    itemPrices: itemPricesDoc?.items || {},
+    presets,
+  };
 }
 
 /**

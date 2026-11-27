@@ -1,3 +1,5 @@
+pub mod runtime_bundle;
+
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
@@ -7,6 +9,22 @@ use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use shared_types::{AssetSyncResult, AssetSyncStatus};
+
+pub use runtime_bundle::{local_core_payload_hash, recover_runtime_update, run_runtime_update, run_runtime_update_if, seed_bundled_data, MetaEndpointNotFound};
+
+/// Local user-state files stored in `data/` that remote updates must never overwrite.
+pub const USER_PRIVATE_FILES: &[&str] = &[
+    "user_settings.json",
+    "overlay_layout.json",
+    "main_window.json",
+    "player_markers.json",
+    "player_encounters.json",
+    "augment_offer_stats.json",
+];
+
+pub fn is_user_private_file(name: &str) -> bool {
+    USER_PRIVATE_FILES.iter().any(|file| file.eq_ignore_ascii_case(name))
+}
 
 /// Required model artifacts for full Chinese + neural card detection OCR.
 pub const REQUIRED_MODEL_FILES: &[&str] = &[
@@ -62,7 +80,7 @@ pub fn verify_manifest(data_dir: &Path) -> Result<ManifestReport> {
 
     let mut missing_files = Vec::new();
     let mut present_files = 0usize;
-    for f in &files {
+    for f in files.iter().filter(|name| !is_user_private_file(name)) {
         if data_dir.join(f).exists() {
             present_files += 1;
         } else {
@@ -73,7 +91,7 @@ pub fn verify_manifest(data_dir: &Path) -> Result<ManifestReport> {
     Ok(ManifestReport {
         version,
         report_date,
-        expected_files: files.len(),
+        expected_files: present_files + missing_files.len(),
         present_files,
         missing_files,
         manifest_sha256,
@@ -93,6 +111,7 @@ fn extract_manifest_files(json: &serde_json::Value) -> Vec<String> {
 
 fn extract_manifest_hashes(json: &serde_json::Value) -> HashMap<String, String> {
     json.get("hashes")
+        .or_else(|| json.get("file_hashes"))
         .and_then(|v| v.as_object())
         .map(|obj| {
             obj.iter()
@@ -178,11 +197,23 @@ pub fn inspect_asset_status(data_dir: &Path, model_dir: &Path) -> AssetSyncStatu
 /// (e.g. absolute paths, `C:\…`, `../x`).
 fn is_safe_file_name(name: &str) -> bool {
     !name.is_empty()
+        && !name.starts_with('.')
+        && name.is_ascii()
+        && !name.ends_with(['.', ' '])
+        && !name.bytes().any(|byte| byte.is_ascii_control() || b"<>\"|?*".contains(&byte))
+        && !is_windows_device_name(name)
         && !name.contains("..")
         && !name.contains('/')
         && !name.contains('\\')
         && !name.contains(':')
         && Path::new(name).file_name().and_then(|n| n.to_str()) == Some(name)
+}
+
+fn is_windows_device_name(name: &str) -> bool {
+    let stem = name.split('.').next().unwrap_or_default().trim_end().to_ascii_uppercase();
+    matches!(stem.as_str(), "CON" | "PRN" | "AUX" | "NUL")
+        || (stem.len() == 4 && (stem.starts_with("COM") || stem.starts_with("LPT"))
+            && matches!(stem.as_bytes()[3], b'1'..=b'9'))
 }
 
 fn write_atomic(dest: &Path, bytes: &[u8]) -> Result<()> {
@@ -270,7 +301,7 @@ pub async fn sync_remote_assets(
     let mut skipped_files = 0usize;
 
     for file_name in &files {
-        if !is_safe_file_name(file_name) {
+        if !is_safe_file_name(file_name) || is_user_private_file(file_name) {
             continue;
         }
         let dest = data_dir.join(file_name);
@@ -353,6 +384,91 @@ pub async fn sync_remote_assets(
         failed_files,
         status,
     })
+}
+
+/// Download any missing required/listed OCR model files from `<base_url>/models/<name>`.
+/// Returns `(downloaded_models, failed_models, skipped_models)`.
+pub async fn sync_missing_models(
+    base_url: &str,
+    data_dir: &Path,
+    model_dir: &Path,
+) -> Result<(Vec<String>, Vec<String>, usize)> {
+    let trimmed = base_url.trim().trim_end_matches('/');
+    if trimmed.is_empty() {
+        return Ok((Vec::new(), Vec::new(), 0));
+    }
+
+    let manifest_json: serde_json::Value = fs::read(data_dir.join("manifest.json"))
+        .ok()
+        .and_then(|b| serde_json::from_slice(&b).ok())
+        .unwrap_or(serde_json::Value::Null);
+    let model_hashes: HashMap<String, String> = manifest_json
+        .get("model_hashes")
+        .and_then(|v| v.as_object())
+        .map(|obj| {
+            obj.iter()
+                .filter_map(|(k, v)| v.as_str().map(|s| (k.clone(), s.to_lowercase())))
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let candidates = extract_manifest_models(&manifest_json);
+    let mut missing = Vec::new();
+    let mut skipped = 0usize;
+    for model_name in candidates {
+        if !is_safe_file_name(&model_name) {
+            continue;
+        }
+        let dest = model_dir.join(&model_name);
+        let expected_hash = model_hashes.get(&model_name).map(String::as_str);
+        if file_matches_hash(&dest, expected_hash) {
+            skipped += 1;
+        } else {
+            missing.push(model_name);
+        }
+    }
+    if missing.is_empty() {
+        return Ok((Vec::new(), Vec::new(), skipped));
+    }
+
+    fs::create_dir_all(model_dir)?;
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(60))
+        .build()?;
+    let model_base = format!("{trimmed}/models");
+    let mut downloaded = Vec::new();
+    let mut failed = Vec::new();
+
+    for model_name in missing {
+        let dest = model_dir.join(&model_name);
+        let expected_hash = model_hashes.get(&model_name).map(String::as_str);
+        let is_required = REQUIRED_MODEL_FILES.contains(&model_name.as_str());
+        let url = format!("{model_base}/{model_name}");
+        match fetch_bytes(&client, &url).await {
+            Ok(bytes) => {
+                if let Some(exp) = expected_hash {
+                    if !sha256_hex(&bytes).eq_ignore_ascii_case(exp) {
+                        failed.push(format!("models/{model_name} (sha256 mismatch)"));
+                        continue;
+                    }
+                }
+                if let Err(err) = write_atomic(&dest, &bytes) {
+                    if is_required {
+                        failed.push(format!("models/{model_name}: {err}"));
+                    }
+                    continue;
+                }
+                downloaded.push(model_name);
+            }
+            Err(err) => {
+                if is_required {
+                    failed.push(format!("models/{model_name}: {err}"));
+                }
+            }
+        }
+    }
+
+    Ok((downloaded, failed, skipped))
 }
 
 #[cfg(test)]

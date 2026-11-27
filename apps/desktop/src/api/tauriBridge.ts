@@ -9,6 +9,7 @@ import type {
   AssetSyncStatus,
   AugmentOfferStatsReport,
   BenchGrabStatus,
+  DataUpdateOutcome,
   GamePlayerIntel,
   IntelCacheStatus,
   ItemPlan,
@@ -247,6 +248,15 @@ export async function subscribeSettingsUpdated(
   });
 }
 
+export async function subscribeDatasetUpdated(
+  handler: (summary: RuntimeSummary) => void
+): Promise<UnlistenFn> {
+  if (!isTauriRuntime()) return () => {};
+  return listen<RuntimeSummary>("haxassistant://dataset-updated", (event) => {
+    handler(event.payload);
+  });
+}
+
 // ---------------------------------------------------------------------------
 // P0: Asset sync, OCR cache cleanup & client locale
 // ---------------------------------------------------------------------------
@@ -264,6 +274,17 @@ export async function tauriSyncRemoteAssets(
   return invoke<AssetSyncResult>("sync_remote_assets", {
     sourceUrl: sourceUrl ?? null,
     includeModels,
+  });
+}
+
+export async function tauriSyncRuntimeBundle(
+  sourceUrl?: string,
+  apply = true
+): Promise<DataUpdateOutcome | null> {
+  if (!isTauriRuntime()) return null;
+  return invoke<DataUpdateOutcome>("sync_runtime_bundle", {
+    sourceUrl: sourceUrl ?? null,
+    apply,
   });
 }
 

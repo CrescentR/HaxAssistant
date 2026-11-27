@@ -379,6 +379,19 @@ export interface AssetSyncResult {
   status: AssetSyncStatus;
 }
 
+export interface DataUpdateOutcome {
+  status: "disabled" | "already_latest" | "available" | "updated" | string;
+  sourceUrl: string;
+  snapshotId: string;
+  patch: string;
+  reportDate: string;
+  remoteHash: string;
+  previousHash: string;
+  updatedFiles: string[];
+  message: string;
+  checkedAtMs: number;
+}
+
 export interface OcrCacheCleanupReport {
   removedFiles: number;
   freedBytes: number;

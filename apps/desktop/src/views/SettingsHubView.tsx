@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { CloudDownload, Eye, Globe, RefreshCw, RotateCcw, Settings, Trash2 } from "lucide-react";
-import { DEFAULT_SETTINGS, loadDatabase, type LoadedHexBoxDatabase } from "../api/dataService";
+import { DEFAULT_SETTINGS, type LoadedHexBoxDatabase } from "../api/dataService";
 import {
   isTauriRuntime,
   subscribeUpdateProgress,
@@ -26,7 +26,6 @@ interface SettingsHubViewProps {
   settings: AppSettings;
   onUpdateSettings: (patch: Partial<AppSettings>) => void;
   onOpenOverlayPreview: (overlayKind: string) => void;
-  onDatabaseReloaded?: (fresh: LoadedHexBoxDatabase) => void;
 }
 
 export const SettingsHubView: React.FC<SettingsHubViewProps> = ({
@@ -34,7 +33,6 @@ export const SettingsHubView: React.FC<SettingsHubViewProps> = ({
   settings,
   onUpdateSettings,
   onOpenOverlayPreview,
-  onDatabaseReloaded,
 }) => {
   const [assetStatus, setAssetStatus] = useState<AssetSyncStatus | null>(null);
   const [syncing, setSyncing] = useState(false);
@@ -143,7 +141,7 @@ export const SettingsHubView: React.FC<SettingsHubViewProps> = ({
 
   useEffect(() => {
     refreshAssetStatus();
-  }, []);
+  }, [db]);
 
   const handleSyncAssets = async () => {
     if (!isTauriRuntime()) {
@@ -159,15 +157,15 @@ export const SettingsHubView: React.FC<SettingsHubViewProps> = ({
       );
       if (result) {
         setAssetStatus(result.status);
-        const fresh = await loadDatabase(true);
-        onDatabaseReloaded?.(fresh);
         const dlCount = result.downloadedDataFiles.length + result.downloadedModelFiles.length;
         const failMsg =
-          result.failedFiles.length > 0 ? `，${result.failedFiles.length} 项校验未通过` : "";
+          result.failedFiles.length > 0 ? `，${result.failedFiles.length} 项更新失败` : "";
         setMaintenanceMsg(
           dlCount > 0
             ? `数据已更新至 Patch ${result.patch}（更新 ${dlCount} 项，已是最新 ${result.skippedFiles} 项${failMsg}）。`
-            : `当前已是最新数据（Patch ${result.patch}，已校验 ${result.skippedFiles} 项${failMsg}）。`
+            : result.failedFiles.length > 0
+              ? `同步未完成（Patch ${result.patch}，已校验 ${result.skippedFiles} 项${failMsg}）。`
+              : `当前已是最新数据（Patch ${result.patch}，已校验 ${result.skippedFiles} 项）。`
         );
       }
     } catch (err) {

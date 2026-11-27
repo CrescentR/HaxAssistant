@@ -150,16 +150,18 @@ impl Dataset {
     }
 
     pub fn patch(&self) -> &str {
-        self.runtime_meta
+        self.manifest
             .get("version")
-            .and_then(|v| v.as_str())
+            .and_then(Value::as_str)
+            .or_else(|| self.runtime_meta.get("version").and_then(Value::as_str))
             .unwrap_or("16.22")
     }
 
     pub fn report_date(&self) -> &str {
-        self.runtime_meta
+        self.manifest
             .get("report_date")
-            .and_then(|v| v.as_str())
+            .and_then(Value::as_str)
+            .or_else(|| self.runtime_meta.get("report_date").and_then(Value::as_str))
             .unwrap_or("2026-11-09")
     }
 

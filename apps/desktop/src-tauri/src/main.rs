@@ -16,11 +16,12 @@ use serde_json::Value;
 use shared_types::{
     AppSettings, AppUpdateInfo, AppUpdateProgress, ArurfRecommendation, AssetSyncResult,
     AssetSyncStatus, AugmentOfferStatsReport,
-    AugmentRecommendationCard, BenchGrabStatus, EnemyCounterAnalysis, GamePlayerIntel,
-    IntelCacheStatus, ItemPlan, ItemSetSyncResult, LcuStatus, LeagueWindowMode, LineupEvaluation, MatchHistoryEntry,
-    MatchHistoryResponse, OcrCacheCleanupReport, OverlayStatePayload, PlayerEncounterRecord,
-    PlayerEncounterSummary, PlayerLibraryBundle, PlayerMarker, PlayerProfile, PlayerSearchResult,
-    PostgameReview, RunePagePlan, RuntimeSummary, SummonerSpellSnapshot,
+    AugmentRecommendationCard, BenchGrabStatus, DataUpdateOutcome, EnemyCounterAnalysis,
+    GamePlayerIntel, IntelCacheStatus, ItemPlan, ItemSetSyncResult, LcuStatus, LeagueWindowMode,
+    LineupEvaluation, MatchHistoryEntry, MatchHistoryResponse, OcrCacheCleanupReport,
+    OverlayStatePayload, PlayerEncounterRecord, PlayerEncounterSummary, PlayerLibraryBundle,
+    PlayerMarker, PlayerProfile, PlayerSearchResult, PostgameReview, RunePagePlan, RuntimeSummary,
+    SummonerSpellSnapshot,
 };
 use main_window::MainWindowStore;
 use overlay_layout::{OverlayLayoutStore, SavedPosition};
@@ -84,7 +85,7 @@ fn handle_main_close(
     Ok(())
 }
 
-fn resolve_app_root(app: &AppHandle) -> PathBuf {
+fn resolve_app_roots(app: &AppHandle) -> (PathBuf, PathBuf) {
     let has_data = |dir: &PathBuf| {
         dir.join("data/champions.json").exists()
             || dir.join("data/runtime_meta.json").exists()
@@ -128,11 +129,17 @@ fn resolve_app_root(app: &AppHandle) -> PathBuf {
     } else {
         resource_dir
             .or(exe_dir)
-            .or(local_data_dir)
+            .or_else(|| local_data_dir.clone())
             .unwrap_or(manifest_root)
     };
 
-    candidates.into_iter().find(has_data).unwrap_or(fallback)
+    let resolved = candidates.into_iter().find(has_data).unwrap_or(fallback);
+    let data_root = if cfg!(debug_assertions) {
+        resolved.clone()
+    } else {
+        app_core::prepare_writable_data_root(&resolved, local_data_dir.as_deref())
+    };
+    (data_root, resolved)
 }
 
 #[tauri::command]
@@ -415,15 +422,38 @@ fn get_asset_sync_status(state: State<'_, AppState>) -> AssetSyncStatus {
 
 #[tauri::command]
 async fn sync_remote_assets(
+    app: AppHandle,
     state: State<'_, AppState>,
     source_url: Option<String>,
     include_models: Option<bool>,
 ) -> Result<AssetSyncResult, String> {
-    state
+    let result = state
         .core
         .sync_remote_assets(source_url.as_deref(), include_models.unwrap_or(true))
         .await
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+    if !result.downloaded_data_files.is_empty() {
+        let _ = app.emit("haxassistant://dataset-updated", state.core.runtime_summary());
+    }
+    Ok(result)
+}
+
+#[tauri::command]
+async fn sync_runtime_bundle(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    source_url: Option<String>,
+    apply: Option<bool>,
+) -> Result<DataUpdateOutcome, String> {
+    let out = state
+        .core
+        .sync_runtime_bundle(source_url.as_deref(), apply.unwrap_or(true))
+        .await
+        .map_err(|e| e.to_string())?;
+    if out.status == "updated" {
+        let _ = app.emit("haxassistant://dataset-updated", state.core.runtime_summary());
+    }
+    Ok(out)
 }
 
 #[tauri::command]
@@ -734,15 +764,26 @@ fn spawn_lcu_event_listener(wake: Arc<Notify>) {
     });
 }
 
-fn spawn_background_lcu_poller(app: AppHandle, core: Arc<HexBoxCore>, wake: Arc<Notify>) {
+fn spawn_background_lcu_poller(
+    app: AppHandle,
+    core: Arc<HexBoxCore>,
+    wake: Arc<Notify>,
+    data_update_wake: Arc<Notify>,
+) {
     tauri::async_runtime::spawn(async move {
         let mut interval = tokio::time::interval(Duration::from_millis(1500));
+        let mut was_safe_to_swap = true;
         loop {
             tokio::select! {
                 _ = interval.tick() => {}
                 _ = wake.notified() => {}
             }
             let outcome = core.poll_lcu_tick().await;
+            let safe_now = core.is_safe_to_swap_data();
+            if !was_safe_to_swap && safe_now {
+                data_update_wake.notify_one();
+            }
+            was_safe_to_swap = safe_now;
             if outcome.changed {
                 let _ = app.emit("haxassistant://lcu-status", &outcome.status);
                 let _ = app.emit("haxassistant://overlay-state", &outcome.overlay_state);
@@ -977,14 +1018,92 @@ fn spawn_startup_update_check(app: AppHandle, core: Arc<HexBoxCore>) {
     });
 }
 
+/// Periodically checks the backend for newer runtime data bundles (every 6 hours,
+/// plus once shortly after startup) and applies updates only between matches.
+fn spawn_background_data_updater(
+    app: AppHandle,
+    core: Arc<HexBoxCore>,
+    wake: Arc<Notify>,
+) {
+    const CHECK_INTERVAL: Duration = Duration::from_secs(6 * 3600);
+    const RETRY_INTERVAL: Duration = Duration::from_secs(15 * 60);
+
+    tauri::async_runtime::spawn(async move {
+        tokio::time::sleep(Duration::from_secs(6)).await;
+        let mut pending_deferred = false;
+        let mut retry_delay = RETRY_INTERVAL;
+        let mut next_check_at = tokio::time::Instant::now();
+
+        loop {
+            let configured_url = if cfg!(debug_assertions) {
+                let custom = core.get_settings().data_sync_url;
+                let from_env = std::env::var("HAXASSISTANT_DATA_SYNC_URL").unwrap_or_default();
+                if !custom.trim().is_empty() || !from_env.trim().is_empty() {
+                    core.resolve_data_sync_url(None)
+                } else {
+                    String::new()
+                }
+            } else {
+                core.resolve_data_sync_url(None)
+            };
+
+            let now = tokio::time::Instant::now();
+            let due_deferred = pending_deferred && core.is_safe_to_swap_data();
+            let due_scheduled = now >= next_check_at;
+
+            if !configured_url.is_empty() && (due_deferred || due_scheduled) {
+                let apply = core.is_safe_to_swap_data();
+                match core.sync_runtime_bundle(None, apply).await {
+                    Ok(out) => {
+                        retry_delay = RETRY_INTERVAL;
+                        match out.status.as_str() {
+                            "updated" => {
+                                println!("[data-updater] {}", out.message);
+                                pending_deferred = false;
+                                next_check_at = tokio::time::Instant::now() + CHECK_INTERVAL;
+                                let _ = app.emit(
+                                    "haxassistant://dataset-updated",
+                                    core.runtime_summary(),
+                                );
+                            }
+                            "available" => {
+                                pending_deferred = true;
+                                next_check_at = tokio::time::Instant::now() + CHECK_INTERVAL;
+                            }
+                            _ => {
+                                pending_deferred = false;
+                                next_check_at = tokio::time::Instant::now() + CHECK_INTERVAL;
+                            }
+                        }
+                    }
+                    Err(err) => {
+                        eprintln!("[data-updater] 自动检查数据更新失败: {err}");
+                        pending_deferred = false;
+                        next_check_at = tokio::time::Instant::now() + retry_delay;
+                        retry_delay = (retry_delay * 2).min(CHECK_INTERVAL);
+                    }
+                }
+            } else if configured_url.is_empty() {
+                next_check_at = tokio::time::Instant::now() + CHECK_INTERVAL;
+            }
+
+            let sleep_until = next_check_at.max(tokio::time::Instant::now() + Duration::from_secs(5));
+            tokio::select! {
+                _ = tokio::time::sleep_until(sleep_until) => {}
+                _ = wake.notified() => {}
+            }
+        }
+    });
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
-            let root = resolve_app_root(app.handle());
+            let (root, resource_root) = resolve_app_roots(app.handle());
             let core =
-                Arc::new(HexBoxCore::initialize(&root).expect("Failed to initialize HexBoxCore"));
+                Arc::new(HexBoxCore::initialize_with_resources(&root, &resource_root).expect("Failed to initialize HexBoxCore"));
             let summary = core.runtime_summary();
             println!(
                 "HaxAssistant Desktop Host Ready (Patch {}, {} heroes, {} augments, {} mechanic links)",
@@ -995,10 +1114,17 @@ fn main() {
             );
             register_hotkeys(app.handle(), core.clone(), &core.get_settings());
             let lcu_wake = Arc::new(Notify::new());
-            spawn_background_lcu_poller(app.handle().clone(), core.clone(), lcu_wake.clone());
+            let data_update_wake = Arc::new(Notify::new());
+            spawn_background_lcu_poller(
+                app.handle().clone(),
+                core.clone(),
+                lcu_wake.clone(),
+                data_update_wake.clone(),
+            );
             spawn_lcu_event_listener(lcu_wake);
             spawn_background_auto_ocr_watcher(app.handle().clone(), core.clone());
             spawn_startup_update_check(app.handle().clone(), core.clone());
+            spawn_background_data_updater(app.handle().clone(), core.clone(), data_update_wake);
             let layout = Arc::new(OverlayLayoutStore::load(&core.data_dir()));
             overlay_layout::apply_zoom(app.handle(), core.get_settings().overlay_zoom);
             overlay_layout::restore_positions(app.handle(), &layout);
@@ -1085,6 +1211,7 @@ fn main() {
             start_overlay_drag,
             get_asset_sync_status,
             sync_remote_assets,
+            sync_runtime_bundle,
             cleanup_ocr_cache,
             get_client_locale,
             list_player_markers,

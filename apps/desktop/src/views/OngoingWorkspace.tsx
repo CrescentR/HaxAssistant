@@ -335,10 +335,20 @@ export const OngoingWorkspace: React.FC<Props> = ({
     if (!isTauriRuntime()) return;
     tauriGetBenchGrabStatus().then((st) => st && setBenchGrabStatus(st)).catch(() => {});
     tauriGetSummonerSpellSnapshot().then((sp) => sp && setSpellSnapshot(sp)).catch(() => {});
-    tauriGetArurfRecommendation(selectedHero).then((r) => r && setArurfRec(r)).catch(() => {});
     tauriGetAugmentOfferStats(8).then((r) => r && setOfferStats(r)).catch(() => {});
     tauriGetIntelCacheStatus().then((c) => c && setIntelCache(c)).catch(() => {});
   }, [selectedHero, phase]);
+
+  useEffect(() => {
+    if (!isTauriRuntime()) return;
+    let active = true;
+    tauriGetArurfRecommendation(selectedHero)
+      .then((recommendation) => {
+        if (active && recommendation) setArurfRec(recommendation);
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [db, selectedHero, phase]);
 
   const handleApplySpells = async () => {
     if (!isTauriRuntime()) {
