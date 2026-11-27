@@ -350,7 +350,11 @@ impl HexBoxCore {
     /// True when the League client is not in champ select or an active match,
     /// so swapping the local runtime dataset will not disrupt live decisions.
     pub fn is_safe_to_swap_data(&self) -> bool {
-        let lcu = self.get_overlay_state().lcu;
+        let state = self.get_overlay_state();
+        if state.live_game_ready {
+            return false;
+        }
+        let lcu = state.lcu;
         if !lcu.connected {
             return true;
         }
@@ -1656,22 +1660,30 @@ impl HexBoxCore {
                             }
                         }
                     }
-                } else if matches!(status.phase.as_str(), "InProgress" | "Reconnect") {
-                    if let Ok(live) = self.lcu.fetch_live_game_snapshot().await {
-                        if live.in_game {
-                            if let Some(ref champ) = live.active_champion {
-                                next_state.hero_name = champ.clone();
-                                next_state.live_game_ready = true;
-                            }
-                            next_state.current_gold = live.current_gold;
-                            next_state.owned_item_ids = live.owned_item_ids.clone();
-                            next_state.is_dead = live.is_dead;
-                            next_state.ally_team = live.allies.clone();
-                            next_state.enemy_team = live.enemies.clone();
-                            next_state.live_players = live.players.clone();
-                            self.record_live_game_encounters(&live);
+                }
+            }
+        }
+
+        // During a match the local Live Client Data API works independently of
+        // the launcher API, including when WeGame withholds its LCU credentials.
+        let reports_in_game = matches!(status.phase.as_str(), "InProgress" | "Reconnect");
+        if reports_in_game || (status.client_running && !status.connected) {
+            if let Ok(live) = self.lcu.fetch_live_game_snapshot().await {
+                if live.in_game {
+                    if let Some(ref champion) = live.active_champion {
+                        next_state.hero_name = champion.clone();
+                        next_state.live_game_ready = true;
+                        if !reports_in_game {
+                            next_state.phase = "InProgress".into();
                         }
                     }
+                    next_state.current_gold = live.current_gold;
+                    next_state.owned_item_ids = live.owned_item_ids.clone();
+                    next_state.is_dead = live.is_dead;
+                    next_state.ally_team = live.allies.clone();
+                    next_state.enemy_team = live.enemies.clone();
+                    next_state.live_players = live.players.clone();
+                    self.record_live_game_encounters(&live);
                 }
             }
         }

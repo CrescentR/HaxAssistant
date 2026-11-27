@@ -804,6 +804,9 @@ fn spawn_background_lcu_poller(
                 }
                 if !outcome.status.connected {
                     set_overlay_visible(&app, "champ-select", false);
+                    if settings.death_shop_hint_enabled && outcome.overlay_state.live_game_ready {
+                        set_overlay_visible(&app, "death-hint", outcome.overlay_state.is_dead);
+                    }
                 } else {
                     match outcome.status.phase.as_str() {
                         "ChampSelect" => {
