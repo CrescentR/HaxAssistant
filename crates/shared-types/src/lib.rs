@@ -76,7 +76,8 @@ impl Default for AppSettings {
             player_scores_overlay_enabled: true,
             death_shop_hint_enabled: true,
             bench_quick_grab_enabled: true,
-            bench_autograb_enabled: true,
+            // Opt-in: auto-grab swaps the player's champion via the LCU.
+            bench_autograb_enabled: false,
             bench_preferred_champion_ids: vec![157, 4, 114, 51, 22],
             auto_ocr_enabled: true,
             ocr_performance_mode: "balanced".to_string(),

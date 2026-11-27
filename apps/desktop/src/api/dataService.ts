@@ -590,7 +590,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   player_scores_overlay_enabled: true,
   death_shop_hint_enabled: true,
   bench_quick_grab_enabled: true,
-  bench_autograb_enabled: true,
+  bench_autograb_enabled: false,
   bench_preferred_champion_ids: [157, 4, 114, 51, 22],
   auto_ocr_enabled: true,
   ocr_performance_mode: "balanced",

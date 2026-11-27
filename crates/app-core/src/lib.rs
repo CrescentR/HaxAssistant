@@ -1664,15 +1664,21 @@ impl HexBoxCore {
                             && settings.bench_autograb_enabled
                             && !cancelled
                         {
-                            for preferred_id in &settings.bench_preferred_champion_ids {
-                                if cs.bench_champion_ids.contains(preferred_id)
-                                    && cs.my_champion_id != Some(*preferred_id)
-                                {
-                                    if self.lcu.bench_swap(&creds, *preferred_id).await.is_ok() {
-                                        auto_grabbed_champion_id = Some(*preferred_id);
-                                    }
-                                    break;
+                            if let Some(preferred_id) = autograb_target(
+                                &cs.bench_champion_ids,
+                                cs.my_champion_id,
+                                &settings.bench_preferred_champion_ids,
+                            ) {
+                                if self.lcu.bench_swap(&creds, preferred_id).await.is_ok() {
+                                    auto_grabbed_champion_id = Some(preferred_id);
                                 }
+                            }
+                        }
+                        // Auto-grab fires at most once per champ select, so a
+                        // champion the user picks afterwards is never swapped back.
+                        if auto_grabbed_champion_id.is_some() {
+                            if let Ok(mut c) = self.bench_autograb_cancelled.lock() {
+                                *c = true;
                             }
                         }
                     }
@@ -2141,6 +2147,16 @@ pub fn prepare_writable_data_root(bundled_root: &Path, local_data_dir: Option<&P
     }
 }
 
+/// The preferred bench champion to auto-grab, if any. Never trades away a
+/// champion that is already on the preferred list, so it cannot bounce the
+/// player between preferred champions.
+fn autograb_target(bench: &[u32], mine: Option<u32>, preferred: &[u32]) -> Option<u32> {
+    if mine.is_some_and(|id| preferred.contains(&id)) {
+        return None;
+    }
+    preferred.iter().copied().find(|id| bench.contains(id))
+}
+
 fn load_settings_file(data_dir: &Path) -> AppSettings {
     let path = data_dir.join("user_settings.json");
     if let Ok(raw) = fs::read_to_string(&path) {
@@ -2236,6 +2252,25 @@ mod tests {
         let _ = fs::create_dir_all(&empty_root);
         let dir = resolve_ocr_sidecar_dir(&empty_root);
         assert!(dir.join("worker.py").exists(), "resolved {}", dir.display());
+    }
+
+    #[test]
+    fn autograb_never_trades_away_a_preferred_champion() {
+        let preferred = [157, 4, 114, 51, 22];
+        // Holding Ashe (22): Yasuo (157) on the bench must not be grabbed.
+        assert_eq!(autograb_target(&[157, 99], Some(22), &preferred), None);
+        // Holding a non-preferred champion: take the highest-priority one.
+        assert_eq!(autograb_target(&[22, 157], Some(99), &preferred), Some(157));
+        // Nothing preferred on the bench.
+        assert_eq!(autograb_target(&[1, 2], Some(99), &preferred), None);
+        assert_eq!(autograb_target(&[22], None, &preferred), Some(22));
+    }
+
+    #[test]
+    fn champion_select_writes_are_off_by_default() {
+        let s = AppSettings::default();
+        assert!(!s.bench_autograb_enabled);
+        assert!(!s.auto_apply_summoner_spells);
     }
 
     #[test]
