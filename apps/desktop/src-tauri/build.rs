@@ -68,5 +68,14 @@ fn main() {
     println!("cargo:rerun-if-changed={}", ocr_src.display());
     stage_tree(&ocr_src, &ocr_dest);
 
-    tauri_build::build();
+    // Windows: embed an app manifest that keeps tauri-build's default
+    // Common Controls v6 dependency and adds requireAdministrator, so every
+    // launch goes through the native UAC prompt (declining it stops startup).
+    // tauri-build only embeds the manifest when the target is Windows, so
+    // macOS/Linux builds are unaffected.
+    println!("cargo:rerun-if-changed=windows-app-manifest.xml");
+    let windows = tauri_build::WindowsAttributes::new()
+        .app_manifest(include_str!("windows-app-manifest.xml"));
+    tauri_build::try_build(tauri_build::Attributes::new().windows_attributes(windows))
+        .expect("failed to run tauri-build");
 }
