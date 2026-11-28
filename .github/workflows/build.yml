@@ -27,47 +27,13 @@ jobs:
             target: x86_64-pc-windows-msvc
             bundles: nsis,msi
             artifact_name: hexbox-windows-x64
-
-          - label: macos-arm64
-            os: macos-latest
-            target: aarch64-apple-darwin
-            bundles: dmg,app
-            artifact_name: hexbox-macos-arm64
-
-          - label: macos-x64
-            os: macos-latest
-            target: x86_64-apple-darwin
-            bundles: dmg,app
-            artifact_name: hexbox-macos-x64
-
-          - label: linux-x64
-            os: ubuntu-22.04
-            target: x86_64-unknown-linux-gnu
-            bundles: deb,rpm,appimage
-            artifact_name: hexbox-linux-x64
+          # League of Legends only runs on Windows, so no other platform is built.
 
     runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Install Linux system dependencies
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libwebkit2gtk-4.1-dev \
-            build-essential \
-            curl \
-            wget \
-            file \
-            libxdo-dev \
-            libssl-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev \
-            patchelf \
-            rpm
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -95,10 +61,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      # The macos-x64 job cross-compiles on an Apple Silicon runner, where the
-      # runner would come out arm64; that build falls back to the Python sidecar.
       - name: Compile standalone OCR runner
-        if: matrix.label != 'macos-x64'
         shell: bash
         run: |
           python -m pip install --upgrade pip
@@ -124,8 +87,6 @@ jobs:
         working-directory: apps/desktop
         shell: bash
         env:
-          # Avoid FUSE mount failures when creating AppImage on Linux CI runners
-          APPIMAGE_EXTRACT_AND_RUN: "1"
           # Updater signing key (minisign). Generate with
           # `npm run tauri signer generate -w ~/.tauri/hexbox-updater.key`
           # and store the private key + password as repository secrets.
@@ -201,21 +162,8 @@ jobs:
           for f in \
             target/${{ matrix.target }}/release/bundle/nsis/*-setup.exe \
             target/${{ matrix.target }}/release/bundle/nsis/*-setup.exe.sig \
-            target/${{ matrix.target }}/release/bundle/msi/*.msi \
-            target/${{ matrix.target }}/release/bundle/dmg/*.dmg \
-            target/${{ matrix.target }}/release/bundle/deb/*.deb \
-            target/${{ matrix.target }}/release/bundle/rpm/*.rpm \
-            target/${{ matrix.target }}/release/bundle/appimage/*.AppImage \
-            target/${{ matrix.target }}/release/bundle/appimage/*.AppImage.sig; do
+            target/${{ matrix.target }}/release/bundle/msi/*.msi; do
             cp -v "$f" target/release-assets/
-          done
-          # macOS updater archive is always named HexBox.app.tar.gz; give each
-          # architecture its own name so both fit in one release.
-          version=$(node -p "require('./apps/desktop/src-tauri/tauri.conf.json').version")
-          arch=$([[ "${{ matrix.target }}" == aarch64-* ]] && echo aarch64 || echo x64)
-          for f in target/${{ matrix.target }}/release/bundle/macos/*.app.tar.gz{,.sig}; do
-            base=$(basename "$f")
-            cp -v "$f" "target/release-assets/${base/.app.tar.gz/_${version}_${arch}.app.tar.gz}"
           done
           ls -lh target/release-assets/
 
