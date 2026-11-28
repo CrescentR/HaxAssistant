@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { loadDatabase, loadSettings, type LoadedHexBoxDatabase } from "./api/dataService";
 import {
@@ -6,13 +6,16 @@ import {
   subscribeDatasetUpdated,
   subscribeOverlayState,
   subscribeSettingsUpdated,
+  subscribeShopHint,
   tauriGetOverlayState,
   tauriGetSettings,
   tauriResetOverlayPosition,
   tauriResetOverlayZoom,
   tauriStartOverlayDrag,
+  tauriToggleShopHint,
   tauriZoomOverlay,
 } from "./api/tauriBridge";
+import { ShoppingBag } from "lucide-react";
 import type { AppSettings, OverlayStatePayload } from "./types/hexbox";
 import { OverlayApp, type OverlayKind } from "./overlays/OverlayApp";
 import "./styles/replica.css";
@@ -26,9 +29,71 @@ function resolveOverlayKind(): OverlayKind {
     "champ-select",
     "player-scores",
     "death-hint",
+    "item-launcher",
   ];
   return allowed.includes(raw as OverlayKind) ? (raw as OverlayKind) : "augment";
 }
+
+/** Pointer travel (px) that turns a press on the launcher into a drag. */
+const DRAG_THRESHOLD = 4;
+
+/**
+ * The in-game shopping button. Its window is exactly the button, so it never
+ * covers the game beyond it; a click toggles the panel, a drag moves it.
+ */
+const ItemLauncher: React.FC<{ settings: AppSettings }> = ({ settings }) => {
+  const [panelOpen, setPanelOpen] = useState(false);
+  const press = useRef<{ x: number; y: number; dragged: boolean } | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const unlisten = subscribeShopHint((v) => {
+      if (active) setPanelOpen(v.panel);
+    });
+    return () => {
+      active = false;
+      unlisten.then((fn) => fn()).catch(() => {});
+    };
+  }, []);
+
+  const label = panelOpen ? "收起出装推荐" : "打开出装推荐";
+  return (
+    <button
+      type="button"
+      className={`overlay-launcher ${panelOpen ? "open" : ""}`}
+      title={label}
+      aria-label={label}
+      aria-pressed={panelOpen}
+      style={{
+        opacity: Math.max(0.5, Math.min(1, (settings.overlay_opacity || 95) / 100)),
+        zoom: `${settings.overlay_zoom || 100}%`,
+      }}
+      onPointerDown={(e) => {
+        if (e.button === 0) press.current = { x: e.screenX, y: e.screenY, dragged: false };
+      }}
+      onPointerMove={(e) => {
+        const p = press.current;
+        if (!p || p.dragged || (e.buttons & 1) === 0) return;
+        if (Math.hypot(e.screenX - p.x, e.screenY - p.y) >= DRAG_THRESHOLD) {
+          p.dragged = true;
+          tauriStartOverlayDrag().catch(() => {});
+        }
+      }}
+      onClick={() => {
+        const dragged = press.current?.dragged;
+        press.current = null;
+        if (dragged) return;
+        tauriToggleShopHint()
+          .then((v) => {
+            if (v) setPanelOpen(v.panel);
+          })
+          .catch(() => {});
+      }}
+    >
+      <ShoppingBag size={20} aria-hidden="true" />
+    </button>
+  );
+};
 
 const OverlayEntry: React.FC = () => {
   const [db, setDb] = useState<LoadedHexBoxDatabase | null>(null);
@@ -37,6 +102,8 @@ const OverlayEntry: React.FC = () => {
   const kind = resolveOverlayKind();
 
   useEffect(() => {
+    // The launcher is only a button; it needs no dataset.
+    if (kind === "item-launcher") return;
     let active = true;
     const refresh = (force: boolean) => {
       // A failed reload keeps whatever the overlay is already showing.
@@ -52,7 +119,7 @@ const OverlayEntry: React.FC = () => {
       active = false;
       unlisten.then((fn) => fn()).catch(() => {});
     };
-  }, []);
+  }, [kind]);
 
   useEffect(() => {
     if (!isTauriRuntime()) return;
@@ -90,6 +157,10 @@ const OverlayEntry: React.FC = () => {
     if (target.closest("button") || !target.closest(".overlay-header")) return;
     tauriStartOverlayDrag().catch(() => {});
   };
+
+  if (kind === "item-launcher") {
+    return <ItemLauncher settings={settings} />;
+  }
 
   if (!db) {
     return <div className="overlay-card">正在初始化悬浮窗数据...</div>;

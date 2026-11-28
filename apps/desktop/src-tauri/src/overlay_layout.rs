@@ -15,13 +15,18 @@ pub const ZOOM_DEFAULT: u16 = 100;
 pub const ZOOM_STEP: i32 = 5;
 
 /// (window label, base width, base height) at 100 % zoom; mirrors `tauri.conf.json`.
-pub const OVERLAYS: [(&str, f64, f64); 5] = [
+pub const OVERLAYS: [(&str, f64, f64); 6] = [
     ("augment-overlay", 980.0, 340.0),
     ("formula-item-overlay", 460.0, 280.0),
     ("champ-select-overlay", 420.0, 540.0),
     ("player-scores-overlay", 640.0, 240.0),
     ("death-hint-overlay", 380.0, 140.0),
+    (LAUNCHER_LABEL, 44.0, 44.0),
 ];
+
+/// The small in-game button that opens the shopping panel. Its window is the
+/// button itself, so it takes no clicks outside its own few pixels.
+pub const LAUNCHER_LABEL: &str = "item-launcher-overlay";
 
 pub fn is_overlay(label: &str) -> bool {
     OVERLAYS.iter().any(|(l, _, _)| *l == label)
@@ -132,12 +137,49 @@ pub fn apply_zoom(app: &AppHandle, zoom: u16) {
     }
 }
 
+/// Where the launcher goes until the user drags it: the right edge of the
+/// display the shopping panel is on (the primary one if that is unknown), a
+/// little below the middle, clear of the minimap.
+fn launcher_default(win: &WebviewWindow) -> Option<PhysicalPosition<i32>> {
+    let panel_monitor = win
+        .app_handle()
+        .get_webview_window("death-hint-overlay")
+        .and_then(|panel| panel.current_monitor().ok().flatten());
+    let monitor = match panel_monitor {
+        Some(m) => m,
+        None => win.primary_monitor().ok().flatten()?,
+    };
+    let origin = monitor.position();
+    let screen = monitor.size();
+    let size = win.outer_size().ok()?;
+    let margin = (16.0 * monitor.scale_factor()).round() as i32;
+    Some(PhysicalPosition::new(
+        origin.x + screen.width as i32 - size.width as i32 - margin,
+        origin.y + (screen.height as f64 * 0.58).round() as i32,
+    ))
+}
+
+/// Move an overlay to its default spot: centred, or the launcher's corner.
+fn place_default(label: &str, win: &WebviewWindow) {
+    match (label == LAUNCHER_LABEL).then(|| launcher_default(win)).flatten() {
+        Some(pos) => {
+            let _ = win.set_position(pos);
+        }
+        None => {
+            let _ = win.center();
+        }
+    }
+}
+
 pub fn restore_positions(app: &AppHandle, store: &OverlayLayoutStore) {
     for (label, _, _) in OVERLAYS {
-        if let (Some(win), Some(pos)) = (app.get_webview_window(label), store.get(label)) {
-            if is_on_screen(&win, pos) {
+        let Some(win) = app.get_webview_window(label) else { continue };
+        match store.get(label) {
+            Some(pos) if is_on_screen(&win, pos) => {
                 let _ = win.set_position(PhysicalPosition::new(pos.x, pos.y));
             }
+            _ if label == LAUNCHER_LABEL => place_default(label, &win),
+            _ => {}
         }
     }
 }
@@ -150,10 +192,10 @@ pub fn reset_positions(app: &AppHandle, store: &OverlayLayoutStore, label: Optio
             continue;
         }
         if let Some(win) = app.get_webview_window(l) {
-            let _ = win.center();
+            place_default(l, &win);
         }
     }
-    // `center()` fires Moved events that would re-save the centred spot.
+    // Moving fires Moved events that would re-save the default spot.
     store.forget(label);
     store.flush();
 }

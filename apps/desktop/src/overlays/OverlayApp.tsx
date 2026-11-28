@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Crown, Crosshair, ShoppingBag, Sparkles, Swords, Users } from "lucide-react";
+import { Crown, Crosshair, ShoppingBag, Sparkles, Swords, Users, X } from "lucide-react";
 import {
   analyzeEnemyCounter,
   evaluate5v5Lineup,
@@ -7,7 +7,7 @@ import {
   type LoadedHexBoxDatabase,
 } from "../api/dataService";
 import { getChampionIconUrl, getItemIconUrl, getTierMeta } from "../utils/hexScore";
-import { tauriConfirmOcrAugment, tauriGetItemPlan } from "../api/tauriBridge";
+import { tauriConfirmOcrAugment, tauriGetItemPlan, tauriToggleOverlay } from "../api/tauriBridge";
 import type { ItemPlan, OverlayStatePayload } from "../types/hexbox";
 
 export type OverlayKind =
@@ -15,7 +15,8 @@ export type OverlayKind =
   | "item"
   | "champ-select"
   | "player-scores"
-  | "death-hint";
+  | "death-hint"
+  | "item-launcher";
 
 interface OverlayAppProps {
   kind: OverlayKind;
@@ -292,24 +293,39 @@ export const OverlayApp: React.FC<OverlayAppProps> = ({
     );
   }
 
+  // Only a plan for the hero on screen: never last game's, or another hero's.
+  const plan = itemPlan && itemPlan.heroName === effectiveHero ? itemPlan : null;
   return (
     <div className="overlay-card overlay-death-hint">
       <div className="overlay-header">
         <span>
-          <ShoppingBag size={14} className="gold-text" /> 阵亡购物提示
+          <ShoppingBag size={14} className="gold-text" /> 出装购物推荐
         </span>
-        <span className="overlay-badge">当前金币 {Math.round(currentGold).toLocaleString()}g</span>
+        <span className="overlay-header-end">
+          <span className="overlay-badge">当前金币 {Math.round(currentGold).toLocaleString()}g</span>
+          <button
+            type="button"
+            className="overlay-close"
+            title="收起"
+            aria-label="收起出装推荐"
+            onClick={() => tauriToggleOverlay("death-hint").catch(() => {})}
+          >
+            <X size={13} aria-hidden="true" />
+          </button>
+        </span>
       </div>
-      {itemPlan && itemPlan.steps.length > 0 ? (
+      {!effectiveHero ? (
+        <div className="overlay-note">等待对局数据…</div>
+      ) : plan && plan.steps.length > 0 ? (
         <>
           <div className="overlay-note ok">
-            {itemPlan.buyNow.length > 0
-              ? `现在买：${itemPlan.buyNow.map((b) => `${b.itemName}(${b.cost}g)`).join(" → ")}`
-              : itemPlan.note}
+            {plan.buyNow.length > 0
+              ? `现在买：${plan.buyNow.map((b) => `${b.itemName}(${b.cost}g)`).join(" → ")}`
+              : plan.note}
           </div>
-          {itemPlan.buyNow.length > 0 && (
+          {plan.buyNow.length > 0 && (
             <div className="overlay-note">
-              买完剩 {itemPlan.goldAfter}g · {itemPlan.note}
+              买完剩 {plan.goldAfter}g · {plan.note}
             </div>
           )}
         </>

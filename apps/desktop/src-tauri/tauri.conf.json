@@ -81,6 +81,21 @@
         "alwaysOnTop": true,
         "skipTaskbar": true,
         "visible": false
+      },
+      {
+        "label": "item-launcher-overlay",
+        "title": "HaxAssistant · 出装按钮",
+        "url": "overlay.html?overlay=item-launcher",
+        "width": 44,
+        "height": 44,
+        "decorations": false,
+        "transparent": true,
+        "shadow": false,
+        "resizable": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "focus": false,
+        "visible": false
       }
     ],
     "security": {

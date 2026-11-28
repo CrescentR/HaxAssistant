@@ -231,6 +231,12 @@ export interface LivePlayerScore {
   isDead: boolean;
 }
 
+/** What the in-game shopping launcher and panel show (`haxassistant://shop-hint`). */
+export interface ShopHintVisibility {
+  launcher: boolean;
+  panel: boolean;
+}
+
 export interface OverlayStatePayload {
   heroName: string;
   phase: string;

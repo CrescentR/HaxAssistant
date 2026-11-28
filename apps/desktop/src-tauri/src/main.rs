@@ -7,6 +7,7 @@
 mod main_window;
 mod overlay_layout;
 mod overlay_window;
+mod shop_hint;
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -26,6 +27,7 @@ use shared_types::{
 };
 use main_window::MainWindowStore;
 use overlay_layout::{OverlayLayoutStore, SavedPosition};
+use shop_hint::ShopHintCell;
 use tauri::{AppHandle, Emitter, Manager, State, WebviewWindow, WindowEvent};
 use tokio::sync::Notify;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
@@ -187,6 +189,9 @@ fn update_settings(
     }
     register_hotkeys(&app, state.core.clone(), &saved);
     overlay_layout::apply_zoom(&app, saved.overlay_zoom);
+    app.state::<ShopHintCell>()
+        .with(|hint| hint.set_enabled(saved.death_shop_hint_enabled));
+    apply_shop_hint(&app);
     let _ = app.emit("haxassistant://settings-updated", &saved);
     Ok(saved)
 }
@@ -408,6 +413,7 @@ fn overlay_label(kind: &str) -> &'static str {
         "champ-select" => "champ-select-overlay",
         "player-scores" => "player-scores-overlay",
         "death-hint" => "death-hint-overlay",
+        "item-launcher" => "item-launcher-overlay",
         _ => "augment-overlay",
     }
 }
@@ -417,6 +423,34 @@ fn set_overlay_visible(app: &AppHandle, kind: &str, visible: bool) {
     if let Some(win) = app.get_webview_window(label) {
         let _ = overlay_window::set_visible(&win, visible);
     }
+}
+
+/// Bring the shopping panel and its launcher in line with `ShopHintCell`
+/// and tell the launcher whether the panel is open.
+///
+/// Every caller changes the cell first and then calls this. The windows are
+/// updated on the main thread, one call after another, from the state as it
+/// is when the call runs, so a poller tick that lands next to a click can
+/// never put back what the click replaced. The lock is not held while the
+/// windows change: window calls from other threads wait on the main thread,
+/// and sync commands (a click) take the lock on that thread.
+fn apply_shop_hint(app: &AppHandle) {
+    let handle = app.clone();
+    let _ = app.run_on_main_thread(move || {
+        let visibility = handle.state::<ShopHintCell>().with(|h| h.visibility());
+        set_overlay_visible(&handle, "item-launcher", visibility.launcher);
+        set_overlay_visible(&handle, "death-hint", visibility.panel);
+        let _ = handle.emit("haxassistant://shop-hint", visibility);
+    });
+}
+
+/// Launcher click (or the panel's close button): open or close the
+/// shopping panel. Does nothing outside a valid game.
+#[tauri::command]
+fn toggle_shop_hint(app: AppHandle, hint: State<'_, ShopHintCell>) -> shop_hint::Visibility {
+    let visibility = hint.with(|h| h.toggle());
+    apply_shop_hint(&app);
+    visibility
 }
 
 #[tauri::command]
@@ -709,8 +743,31 @@ fn get_bench_grab_status(state: State<'_, AppState>) -> BenchGrabStatus {
     state.core.get_bench_grab_status()
 }
 
+/// In a game the shopping panel is owned by `ShopHintCell`: route show, hide
+/// and toggle through it so the poller keeps the user's choice. Returns the
+/// panel's new visibility, or `None` outside a game (plain window toggle).
+fn route_shop_panel(app: &AppHandle, kind: &str, open: Option<bool>) -> Option<bool> {
+    if overlay_label(kind) != "death-hint-overlay" {
+        return None;
+    }
+    let visibility = app.state::<ShopHintCell>().with(|h| {
+        if !h.visibility().launcher {
+            return None;
+        }
+        Some(match open {
+            Some(o) => h.set_panel(o),
+            None => h.toggle(),
+        })
+    })?;
+    apply_shop_hint(app);
+    Some(visibility.panel)
+}
+
 #[tauri::command]
 fn show_overlay(app: AppHandle, kind: String) -> Result<(), String> {
+    if route_shop_panel(&app, &kind, Some(true)).is_some() {
+        return Ok(());
+    }
     let label = overlay_label(&kind);
     if let Some(win) = app.get_webview_window(label) {
         // No set_focus: an overlay must never take the foreground from League.
@@ -721,6 +778,9 @@ fn show_overlay(app: AppHandle, kind: String) -> Result<(), String> {
 
 #[tauri::command]
 fn hide_overlay(app: AppHandle, kind: String) -> Result<(), String> {
+    if route_shop_panel(&app, &kind, Some(false)).is_some() {
+        return Ok(());
+    }
     let label = overlay_label(&kind);
     if let Some(win) = app.get_webview_window(label) {
         overlay_window::set_visible(&win, false).map_err(|e| e.to_string())?;
@@ -730,6 +790,9 @@ fn hide_overlay(app: AppHandle, kind: String) -> Result<(), String> {
 
 #[tauri::command]
 fn toggle_overlay(app: AppHandle, kind: String) -> Result<bool, String> {
+    if let Some(open) = route_shop_panel(&app, &kind, None) {
+        return Ok(open);
+    }
     let label = overlay_label(&kind);
     if let Some(win) = app.get_webview_window(label) {
         let visible = win.is_visible().unwrap_or(false);
@@ -792,33 +855,29 @@ fn spawn_background_lcu_poller(
                     set_overlay_visible(&app, "augment", false);
                     set_overlay_visible(&app, "item", false);
                     set_overlay_visible(&app, "player-scores", false);
-                    set_overlay_visible(&app, "death-hint", false);
                 }
-                if !outcome.status.connected {
-                    set_overlay_visible(&app, "champ-select", false);
-                    if settings.death_shop_hint_enabled && outcome.overlay_state.live_game_ready {
-                        set_overlay_visible(&app, "death-hint", outcome.overlay_state.is_dead);
+                if outcome.status.connected && outcome.status.phase == "ChampSelect" {
+                    if settings.auto_show_overlay {
+                        set_overlay_visible(&app, "champ-select", true);
                     }
                 } else {
-                    match outcome.status.phase.as_str() {
-                        "ChampSelect" => {
-                            if settings.auto_show_overlay {
-                                set_overlay_visible(&app, "champ-select", true);
-                            }
-                            set_overlay_visible(&app, "death-hint", false);
-                        }
-                        "InProgress" | "Reconnect" => {
-                            set_overlay_visible(&app, "champ-select", false);
-                            if settings.death_shop_hint_enabled && outcome.overlay_state.live_game_ready {
-                                set_overlay_visible(&app, "death-hint", outcome.overlay_state.is_dead);
-                            }
-                        }
-                        _ => {
-                            set_overlay_visible(&app, "champ-select", false);
-                            set_overlay_visible(&app, "death-hint", false);
-                        }
-                    }
+                    set_overlay_visible(&app, "champ-select", false);
                 }
+                // Shopping panel and its launcher: auto on death, but a click
+                // in this game wins over later life-state ticks.
+                let in_game = shop_hint::in_valid_game(
+                    outcome.overlay_state.live_game_ready,
+                    outcome.status.connected,
+                    &outcome.status.phase,
+                );
+                app.state::<ShopHintCell>().with(|hint| {
+                    hint.observe(
+                        settings.death_shop_hint_enabled,
+                        in_game,
+                        outcome.overlay_state.is_dead,
+                    )
+                });
+                apply_shop_hint(&app);
             }
         }
     });
@@ -1134,6 +1193,8 @@ fn main() {
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
+            // Before the poller starts: it reads this on its first tick.
+            app.manage(ShopHintCell::default());
             let (root, resource_root) = resolve_app_roots(app.handle());
             let core =
                 Arc::new(HexBoxCore::initialize_with_resources(&root, &resource_root).expect("Failed to initialize HexBoxCore"));
@@ -1241,6 +1302,7 @@ fn main() {
             show_overlay,
             hide_overlay,
             toggle_overlay,
+            toggle_shop_hint,
             zoom_overlay,
             reset_overlay_zoom,
             reset_overlay_position,

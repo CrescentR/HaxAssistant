@@ -8,7 +8,8 @@
     "formula-item-overlay",
     "champ-select-overlay",
     "player-scores-overlay",
-    "death-hint-overlay"
+    "death-hint-overlay",
+    "item-launcher-overlay"
   ],
   "permissions": [
     "core:default"

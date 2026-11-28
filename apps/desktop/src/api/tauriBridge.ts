@@ -29,6 +29,7 @@ import type {
   PostgameReview,
   RunePagePlan,
   RuntimeSummary,
+  ShopHintVisibility,
   SummonerSpellSnapshot,
 } from "../types/hexbox";
 
@@ -164,6 +165,21 @@ export async function tauriResetOverlayPosition(kind?: string): Promise<boolean>
   if (!isTauriRuntime()) return false;
   await invoke<void>("reset_overlay_position", { kind: kind ?? null });
   return true;
+}
+
+/** Launcher click: open or close the in-game shopping panel. */
+export async function tauriToggleShopHint(): Promise<ShopHintVisibility | null> {
+  if (!isTauriRuntime()) return null;
+  return invoke<ShopHintVisibility>("toggle_shop_hint");
+}
+
+export async function subscribeShopHint(
+  handler: (visibility: ShopHintVisibility) => void
+): Promise<UnlistenFn> {
+  if (!isTauriRuntime()) return () => {};
+  return listen<ShopHintVisibility>("haxassistant://shop-hint", (event) => {
+    handler(event.payload);
+  });
 }
 
 export async function tauriStartOverlayDrag(): Promise<void> {
